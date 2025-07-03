@@ -1,3 +1,20 @@
+<div align="center">
+<p align="center">
+  📑&nbsp <a
+    href="https://www.automq.com/docs/automq/what-is-automq/overview?utm_source=github_automq"
+    target="_blank"
+  ><b>Documentation</b></a>&nbsp&nbsp&nbsp
+  🔥&nbsp <a
+    href="https://www.automq.com/docs/automq-cloud/getting-started/install-byoc-environment/aws/install-env-from-marketplace?utm_source=github_automq"
+    target="_blank"
+  ><b>Free trial of AutoMQ on AWS</b></a>&nbsp&nbsp&nbsp
+</p>
+</div>
+
+[![Linkedin Badge](https://img.shields.io/badge/-LinkedIn-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/company/automq)](https://www.linkedin.com/company/automq)
+[![](https://badgen.net/badge/Slack/Join%20AutoMQ/0abd59?icon=slack)](https://join.slack.com/t/automq/shared_invite/zt-29h17vye9-thf31ebIVL9oXuRdACnOIA)
+
+
 # AutoMQ Labs
 
 This repository provides a collection of samples to help you get started with [AutoMQ](https://www.automq.com), the next-generation cloud-native streaming platform.
