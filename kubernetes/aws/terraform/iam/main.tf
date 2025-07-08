@@ -120,7 +120,4 @@ resource "aws_iam_role_policy_attachment" "policy_attachment" {
   policy_arn = aws_iam_policy.custom_policy.arn
 }
 
-resource "aws_iam_role_policy_attachment" "automq-policy" {
-  policy_arn = aws_iam_policy.custom_policy.arn
-  role       = aws_iam_role.node_group_role.name
-}
+# Removed duplicate aws_iam_role_policy_attachment block for automq-policy.
