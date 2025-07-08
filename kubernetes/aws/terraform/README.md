@@ -9,7 +9,7 @@ The Terraform code is organized into several modules for clarity and reusability
 -   `main.tf`: The root module that ties everything together. It defines the providers, local variables, and orchestrates the module calls.
 -   `network/`: This module is responsible for creating the networking infrastructure, including the VPC, public and private subnets, and internet gateway.
 -   `eks/`: This module sets up the EKS cluster itself, including the control plane.
--   `iam/`: This module creates the necessary IAM roles and policies required for the EKS cluster and the worker nodes to interact with other AWS services like S3.
+-   `iam/`: This module creates the necessary IAM roles and policies required by the AutoMQ cluster running on the node group.
 
 ## Resources Created
 
@@ -18,9 +18,7 @@ This Terraform setup will create the following main resources in your AWS accoun
 -   **VPC**: A dedicated Virtual Private Cloud (VPC) to isolate the network resources.
 -   **EKS Cluster**: A managed Kubernetes cluster control plane.
 -   **EKS Node Group**: A group of EC2 instances that will serve as the worker nodes for the Kubernetes cluster. The instance type and scaling options can be configured in `main.tf`.
--   **S3 Buckets**:
-    -   An "ops" bucket for operational data.
-    -   A "data" bucket for application data.
+-   **S3 Buckets**: Creates S3 buckets for operational (ops) and application (data) storage.
 -   **IAM Roles and Policies**: The necessary permissions for the EKS control plane and worker nodes to function correctly and access resources like S3.
 
 ## Usage
