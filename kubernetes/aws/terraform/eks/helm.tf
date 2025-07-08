@@ -4,7 +4,7 @@
 ###############################################################################
 resource "helm_release" "autoscaler" {
   count = local.enable_autoscaler ? 1 : 0
-  
+
 
   name       = local.cluster_autoscaler_release_name
   namespace  = "kube-system"
@@ -43,7 +43,7 @@ resource "helm_release" "alb_controller" {
   namespace  = "kube-system"
   atomic     = true
   timeout    = 900
-  
+
   dependency_update = true
   values = [
     yamlencode({
@@ -57,8 +57,8 @@ resource "helm_release" "alb_controller" {
       "hostNetwork" : true
   })]
 
-  depends_on = [ 
+  depends_on = [
     aws_eks_node_group.system-nodes, null_resource.kube_config
-   ]
+  ]
 }
 

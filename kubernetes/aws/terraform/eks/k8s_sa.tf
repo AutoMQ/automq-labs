@@ -15,7 +15,7 @@ resource "kubernetes_service_account" "lb_controller_sa" {
       "app.kubernetes.io/managed-by" = "terraform"
     }
   }
-  depends_on = [ module.eks ]
+  depends_on = [module.eks]
 }
 
 

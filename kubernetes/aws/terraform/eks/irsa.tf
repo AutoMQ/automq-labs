@@ -1,6 +1,6 @@
 locals {
-  lb_service_account = "aws-load-balancer-controller"
-  ebs_csi_service_account = "ebs-csi-controller-sa"
+  lb_service_account                 = "aws-load-balancer-controller"
+  ebs_csi_service_account            = "ebs-csi-controller-sa"
   cluster_autoscaler_service_account = "cluster-autoscaler"
 }
 

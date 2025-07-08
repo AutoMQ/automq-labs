@@ -16,7 +16,7 @@ variable "subnet_ids" {
 
 variable "resource_depends_on" {
   description = "Resources that this module depends on"
-  default = null
+  default     = null
 }
 
 variable "resource_suffix" {

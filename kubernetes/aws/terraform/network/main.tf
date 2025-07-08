@@ -22,13 +22,13 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  name_suffix         = "${random_string.suffix.result}-${var.resource_suffix}"
-  vpc_name           = "vpc-${local.name_suffix}"
-  endpoint_sg_name   = "endpoint-sg-${local.name_suffix}"
-  ec2_endpoint_name  = "ec2-endpoint-${local.name_suffix}"
-  s3_endpoint_name   = "s3-endpoint-${local.name_suffix}"
+  name_suffix       = "${random_string.suffix.result}-${var.resource_suffix}"
+  vpc_name          = "vpc-${local.name_suffix}"
+  endpoint_sg_name  = "endpoint-sg-${local.name_suffix}"
+  ec2_endpoint_name = "ec2-endpoint-${local.name_suffix}"
+  s3_endpoint_name  = "s3-endpoint-${local.name_suffix}"
   tags = {
-    ManagedBy          = "terraform"
+    ManagedBy = "terraform"
   }
 }
 
@@ -36,8 +36,8 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.21.0"
 
-  cidr  = "10.0.0.0/16"
-  name  = local.vpc_name
+  cidr = "10.0.0.0/16"
+  name = local.vpc_name
 
   azs             = slice(data.aws_availability_zones.available_azs.names, 0, 3)
   public_subnets  = ["10.0.0.0/20", "10.0.16.0/20", "10.0.32.0/20"]

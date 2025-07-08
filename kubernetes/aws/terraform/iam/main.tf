@@ -20,9 +20,9 @@ resource "random_string" "suffix" {
 
 locals {
   automq_byoc_eks_node_role_arn = aws_iam_role.node_group_role.arn
-  resource_suffix = "${random_string.suffix.result}-${var.resource_suffix}"
-  policy_name = "policy-${local.resource_suffix}"
-  node_group_role_name = "node-group-role-${local.resource_suffix}"
+  resource_suffix               = "${random_string.suffix.result}-${var.resource_suffix}"
+  policy_name                   = "policy-${local.resource_suffix}"
+  node_group_role_name          = "node-group-role-${local.resource_suffix}"
 }
 
 resource "aws_iam_role" "node_group_role" {
