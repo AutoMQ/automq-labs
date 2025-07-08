@@ -18,7 +18,6 @@ This Terraform setup will create the following main resources in your AWS accoun
 -   **VPC**: A dedicated Virtual Private Cloud (VPC) to isolate the network resources.
 -   **EKS Cluster**: A managed Kubernetes cluster control plane.
 -   **EKS Node Group**: A group of EC2 instances that will serve as the worker nodes for the Kubernetes cluster. The instance type and scaling options can be configured in `main.tf`.
--   **S3 Buckets**: Creates S3 buckets for operational (ops) and application (data) storage.
 -   **IAM Roles and Policies**: The necessary permissions for the EKS control plane and worker nodes to function correctly and access resources like S3.
 
 ## Usage

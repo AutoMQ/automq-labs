@@ -43,39 +43,13 @@ module "eks" {
   resource_depends_on = module.network
 }
 
-# Operations bucket: Stores cluster operational data
-module "ops_bucket" {
-  source        = "terraform-aws-modules/s3-bucket/aws"
-  version       = "4.1.2"
-  create_bucket = true
-  bucket        = local.ops_bucket_name
-  force_destroy = true # Allows deletion of non-empty bucket during destroy
-
-  tags = {
-    ManagedBy = "terraform"
-  }
-}
-
-# Data bucket: Stores application data
-module "data_bucket" {
-  source        = "terraform-aws-modules/s3-bucket/aws"
-  version       = "4.1.2"
-  create_bucket = true
-  bucket        = local.data_bucket_name
-  force_destroy = true # Allows deletion of non-empty bucket during destroy
-
-  tags = {
-    ManagedBy = "terraform"
-  }
-}
-
 # IAM module: Configures required IAM roles and permissions for the cluster
 module "cluster-iam" {
   source           = "./iam"
   region           = local.region
   resource_suffix  = local.resource_suffix
-  ops_bucket_name  = local.ops_bucket_name
-  data_bucket_name = local.data_bucket_name
+  ops_bucket_name  = "*"
+  data_bucket_name = "*"
 }
 
 # EKS Node Group: Configure worker nodes
@@ -131,4 +105,9 @@ output "vpc_id" {
 output "cluster_name" {
   description = "EKS Cluster Name"
   value       = module.eks.eks_cluster_name
+}
+
+output "node_group_name" {
+  description = "EKS Node Group Name"
+  value       = aws_eks_node_group.automq-node-groups.node_group_name
 }
