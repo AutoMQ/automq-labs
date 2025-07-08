@@ -1,0 +1,61 @@
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 20.31"
+
+  cluster_name    = local.cluster_name
+  cluster_version = "1.32"
+
+  cluster_endpoint_public_access           = true
+  enable_cluster_creator_admin_permissions = true
+
+  vpc_id     = var.vpc_id
+  subnet_ids = var.subnet_ids
+
+  eks_managed_node_group_defaults = {
+    ami_type = "AL2_x86_64"
+  }
+}
+
+resource "aws_eks_node_group" "system-nodes" {
+  cluster_name    = local.cluster_name
+  node_group_name = local.system_node_group_name
+  node_role_arn   = aws_iam_role.nodes.arn
+
+  subnet_ids = [local.private_subnet_ids[0]]
+
+  ami_type       = "AL2_x86_64"
+  capacity_type  = "SPOT"
+  instance_types = ["t3.medium", "c5.large", "t3.small"]
+
+  scaling_config {
+    desired_size = 4
+    max_size     = 5
+    min_size     = 3
+  }
+
+  update_config {
+    max_unavailable = 1
+  }
+
+  labels = {
+    node_type                      = "spot"
+    "node.kubernetes.io/lifecycle" = "normal"
+  }
+
+  depends_on = [
+    module.eks,
+    var.resource_depends_on,
+    aws_iam_role_policy_attachment.nodes-AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.nodes-AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.nodes-AmazonEC2ContainerRegistryReadOnly,
+  ]
+}
+
+resource "null_resource" "kube_config" {
+  provisioner "local-exec" {
+    command = "aws eks update-kubeconfig --region ${var.region} --name ${local.cluster_name} --no-verify-ssl"
+  }
+  depends_on = [
+    module.eks
+  ]
+}
