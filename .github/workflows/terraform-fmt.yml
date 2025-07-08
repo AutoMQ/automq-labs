@@ -1,0 +1,27 @@
+
+name: Terraform Format Check
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.tf'
+  pull_request:
+    paths:
+      - '**/*.tf'
+
+jobs:
+  terraform-fmt:
+    name: 'Terraform Format Check'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Format Check
+      run: terraform fmt -check -recursive
