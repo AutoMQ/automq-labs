@@ -23,6 +23,11 @@ This Terraform setup will create the following main resources in your AWS accoun
 
 ## Usage
 
+**Prerequisites**
+
+-   **AWS CLI**: Ensure you have the AWS CLI installed and configured with appropriate credentials.
+
+
 1.  **Initialize Terraform**:
     ```bash
     terraform init
