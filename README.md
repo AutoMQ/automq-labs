@@ -28,6 +28,7 @@ This repository is organized into the following sections:
 *   **[Table Topic Solutions](./table-topic-solutions/)**: Explore solutions for append and CDC scenarios with Table Topic, and integrations with Iceberg REST Catalog, AWS Glue, and Hive Metastore.
 *   **[Commercial Setup](./commercial-setup/)**: Deploy AutoMQ commercial version on AWS (EC2 and EKS), GCP (Kubernetes), and Azure (Kubernetes) using Terraform.
 *   **[Observability](./observability/)**: Set up a monitoring stack with Mimir and Grafana for AutoMQ using Docker Compose.
+*   **[Kubernetes](./kubernetes/)**: Provides Terraform scripts for provisioning Kubernetes clusters on AWS, Azure, and GCP.
 *   **[Kafka Linking Demos](./kafka-linking-demos/)**: Learn how to migrate from any Kafka cluster to AutoMQ with demos for standard clients and Flink applications.
 
 ## Getting Started
