@@ -19,9 +19,9 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  resource_suffix               = "${random_string.suffix.result}-${var.resource_suffix}"
-  policy_name                   = "policy-${local.resource_suffix}"
-  node_group_role_name          = "node-group-role-${local.resource_suffix}"
+  resource_suffix      = "${random_string.suffix.result}-${var.resource_suffix}"
+  policy_name          = "policy-${local.resource_suffix}"
+  node_group_role_name = "node-group-role-${local.resource_suffix}"
 }
 
 resource "aws_iam_role" "node_group_role" {
@@ -118,5 +118,3 @@ resource "aws_iam_role_policy_attachment" "policy_attachment" {
   role       = aws_iam_role.node_group_role.name
   policy_arn = aws_iam_policy.custom_policy.arn
 }
-
-# Removed duplicate aws_iam_role_policy_attachment block for automq-policy.
