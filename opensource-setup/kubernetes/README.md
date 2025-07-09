@@ -17,27 +17,21 @@ Before you begin, ensure you have the following:
 
 ## Installation Steps
 
-### 1. Configure `values.yaml`
+### 1. Configure `demo-values.yaml`
 
 The key to deploying AutoMQ is to provide a custom `values.yaml` file that configures the Bitnami Kafka chart to use AutoMQ's container image and settings.
 
-We provide a `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on AWS using `m7g.xlarge` instances. You can use it as a starting point.
+We provide a `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on AWS using `m7g.xlarge` instances.
 
 **Action:**
 
-Create a copy of `demo-values.yaml` named `my-values.yaml` and customize it for your environment.
-
-```shell
-cp demo-values.yaml my-values.yaml
-```
-
-You will need to replace the placeholder values (marked with `${...}`) in `my-values.yaml`, such as the S3 bucket names (`ops-bucket`, `data-bucket`), AWS region, and endpoint.
+Edit the `demo-values.yaml` file and customize it for your environment. You will need to replace the placeholder values (marked with `${...}`), such as the S3 bucket names (`ops-bucket`, `data-bucket`), AWS region, and endpoint.
 
 For more details on performance tuning and available parameters, refer to the [AutoMQ Performance Tuning Guide](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker) and the official [Bitnami Kafka chart values](https://github.com/bitnami/charts/blob/main/bitnami/kafka/values.yaml).
 
 ### 2. Install the Helm Chart
 
-Once your `my-values.yaml` file is ready, use the `helm install` command to deploy AutoMQ. We recommend using a version from the `31.x` series of the Bitnami Kafka chart for best compatibility.
+Once your `demo-values.yaml` file is ready, use the `helm install` command to deploy AutoMQ. We recommend using a version from the `31.x` series of the Bitnami Kafka chart for best compatibility.
 
 **Action:**
 
@@ -45,7 +39,7 @@ Run the following command to install AutoMQ in a dedicated namespace:
 
 ```shell
 helm install automq-release oci://registry-1.docker.io/bitnamicharts/kafka \
-  -f my-values.yaml \
+  -f demo-values.yaml \
   --version 31.5.0 \
   --namespace automq \
   --create-namespace
@@ -57,11 +51,11 @@ This command will create a new release named `automq-release` in the `automq` na
 
 ### Upgrading the Deployment
 
-To apply changes to your deployment (e.g., after updating `my-values.yaml`), use the `helm upgrade` command:
+To apply changes to your deployment after updating `demo-values.yaml`, use the `helm upgrade` command:
 
 ```shell
 helm upgrade automq-release oci://registry-1.docker.io/bitnamicharts/kafka \
-  -f my-values.yaml \
+  -f demo-values.yaml \
   --version 31.5.0 \
   --namespace automq
 ```
