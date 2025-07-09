@@ -1,160 +1,122 @@
-# Kafka mTLS Configuration with Helm and Bitnami Chart
+# Deploy AutoMQ with mTLS on Kubernetes
 
-This project provides two Bash scripts to automate the setup of mutual TLS (mTLS) for a Kafka cluster deployed using the Bitnami Kafka Helm Chart. The scripts generate server and client certificates, create Kubernetes Secrets, and configure a Kafka client pod for secure communication.
+This guide provides instructions for setting up a secure AutoMQ cluster with mutual TLS (mTLS) on Kubernetes. It uses helper scripts to automate the generation of certificates and the configuration of a Kafka client for secure communication.
+
+The process involves two main scripts:
+1.  `generate_server_certs.sh`: Creates a Certificate Authority (CA) and server-side certificates required by the AutoMQ cluster.
+2.  `generate_client_certs.sh`: Generates client-side certificates and a configuration file for a Kafka client to securely connect to the cluster.
 
 ## Prerequisites
-follow base README: [Prerequisites](../README.md#Prerequisites)
-- **Kubernetes Cluster**: A running Kubernetes cluster with `kubectl` configured.
-- **Helm**: Helm 3 installed for deploying the Bitnami Kafka chart.
-- **Kafka Client Pod**: A pod (e.g., `kafka-client`) with Kafka command-line tools installed (e.g., Bitnami Kafka image).
-- **Namespace**: A Kubernetes namespace (e.g., `automq-mtls`) where the Kafka cluster and secrets will be deployed.
-- **OpenSSL and keytool**: Installed on the system where the scripts are executed.
 
-## Scripts Overview
+*   A running Kubernetes cluster with `kubectl` configured.
+*   Helm v3 installed.
+*   OpenSSL and `keytool` installed on your local machine.
 
-### 1. `generate_server_certs.sh`
-This script generates:
-- A self-signed CA certificate and key.
-- A Kafka server certificate with Subject Alternative Names (SANs) matching the Kubernetes service names.
-- JKS keystore and truststore for the Kafka server.
-- Kubernetes Secrets (`kafka-tls-secret` and `kafka-tls-passwords`) for mTLS configuration.
-- Copies `ca-cert` and `ca-key` to the current directory for use by the client script.
+## Step-by-Step Guide
 
-### 2. `generate_client_certs.sh`
-This script generates:
-- A Kafka client certificate signed by the CA.
-- JKS keystore and truststore for the Kafka client.
-- A `client.properties` file configured for mTLS.
-- Copies the generated files to a specified Kafka client pod.
+### Step 1: Generate Server Certificates
 
-## mTLS Setup Instructions
+First, we need to generate the CA and the server certificates that the AutoMQ brokers will use to identify themselves.
 
-### Step 1: Deploy Kafka Cluster By Terraform
-follow base README: [Setup a Kubernetes Cluster](../README.md#Setup-a-Kubernetes-Cluster)
+1.  Make the server script executable:
+    ```bash
+    chmod +x generate_server_certs.sh
+    ```
 
-### Step 2: Generate Server Certificates and Secrets
-1. Save the `generate_server_certs.sh` script and make it executable:
-   ```bash
-   chmod +x generate_server_certs.sh
-   ```
-2. Run the script with the required parameters:
-   ```bash
-   ./generate_server_certs.sh \
-     --password your-password \
-     --namespace automq-mtls \
-     --release-name automq-release
-   ```
-   **Parameters**:
-   - `--password`: Password for the keystore, truststore, and key.
-   - `--namespace`: Kubernetes namespace for secrets (e.g., `automq-mtls`).
-   - `--release-name`: Helm release name used to construct Kafka service names (e.g., `automq-release`).
+2.  Run the script to generate the certificates and create the necessary Kubernetes secrets.
+    ```bash
+    # Usage: ./generate_server_certs.sh --password <your-password> --namespace <your-namespace> --release-name <helm-release-name>
+    ./generate_server_certs.sh \
+      --password your-secure-password \
+      --namespace automq \
+      --release-name automq-release
+    ```
+    This command creates two Kubernetes secrets (`kafka-tls-secret` and `kafka-tls-passwords`) in the `automq` namespace and leaves `ca-cert` and `ca-key` files in your current directory for the next step.
 
-   **Output**:
-   - Generates `ca-cert` and `ca-key` in the current directory.
-   - Creates Kubernetes secrets `kafka-tls-secret` and `kafka-tls-passwords`.
+### Step 2: Deploy AutoMQ with mTLS Enabled
 
-3. Verify that `ca-cert` and `ca-key` are present:
-   ```bash
-   ls -l ca-cert ca-key
-   ```
+Now, deploy AutoMQ using the Bitnami Helm chart, configured to use the secrets we just created.
 
-### Step 3: Install AutoMQ server
+1.  **Customize `demo-tls-values.yaml`**:
+    Review the provided `demo-tls-values.yaml` file. You must replace the placeholder values for your S3 buckets (`${ops-bucket}`, `${data-bucket}`), region, and endpoint.
 
-1. Create an empty `automq-values.yaml` file，You can refer to the tls feature [demo-tls-values.yaml](demo-tls-values.yaml)
-2. Edit the file with your specific parameters:
+2.  **Install the Helm Chart**:
+    Deploy AutoMQ using your customized values file. We recommend using a version from the `31.x` series of the Bitnami Kafka chart.
+    ```shell
+    helm install automq-release oci://registry-1.docker.io/bitnamicharts/kafka \
+      -f demo-tls-values.yaml \
+      --version 31.5.0 \
+      --namespace automq \
+      --create-namespace
+    ```
 
-   we provided for deploying AutoMQ on AWS using m7g.xlarge instances (4 vCPUs, 16GB Mem, 238MiB/s network bandwidth). more performance tuning information see [AutoMQ Performance Tuning](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker).
+### Step 3: Configure and Test the Client
 
+To verify the mTLS setup, we will launch a client pod, generate client certificates for it, and use it to produce and consume messages.
 
-    You need to replace the values configurations in the placeholders $｛｝, such as ops-bucket, data-bucket, region, endpoint, storage-class.
+1.  **Launch a Client Pod**:
+    Create a simple pod with Kafka tools installed.
+    ```bash
+    kubectl run kafka-client --image=automqinc/automq:1.5.3-rc0-bitnami -n automq --restart='Never' --command -- sleep infinity
+    ```
 
-3. Install or upgrade the AutoMQ Helm chart using your custom yaml file:
+2.  **Generate Client Certificates**:
+    Make the client script executable and run it. This script uses the `ca-cert` and `ca-key` from Step 1 to generate client certificates and copies them into the `kafka-client` pod.
+    ```bash
+    chmod +x generate_client_certs.sh
+    # Usage: ./generate_client_certs.sh --password <your-password> --namespace <your-namespace> --pod-name <client-pod-name>
+    ./generate_client_certs.sh \
+      --password your-secure-password \
+      --namespace automq \
+      --pod-name kafka-client
+    ```
 
-   we recommend using the `--version` [31.x.x (31.1.0 ~ 31.5.0)](https://artifacthub.io/packages/helm/bitnami/kafka) bitnami helm chart while installing AutoMQ.
+3.  **Produce and Consume Messages**:
+    Execute producer and consumer commands from within the client pod to test the secure connection.
 
-```shell
-helm install automq-release oci://registry-1.docker.io/bitnamicharts/kafka -f demo-tls-values.yaml --version 31.5.0 --namespace automq-mtls --create-namespace
-```
+    *   **Send messages:**
+        ```bash
+        kubectl exec -it kafka-client -n automq -- bash -c "
+          kafka-console-producer.sh \
+            --bootstrap-server automq-release-kafka.automq.svc.cluster.local:9092 \
+            --producer.config /opt/bitnami/kafka/config/client.properties \
+            --topic test-mtls
+        "
+        ```
+        (Type a few messages and press `Ctrl+C` to exit)
 
-### Step 4: Create mTLS client pod
-1. create the example `kafka-client` pod:
-   ```bash
-   kubectl run kafka-client --image=automqinc/automq:1.5.0-bitnami -n automq-mtls --restart='Never' --command -- sleep infinity
-   ```
+    *   **Receive messages:**
+        ```bash
+        kubectl exec -it kafka-client -n automq -- bash -c "
+          kafka-console-consumer.sh \
+            --bootstrap-server automq-release-kafka.automq.svc.cluster.local:9092 \
+            --consumer.config /opt/bitnami/kafka/config/client.properties \
+            --topic test-mtls \
+            --from-beginning
+        "
+        ```
+    If both commands run without SSL errors, your mTLS setup is working correctly.
 
-### Step 5: Generate Client Certificates and Configuration
-1. Ensure `ca-cert` and `ca-key` are in the current directory (generated by the server script).
-2. Save the `generate_client_certs.sh` script and make it executable:
-   ```bash
-   chmod +x generate_client_certs.sh
-   ```
-3. Run the script with the required parameters:
-   ```bash
-   ./generate_client_certs.sh \
-     --password your-password \
-     --namespace automq-mtls \
-     --pod-name kafka-client
-   ```
-   **Parameters**:
-   - `--password`: Same password used in the server script.
-   - `--namespace`: Kubernetes namespace where the client pod resides (e.g., `automq-mtls`).
-   - `--pod-name`: Name of the Kafka client pod (e.g., `kafka-client`).
-   - `--config-path`: Path in the pod where configuration files are stored (default: `/opt/bitnami/kafka/config`).
+## Cleanup
 
-   **Output**:
-   - Generates `client.properties`, `kafka.client.keystore.jks`, and `kafka.client.truststore.jks`.
-   - Copies these files to the specified pod.
+To remove the resources created in this guide, run the following commands:
 
-### Step 6: Verify mTLS and Test
+1.  **Uninstall the Helm release**:
+    ```bash
+    helm uninstall automq-release --namespace automq
+    ```
+2.  **Delete the client pod and secrets**:
+    ```bash
+    kubectl delete pod kafka-client -n automq
+    kubectl delete secret kafka-tls-secret kafka-tls-passwords -n automq
+    ```
+3.  **Remove local certificate files**:
+    ```bash
+    rm ca-cert ca-key
+    ```
 
-1. Run a producer to send messages:
-   ```bash
-   kubectl exec -it kafka-client -n automq-mtls -- bash -c "
-     kafka-console-producer.sh \
-       --bootstrap-server automq-release-kafka.automq-mtls.svc.cluster.local:9092 \
-       --producer.config /opt/bitnami/kafka/config/client.properties \
-       --topic test
-   "
-   ```
-2. Run a consumer to receive messages:
-   ```bash
-   kubectl exec -it kafka-client -n automq-mtls -- bash -c "
-     kafka-console-consumer.sh \
-       --bootstrap-server automq-release-kafka.automq-mtls.svc.cluster.local:9092 \
-       --consumer.config /opt/bitnami/kafka/config/client.properties \
-       --topic test \
-       --from-beginning
-   "
-   ```
-- **Valid Connection**: The producer and consumer should work with the provided `client.properties`.
-- **Invalid Connection**: Test with an incorrect keystore or truststore to confirm mTLS rejects unauthorized clients.
+## Notes and Troubleshooting
 
-### Step 7: Cleanup
-1. Uninstall the Kafka cluster:
-   ```bash
-   helm uninstall my-kafka --namespace automq-mtls
-   ```
-2. Delete Kubernetes secrets:
-   ```bash
-   kubectl delete secret kafka-tls-secret -n automq-mtls
-   kubectl delete secret kafka-tls-passwords -n automq-mtls
-   ```
-3. Remove CA files:
-   ```bash
-   rm ca-cert ca-key
-   ```
-
-## Notes
-- **Security**: The `ca-key` file is sensitive. Store it securely and delete it after generating client certificates.
-- **SAN Configuration**: The server certificate includes SANs for three Kafka controller nodes and a wildcard for scalability. Adjust the `openssl-san.cnf` section in `generate_server_certs.sh` if your cluster has a different number of replicas or service names.
-- **Pod Requirements**: Ensure the `kafka-client` pod exists and has Kafka command-line tools installed (e.g., use the Bitnami Kafka image: `bitnami/kafka`).
-- **Namespace**: Ensure all commands use the same namespace (`automq-mtls` in the examples).
-- **Helm Chart**: Use we recommend using the `--version` [31.x.x (31.1.0 ~ 31.5.0)](https://artifacthub.io/packages/helm/bitnami/kafka) Bitnami helm chart while installing AutoMQ to ensure mTLS compatibility.
-
-## Troubleshooting
-- **Missing `ca-cert` or `ca-key`**: Verify that `generate_server_certs.sh` completes successfully and copies these files to the current directory (`ls -l ca-cert ca-key`).
-- **kubectl cp Errors**: Ensure the `kafka-client` pod exists (`kubectl get pods -n automq-mtls`) and the `--config-path` is correct.
-- **SSL Handshake Errors**: Check that the SANs in `openssl-san.cnf` match your Kafka service names (`kubectl get svc -n automq-mtls`).
-- **Permission Issues**: Ensure you have write permissions in the current directory and execute permissions for the scripts.
-
-For further assistance, provide the script output or error logs to diagnose specific issues.
+*   **Security**: The `ca-key` file is highly sensitive. Store it securely and remove it once it's no longer needed.
+*   **SANs**: The server certificate is generated with Subject Alternative Names (SANs) that match the default Kubernetes service names created by the Helm chart. If you change the release name or replica counts, you may need to adjust the `openssl-san.cnf` section inside the `generate_server_certs.sh` script.
+*   **SSL Handshake Errors**: If you encounter SSL errors, double-check that the `--namespace` and `--release-name` used in the scripts and Helm installation match exactly. Also, verify that the client pod is running and accessible.
