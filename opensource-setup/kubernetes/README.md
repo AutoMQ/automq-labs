@@ -1,60 +1,77 @@
-# AutoMQ
+# Deploy AutoMQ OSS on Kubernetes with Helm
 
-[AutoMQ](https://www.automq.com/) is a cloud-native alternative to Kafka by decoupling durability to cloud storage services like S3. 10x Cost-Effective. No Cross-AZ Traffic Cost. Autoscale in seconds. Single-digit ms latency.
-This Helm chart simplifies the deployment of AutoMQ into your Kubernetes cluster using the Software model.
+This guide provides instructions for deploying the open-source version of [AutoMQ](https://www.automq.com/) on a Kubernetes cluster using the Bitnami Helm chart for Kafka.
+
+AutoMQ is a cloud-native streaming platform that is fully compatible with the Kafka protocol. By leveraging Bitnami's widely-used Helm chart, you can easily deploy and manage AutoMQ in your Kubernetes environment.
 
 ## Prerequisites
-### Install Helm chart
-Install Helm chart and version v3.8.0+
-[Helm chart quickstart](https://helm.sh/zh/docs/intro/quickstart/)
-```shell
-helm version
-```
-### Using the Bitnami Helm repository
-AutoMQ is fully compatible with Bitnami's Helm Charts, so you can customize your AutoMQ Kubernetes cluster based on the relevant values.yaml of Bitnami.
-[Bitnami Helm Charts](https://github.com/bitnami/charts)
 
-## Quickstart
-### Setup a Kubernetes Cluster
-The quickest way to set up a Kubernetes cluster to install Bitnami Charts is by following the "Terraform for AWS EKS" guides for AutoMQ services:
-[Terraform for AWS EKS](../../kubernetes/aws/terraform/README.md)
+Before you begin, ensure you have the following:
 
+1.  **A Kubernetes Cluster**: If you don't have one, you can quickly provision a cluster on AWS EKS by following our [Terraform guide for AWS EKS](../../kubernetes/aws/terraform/README.md).
+2.  **Helm (v3.8.0+)**: The package manager for Kubernetes. You can verify your installation by running:
+    ```shell
+    helm version
+    ```
+    If you need to install it, follow the official [Helm installation guide](https://helm.sh/docs/intro/install/).
 
-### Installing the AutoMQ with Bitnami Chart
+## Installation Steps
 
-As an alternative to supplying the configuration parameters as arguments, you can create a supplemental YAML file containing your specific config parameters. Any parameters not specified in this file will default to those set in [values.yaml](values.yaml).
+### 1. Configure `values.yaml`
 
-1. Create an empty `automq-values.yaml` file，You can refer to the [demo-values.yaml](demo-values.yaml)  based on the bitnami [values.yaml](https://github.com/bitnami/charts/blob/main/bitnami/kafka/values.yaml)
-2. Edit the file with your specific parameters:
+The key to deploying AutoMQ is to provide a custom `values.yaml` file that configures the Bitnami Kafka chart to use AutoMQ's container image and settings.
 
-    we provided for deploying AutoMQ on AWS using m7g.xlarge instances (4 vCPUs, 16GB Mem, 238MiB/s network bandwidth). more performance tuning information see [AutoMQ Performance Tuning](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker).
+We provide a `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on AWS using `m7g.xlarge` instances. You can use it as a starting point.
 
+**Action:**
 
-    You need to replace the values configurations in the placeholders $｛｝, such as ops-bucket, data-bucket, region, endpoint, storage-class.
-
-3. Install or upgrade the AutoMQ Helm chart using your custom yaml file:
-
-    we recommend using the `--version` [31.x.x (31.1.0 ~ 31.5.0)](https://artifacthub.io/packages/helm/bitnami/kafka) bitnami helm chart while installing AutoMQ.
+Create a copy of `demo-values.yaml` named `my-values.yaml` and customize it for your environment.
 
 ```shell
-helm install automq-release oci://registry-1.docker.io/bitnamicharts/kafka -f demo-values.yaml --version 31.5.0 --namespace automq --create-namespace
+cp demo-values.yaml my-values.yaml
 ```
 
-### Upgrading
+You will need to replace the placeholder values (marked with `${...}`) in `my-values.yaml`, such as the S3 bucket names (`ops-bucket`, `data-bucket`), AWS region, and endpoint.
 
-To upgrade the deployment:
+For more details on performance tuning and available parameters, refer to the [AutoMQ Performance Tuning Guide](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker) and the official [Bitnami Kafka chart values](https://github.com/bitnami/charts/blob/main/bitnami/kafka/values.yaml).
+
+### 2. Install the Helm Chart
+
+Once your `my-values.yaml` file is ready, use the `helm install` command to deploy AutoMQ. We recommend using a version from the `31.x` series of the Bitnami Kafka chart for best compatibility.
+
+**Action:**
+
+Run the following command to install AutoMQ in a dedicated namespace:
 
 ```shell
-helm repo update
-helm upgrade automq-release oci://registry-1.docker.io/bitnamicharts/kafka -f demo-values.yaml --version 31.5.0 --namespace automq --create-namespace
+helm install automq-release oci://registry-1.docker.io/bitnamicharts/kafka \
+  -f my-values.yaml \
+  --version 31.5.0 \
+  --namespace automq \
+  --create-namespace
 ```
 
-### Uninstalling the Chart
+This command will create a new release named `automq-release` in the `automq` namespace.
 
-To uninstall/delete the deployment:
+## Managing the Deployment
+
+### Upgrading the Deployment
+
+To apply changes to your deployment (e.g., after updating `my-values.yaml`), use the `helm upgrade` command:
+
+```shell
+helm upgrade automq-release oci://registry-1.docker.io/bitnamicharts/kafka \
+  -f my-values.yaml \
+  --version 31.5.0 \
+  --namespace automq
+```
+
+### Uninstalling the Deployment
+
+To completely remove the AutoMQ deployment from your cluster, use `helm uninstall`:
 
 ```shell
 helm uninstall automq-release --namespace automq
 ```
 
-This command removes all the Kubernetes components associated with the chart and deletes the release.
+This will delete all Kubernetes resources associated with the Helm release.
