@@ -35,6 +35,14 @@ This repository is organized into the following sections:
 
 Each section contains a detailed `README.md` file with instructions on how to run the samples. Please refer to the specific section for more information.
 
+## Important Note on Production Use
+
+> **Disclaimer**: The samples and demonstrations provided in this repository are intended for Proof of Concept (PoC) and testing purposes only. They are not recommended for direct use in a production environment.
+>
+> For production deployments, we strongly recommend discussing your architecture and best practices with our engineering team to ensure optimal performance, reliability, and cost-efficiency.
+>
+> Please **[contact us](https://www.automq.com/contact)** to get in touch.
+
 ## Contributing
 
 We welcome contributions! Please see our [contributing guidelines](./CONTRIBUTING.md) for more information.
