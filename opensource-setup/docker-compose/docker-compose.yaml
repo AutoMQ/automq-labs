@@ -60,7 +60,7 @@ services:
 
   # Single node with combined controller and broker roles
   server1:
-    container_name: "automq-single-server"
+    container_name: "automq-server1"
     image: automqinc/automq:1.5.3-rc0
     stop_grace_period: 1m
     environment:
