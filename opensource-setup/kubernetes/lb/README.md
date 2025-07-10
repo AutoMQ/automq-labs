@@ -118,7 +118,7 @@ After the installation is complete, it may take a few minutes for the cloud prov
 1.  **Find the External Address**:
     Run the following command and wait for the `EXTERNAL-IP` to be assigned. You will have a different external IP for each Kafka broker. You can get the list of external IPs using the command below:
     ```shell
-    echo "$(kubectl get svc --namespace automq -l "app.kubernetes.io/instance=automq-lb" -o jsonpath='{.items[*].status.loadBalancer.ingress[0].ip}' | tr ' ' '\n')"
+    kubectl get svc --namespace automq -l "app.kubernetes.io/instance=automq-lb,pod" -w
     ```
 
 2.  **Test with a Kafka Client**:
