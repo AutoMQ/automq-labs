@@ -45,15 +45,6 @@ The key to this setup lies in the `demo-lb-values.yaml` file, which contains spe
           loadBalancerAnnotations:
             - service.beta.kubernetes.io/aws-load-balancer-type: nlb
     ```
-    controller:
-      service:
-        loadBalancerAnnotations:
-          - service.beta.kubernetes.io/aws-load-balancer-type: nlb
-    broker:
-      service:
-        loadBalancerAnnotations:
-          - service.beta.kubernetes.io/aws-load-balancer-type: nlb
-    ```
 
 4.  **`rbac.create`**:
     Required by the `autoDiscovery` feature to grant the necessary permissions for querying service information from the Kubernetes API.
@@ -105,7 +96,7 @@ From the `kubernetes` directory (the parent directory of `lb`), run the followin
 
 ```shell
 helm install automq-lb oci://registry-1.docker.io/bitnamicharts/kafka \
-  -f lb/demo-lb-values.yaml \
+  -f demo-lb-values.yaml \
   --version 31.5.0 \
   --namespace automq \
   --create-namespace
