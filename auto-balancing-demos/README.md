@@ -16,6 +16,10 @@ The demos in this section are designed to run against a pre-existing AutoMQ clus
 
 ## Scenarios
 
+> **Note on Feature Availability**:
+> *   **AutoMQ Open Source** supports Traffic-Based Balancing and balancing during Scale-Up/Scale-Down events.
+> *   **AutoMQ Cloud** supports all scenarios, including the advanced QPS-Based Balancing and Slow Node Isolation features. To test these, please set up an [AutoMQ Cloud cluster](https://www.automq.com/docs/automq-cloud/getting-started/install-byoc-environment/aws/install-env-from-marketplace).
+
 1.  **[Traffic-Based Balancing](./traffic-based/)**: Demonstrates how AutoMQ rebalances partitions when one broker receives a disproportionately high amount of traffic (bytes/sec).
 2.  **[QPS-Based Balancing](./qps-based/)**: Shows how the cluster rebalances based on request rate (queries per second), even if the traffic volume is similar.
 3.  **[Slow Node Isolation](./slow-node-isolation/)**: Simulates a "slow node" with high latency and demonstrates how AutoMQ automatically isolates it by migrating its partitions to healthier nodes.
