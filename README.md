@@ -43,6 +43,7 @@ This repository is organized into the following sections:
 *   **[Observability](./observability/)**: Set up a monitoring stack with Mimir and Grafana for AutoMQ using Docker Compose.
 *   **[Kubernetes](./kubernetes/)**: Provides Terraform scripts for provisioning Kubernetes clusters on AWS, Azure, and GCP.
 *   **[Kafka Linking Demos](./kafka-linking-demos/)**: Learn how to migrate from any Kafka cluster to AutoMQ with demos for standard clients and Flink applications.
+*   **[Auto-Balancing Demos](./auto-balancing-demos/)**: See how AutoMQ automatically balances workloads based on traffic, QPS, and node health.
 
 ## Getting Started
 
