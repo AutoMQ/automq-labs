@@ -3,10 +3,6 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StructType, StructField, StringType, FloatType, IntegerType
 
-# Environment and Configuration
-ICEBERG_CATALOG_URI = os.environ.get("ICEBERG_CATALOG_URI", "http://rest:8181")
-ICEBERG_WAREHOUSE = os.environ.get("ICEBERG_WAREHOUSE", "s3://warehouse/wh/")
-
 # Database
 ICEBERG_DATABASE = "default"
 
