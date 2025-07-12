@@ -2,8 +2,7 @@
 
 This guide provides instructions for deploying AutoMQ locally using Docker Compose. It offers two configurations for different testing needs:
 
-1.  **Single-Node Cluster**: A minimal setup with one AutoMQ broker, perfect for quick functional testing and development.
-2.  **Three-Node Cluster**: A more realistic setup with three AutoMQ brokers, ideal for testing clustering features and client failover.
+**Three-Node Cluster**: A more realistic setup with three AutoMQ brokers, ideal for testing clustering features and client failover.
 
 Both setups use **MinIO** as a self-hosted, S3-compatible object storage backend.
 
@@ -16,20 +15,12 @@ Both setups use **MinIO** as a self-hosted, S3-compatible object storage backend
 
 Choose one of the following options to start your local AutoMQ cluster.
 
-### Option 1: Deploy a Single-Node Cluster
-
-This is the quickest way to get a single AutoMQ broker running.
-
-```shell
-docker compose -f docker-compose.yaml up -d
-```
-
-### Option 2: Deploy a Three-Node Cluster
+### Deploy a Three-Node Cluster
 
 This setup simulates a production-like environment with three brokers.
 
 ```shell
-docker compose -f docker-compose-cluster.yaml up -d
+docker compose -f docker-compose-bitnami-cluster.yaml up -d
 ```
 
 ## Testing the Deployment
@@ -38,8 +29,7 @@ After starting the cluster, you can use standard Kafka tools to interact with it
 
 ### Connecting to the Cluster
 
-*   **Single-Node Bootstrap Server**: `server1:9092`
-*   **Three-Node Bootstrap Servers**: `server1:9092,server2:9092,server3:9092`
+*    `server1:9092,server2:9092,server3:9092`
 
 ### Running Kafka Tools
 
@@ -51,7 +41,7 @@ The easiest way to run Kafka tools without a local installation is to execute th
 
 ```shell
 docker exec -it automq-server1 bash -c "                                       \
-  /opt/automq/kafka/bin/kafka-console-producer.sh                            \
+  /opt/bitnami/kafka/bin/kafka-console-producer.sh                            \
     --broker-list server1:9092                                              \
     --topic my-topic"
 ```
@@ -62,9 +52,9 @@ Type some messages and press `Ctrl+C` when you are finished.
 
 ```shell
 docker exec -it automq-server1 bash -c "                                       \
-  /opt/automq/kafka/bin/kafka-console-consumer.sh                            \
-    --bootstrap-server server1:9092                                         \
-    --topic my-topic                                                          \
+  /opt/bitnami/kafka/bin/kafka-console-consumer.sh                            \
+    --bootstrap-server server1:9092                                              \
+    --topic my-topic                                                        \
     --from-beginning"
 ```
 
@@ -78,10 +68,8 @@ You can run a small-scale performance test using `kafka-producer-perf-test.sh`. 
 
 ```shell
 docker exec -it automq-server1 bash -c "                                       \
-  /opt/automq/kafka/bin/kafka-producer-perf-test.sh --topic test-topic --num-records=1024000 --throughput 5120 --record-size 1024 --producer-props bootstrap.servers=server1:9092,server2:9092,server3:9092 linger.ms=100 batch.size=524288 buffer.memory=134217728 max.request.size=67108864"
+  /opt/bitnami/kafka/bin/kafka-producer-perf-test.sh --topic test-topic --num-records=1024000 --throughput 5120 --record-size 1024 --producer-props bootstrap.servers=server1:9092,server2:9092,server3:9092 linger.ms=100 batch.size=524288 buffer.memory=134217728 max.request.size=67108864"
 ```
-
-*(For a single-node cluster, simply change the `bootstrap.servers` value to `server1:9092`)*
 
 #### A Note on Performance Tuning
 
@@ -95,12 +83,6 @@ docker exec -it automq-server1 bash -c "                                       \
 
 To stop the containers and remove the network, run the `down` command corresponding to your deployment file.
 
-**For Single-Node:**
 ```shell
-docker compose -f docker-compose.yaml down
-```
-
-**For Three-Node:**
-```shell
-docker compose -f docker-compose-cluster.yaml down
+docker compose -f docker-compose-bitnami-cluster.yaml down
 ```
