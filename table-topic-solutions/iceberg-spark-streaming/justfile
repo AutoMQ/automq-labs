@@ -1,13 +1,15 @@
 # Justfile for managing the Iceberg Spark Streaming playground
 
 # Variables for common Spark configurations to keep things DRY
-SPARK_PACKAGES := "org.apache.iceberg:iceberg-spark-runtime-3.4_2.12:1.5.2"
+SPARK_PACKAGES := "org.apache.iceberg:iceberg-spark-runtime-3.4_2.12:1.5.2,org.apache.spark:spark-avro_2.12:3.4.0"
 S3A_PACKAGES := "org.apache.hadoop:hadoop-aws:3.3.4,software.amazon.awssdk:bundle:2.17.257"
 SPARK_CONF := "--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
               --conf spark.hadoop.fs.s3a.endpoint=http://minio:9000 \
               --conf spark.hadoop.fs.s3a.access.key=admin \
               --conf spark.hadoop.fs.s3a.secret.key=password \
-              --conf spark.hadoop.fs.s3a.path.style.access=true"
+              --conf spark.hadoop.fs.s3a.path.style.access=true \
+              --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+              --conf spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem"
 
 # Default recipe to run when calling `just` with no arguments
 default: status
@@ -50,5 +52,5 @@ submit-job:
 # Open an interactive PySpark shell with all necessary configurations
 shell:
     docker-compose exec spark-iceberg pyspark \
-        --packages {{SPARK_PACKAGES}} \
+        --packages {{SPARK_PACKAGES}},{{S3A_PACKAGES}} \
         {{SPARK_CONF}}
