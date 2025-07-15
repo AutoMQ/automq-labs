@@ -5,22 +5,11 @@ provider "aws" {
 
 # Define local variables for resource naming and node group configuration
 locals {
-  region          = "us-east-1"
-  resource_suffix = "automqlab"
-
-  # S3 bucket naming
-  ops_bucket_name  = "automq-ops-${local.resource_suffix}"  # Bucket for operational data
-  data_bucket_name = "automq-data-${local.resource_suffix}" # Bucket for application data
+  region          = var.region
+  resource_suffix = var.resource_suffix
 
   # EKS node group configuration
-  node_group = {
-    name          = "automq-node-group"
-    desired_size  = 4             # Desired number of nodes
-    max_size      = 10            # Maximum number of nodes
-    min_size      = 3             # Minimum number of nodes
-    instance_type = "c6g.2xlarge" # Compute-optimized instance with AWS Graviton2 processor
-    ami_type      = "AL2_ARM_64"  # Amazon Linux 2 AMI type, can use AL2_ARM_64 for ARM architecture
-  }
+  node_group = var.node_group
 }
 
 # Network module: Creates VPC, subnets, and other network resources
@@ -89,25 +78,4 @@ resource "aws_eks_node_group" "automq-node-groups" {
     module.eks,
     module.cluster-iam
   ]
-}
-
-# Output important configuration values
-output "region" {
-  description = "AWS region"
-  value       = local.region
-}
-
-output "vpc_id" {
-  description = "VPC ID"
-  value       = module.network.vpc_id
-}
-
-output "cluster_name" {
-  description = "EKS Cluster Name"
-  value       = module.eks.eks_cluster_name
-}
-
-output "node_group_name" {
-  description = "EKS Node Group Name"
-  value       = aws_eks_node_group.automq-node-groups.node_group_name
 }
