@@ -2,7 +2,7 @@
 
 This document provides instructions for deploying an AutoMQ BYOC (Bring Your Own Cloud) environment on Amazon EKS (Elastic Kubernetes Service) using Terraform.
 
-This project automates the setup process detailed in the [official AutoMQ documentation](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks), providing a repeatable and efficient way to provision a production-ready environment.
+This project automates the setup process detailed in the [official AutoMQ documentation](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks), providing a repeatable and efficient way to provision a Poc environment.
 
 ## Architecture
 
