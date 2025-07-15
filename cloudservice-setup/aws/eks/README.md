@@ -100,9 +100,9 @@ Upon successful deployment, Terraform will display the following outputs. You ca
 
 ## Next Steps
 
-After provisioning the infrastructure, the final step is to configure your profile. Please follow the instructions in **Step 11** of the official AutoMQ deployment guide:
+After provisioning the infrastructure, the final step is to configure your profile. Please follow the instructions in **Step 12** of the official AutoMQ deployment guide:
 
-- **[Deploy AutoMQ on AWS EKS: Enter the Environment Console and Create Deployment Configurations](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-11-enter-the-environment-console-and-create-deployment-configurations)**
+- **[Deploy AutoMQ on AWS EKS: Enter the Environment Console and Create Deployment Configurations](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-12-access-the-environment-console-and-create-deployment-configuration)**
 
 
 ## Cleanup
