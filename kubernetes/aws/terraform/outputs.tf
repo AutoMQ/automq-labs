@@ -36,8 +36,8 @@ output "private_subnets" {
 }
 
 output "eks_cluster_security_group" {
-    description = "Security Group ID for the EKS Cluster"
-    value       = module.eks.eks_cluster_security_group
+  description = "Security Group ID for the EKS Cluster"
+  value       = module.eks.eks_cluster_security_group
 }
 
 
