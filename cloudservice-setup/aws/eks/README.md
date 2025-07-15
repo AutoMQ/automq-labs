@@ -41,32 +41,8 @@ Before you begin, ensure you have the following tools installed and configured:
     terraform init
     ```
 
-2.  **Plan the Deployment**
-    Run `terraform plan` to preview the resources that will be created.
-    ```bash
-    terraform plan
-    ```
 
-3.  **Apply the Deployment**
-    After reviewing the plan, execute `terraform apply` to begin the deployment. This process may take 15-20 minutes.
-    ```bash
-    terraform apply
-    ```
-    Enter `yes` at the prompt to confirm.
-
-
-## Cleanup
-
-To avoid incurring future costs, you can destroy all the resources created by this project.
-
-1.  **Destroy Resources**
-    Run the `destroy` command from the `terraform` directory.
-    ```bash
-    terraform destroy
-    ```
-    Enter `yes` at the prompt to confirm the deletion of all resources.
-
-## Inputs
+### Inputs
 
 You can override the following variables by creating a `terraform.tfvars` file or by using the `-var` command-line argument:
 
@@ -95,7 +71,21 @@ You can override the following variables by creating a `terraform.tfvars` file o
     }
     ```
 
-## Outputs
+
+2.  **Plan the Deployment**
+    Run `terraform plan` to preview the resources that will be created.
+    ```bash
+    terraform plan
+    ```
+
+3.  **Apply the Deployment**
+    After reviewing the plan, execute `terraform apply` to begin the deployment. This process may take 15-20 minutes.
+    ```bash
+    terraform apply
+    ```
+    Enter `yes` at the prompt to confirm.
+
+### Outputs
 
 Upon successful deployment, Terraform will display the following outputs. You can also retrieve them at any time using the `terraform output` command:
 
@@ -107,3 +97,21 @@ Upon successful deployment, Terraform will display the following outputs. You ca
 | `cluster_name`                  | The name of the created EKS cluster.                          |
 | `node_group_instance_profile_arn` | The IAM Instance Profile ARN used by the EKS node group.  |
 | `dns_zone_id`                   | The Route 53 DNS Zone ID created for the BYOC environment.       |
+
+## Next Steps
+
+After provisioning the infrastructure, the final step is to configure your profile. Please follow the instructions in **Step 11** of the official AutoMQ deployment guide:
+
+- **[Deploy AutoMQ on AWS EKS](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks)**
+
+
+## Cleanup
+
+To avoid incurring future costs, you can destroy all the resources created by this project.
+
+1.  **Destroy Resources**
+    Run the `destroy` command from the `terraform` directory.
+    ```bash
+    terraform destroy
+    ```
+    Enter `yes` at the prompt to confirm the deletion of all resources.
