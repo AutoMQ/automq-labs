@@ -66,19 +66,19 @@ resource "null_resource" "kube_config" {
 # # Call eks-addons module to install cluster addons
 # module "eks_addons" {
 #   source = "../eks-addons"
-  
+
 #   region                  = var.region
 #   cluster_name           = module.eks.cluster_name
 
 #   vpc_id                 = var.vpc_id
 #   resource_suffix        = var.resource_suffix
-  
+
 #   # Default addon configurations - can be overridden via variables
 #   enable_autoscaler             = true
 #   enable_alb_ingress_controller = true
 #   enable_vpc_cni                = true
 #   enable_ebs_csi_driver         = true
-  
+
 #   providers = {
 #     aws        = aws
 #     kubernetes = kubernetes
