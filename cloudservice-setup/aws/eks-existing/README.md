@@ -24,9 +24,9 @@ This Terraform project configures an **existing** AWS EKS cluster for AutoMQ BYO
 4.  **IAM Roles & Permissions**: Creates and configures comprehensive IAM roles and policies:
     *   **EKS Node Group Role**: Grants worker nodes permissions for ECR (container registry access), CNI operations, and worker node management
     *   **Service Account Roles (IRSA)**: Individual IAM roles for each add-on (EBS CSI Driver, Load Balancer Controller, Cluster Autoscaler) following the principle of least privilege
-    *   **AutoMQ-specific permissions**: Roles for data and operations bucket access
+    *   **AutoMQ-specific permissions**: Roles for S3 bucket access and virtual machine (VM) management
 
-5.  **Security and Access Configuration**:
+  5.  **Security and Access Configuration**:
     *   **Security Group Rules**: Configures network access rules to allow secure communication between the AutoMQ Console and your EKS cluster
     *   **EKS Access Entry**: Grants the AutoMQ Console's IAM role administrative privileges over the cluster using the new EKS Access Management feature, enabling it to deploy and manage AutoMQ workloads
     *   **Cluster Admin Policy**: Associates the `AmazonEKSClusterAdminPolicy` with the AutoMQ Console role for full cluster management capabilities
@@ -43,7 +43,7 @@ Before you begin, ensure you have the following:
 **AWS Resources:**
 *   An **existing EKS cluster** that you want to configure for AutoMQ
 *   A **VPC** with both public and private subnets
-*   **Private subnets** for the EKS node group (at least one)
+*   **Private subnets** for the EKS node group (at least one). These subnets must have a route to the public internet (e.g., via a NAT Gateway) to allow nodes to pull container images.
 *   A **public subnet** for the AutoMQ Console deployment
 
 
