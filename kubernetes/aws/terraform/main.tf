@@ -37,7 +37,7 @@ module "cluster-iam" {
   source           = "./iam"
   region           = local.region
   resource_suffix  = local.resource_suffix
-  ops_bucket_name  = "abc"
+  ops_bucket_name  = "*"
   data_bucket_name = "*"
 }
 
