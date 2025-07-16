@@ -14,7 +14,6 @@ This Terraform project configures an **existing** AWS EKS cluster for AutoMQ BYO
     *   Uses compute-optimized instances (default: `c6g.2xlarge` with AWS Graviton2 processors)
     *   Configured with node taints (`dedicated=automq:NoSchedule`) to ensure workload isolation
     *   Auto-scaling capabilities (default: 3-10 nodes, desired: 4)
-    *   Single-AZ deployment for cost optimization
 
 3.  **Essential EKS Add-ons**: Automatically installs and configures critical add-ons for full cluster functionality:
     *   **AWS Load Balancer Controller**: Manages AWS Application Load Balancers (ALB) and Network Load Balancers (NLB) for Kubernetes services of type `LoadBalancer`. This enables automatic provisioning of load balancers when services are created.
