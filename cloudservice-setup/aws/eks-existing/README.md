@@ -42,7 +42,7 @@ Before you begin, ensure you have the following:
 
 **AWS Resources:**
 *   An **existing EKS cluster** that you want to configure for AutoMQ
-*   A **VPC** with both public and private subnets
+*   A **VPC** with both public and private subnets. To ensure S3 traffic remains within the VPC (and not over the public internet), the VPC must have an S3 Gateway Endpoint.
 *   **Private subnets** for the EKS node group (at least one). These subnets must have a route to the public internet (e.g., via a NAT Gateway) to allow nodes to pull container images.
 *   A **public subnet** for the AutoMQ Console deployment
 
