@@ -6,22 +6,12 @@ locals {
   cluster_name = "eks-${local.resource_suffix}"
 
   # IAM roles
-  node_group_role_name         = "node-role-${local.resource_suffix}"
-  alb_controller_role_name     = "alb-role-${local.resource_suffix}"
-  ebs_csi_role_name            = "csi-role-${local.resource_suffix}"
-  cluster_autoscaler_role_name = "autoscaler-role-${local.resource_suffix}"
+  node_group_role_name = "node-role-${local.resource_suffix}"
 
   # Node groups
   system_node_group_name = "sys-${local.resource_suffix}"
 
-  # Helm releases - keeping these simple as they are internal to K8s
-  cluster_autoscaler_release_name = "cluster-autoscaler"
-  alb_controller_release_name     = "aws-load-balancer-controller"
-
   # Other configurations
-  enable_autoscaler             = true
-  enable_alb_ingress_controller = true
-
   min_worker_nodes = 0
   max_worker_nodes = 50
 

@@ -1,0 +1,44 @@
+# -----------------------------------------------------------------------------
+# Example Terraform Variables Configuration
+# Copy this file to terraform.tfvars and modify the values according to your environment
+# -----------------------------------------------------------------------------
+
+# Basic Configuration
+region          = "us-east-1"
+resource_suffix = "automqlab"
+
+# Network Configuration (Required)
+vpc_id             = "vpc-0fbecbe6bce721811"  # Replace with your VPC ID
+private_subnet_ids = [               # Replace with your private subnet IDs
+  "subnet-02c3faeae8670057f"
+]
+console_subnet_id = "subnet-01f180147dae9536c"  # Replace with your public subnet ID for console
+
+# EKS Configuration (Required)
+eks_cluster_name = "eks-7x23r-automqlab"  # Replace with your EKS cluster name
+
+# EKS Add-ons Configuration (Optional)
+enable_autoscaler             = true
+enable_alb_ingress_controller = true
+enable_vpc_cni                = true
+enable_ebs_csi_driver         = true
+
+# Node Group Configuration (Optional)
+node_group = {
+  name          = "automq-node-group"
+  desired_size  = 4
+  max_size      = 10
+  min_size      = 3
+  instance_type = "c6g.2xlarge"  # ARM-based Graviton2 instance
+  ami_type      = "AL2_ARM_64"   # Amazon Linux 2 ARM64 AMI
+}
+
+# Alternative x86 configuration:
+# node_group = {
+#   name          = "automq-node-group"
+#   desired_size  = 4
+#   max_size      = 10
+#   min_size      = 3
+#   instance_type = "c5.2xlarge"   # x86-based instance
+#   ami_type      = "AL2_x86_64"   # Amazon Linux 2 x86 AMI
+# }
