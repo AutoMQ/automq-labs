@@ -8,11 +8,11 @@ data "aws_eks_cluster" "eks_cluster" {
 module "eks_addons" {
   source = "../../../../kubernetes/aws/terraform/eks-addons"
 
-  region                 = var.region
-  cluster_name           = data.aws_eks_cluster.eks_cluster.name
+  region       = var.region
+  cluster_name = data.aws_eks_cluster.eks_cluster.name
 
-  vpc_id                 = var.vpc_id
-  resource_suffix        = var.resource_suffix
+  vpc_id          = var.vpc_id
+  resource_suffix = var.resource_suffix
 
   # Default addon configurations - can be overridden via variables
   enable_autoscaler             = var.enable_autoscaler
