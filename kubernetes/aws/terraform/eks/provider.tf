@@ -24,6 +24,11 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "2.36.0"
     }
+
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.0"
+    }
   }
 
   required_version = "~> 1.3"
@@ -33,25 +38,11 @@ provider "aws" {
   region = var.region
 }
 
-###############################################
-data "aws_eks_cluster" "cluster" {
+# Data sources for cluster authentication
+data "aws_eks_cluster_auth" "cluster" {
   name       = module.eks.cluster_name
   depends_on = [module.eks]
 }
-
-data "aws_eks_cluster_auth" "cluster" {
-  name       = module.eks.cluster_name
-  depends_on = [data.aws_eks_cluster.cluster]
-}
-
-###############################################
-
-# data "aws_eks_cluster_auth" "cluster" {
-#   name = module.eks.cluster_name
-#   depends_on = [ module.eks ]
-# }
-
-#################################################
 
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
@@ -60,7 +51,7 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes = {
+  kubernetes {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
     token                  = data.aws_eks_cluster_auth.cluster.token
