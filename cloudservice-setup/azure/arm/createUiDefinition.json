@@ -24,6 +24,20 @@
                         "visible": true
                     },
                     {
+                        "name": "adminUsername",
+                        "type": "Microsoft.Compute.UserNameTextBox",
+                        "label": "Admin Username",
+                        "defaultValue": "azureuser",
+                        "toolTip": "Provide a username for the administrator account.",
+                        "constraints": {
+                            "required": true,
+                            "regex": "^[a-z0-9A-Z]{1,30}$",
+                            "validationMessage": "Only alphanumeric characters are allowed, and the value must be 1-30 characters long."
+                        },
+                        "osPlatform": "Linux",
+                        "visible": true
+                    },
+                    {
                         "name": "vmCredentials",
                         "type": "Microsoft.Compute.CredentialsCombo",
                         "label": {
@@ -137,9 +151,6 @@
                                 "type": "Microsoft.Storage.StorageAccountSelector",
                                 "label": "Operations Storage Account",
                                 "toolTip": "Select an existing storage account or create a new one for AutoMQ operations data.",
-                                "constraints": {
-                                    "required": true
-                                },
                                 "options": {
                                     "hideExisting": false
                                 },
@@ -175,7 +186,7 @@
             "publicIPName": "[steps('networkConfig').publicIPSection.publicIp.name]",
             "publicIPResourceGroup": "[steps('networkConfig').publicIPSection.publicIp.resourceGroup]",
             "vmSize": "[steps('vmConfig').vmSize]",
-            "adminUsername": "[steps('vmConfig').vmCredentials.username]",
+            "adminUsername": "[steps('vmConfig').adminUsername]",
             "sshPublicKey": "[steps('vmConfig').vmCredentials.sshPublicKey]",
             "opsStorageAccountName": "[steps('storageConfig').opsStorageSection.opsStorageAccount.name]",
             "opsStorageAccountResourceGroup": "[steps('storageConfig').opsStorageSection.opsStorageAccount.resourceGroup]",
