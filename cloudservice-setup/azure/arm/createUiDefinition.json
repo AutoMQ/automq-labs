@@ -3,45 +3,7 @@
     "handler": "Microsoft.Azure.CreateUIDef",
     "version": "0.1.2-preview",
     "parameters": {
-        "config": {
-            "isWizard": true,
-            "basics": {
-                "description": "Deploy AutoMQ Control Center with secure virtual machine configuration, including SSH authentication and customizable networking options.",
-                "subscription": {
-                    "constraints": {
-                        "validations": [
-                            {
-                                "isValid": "[not(contains(subscription().displayName, 'Test'))]",
-                                "message": "Test subscriptions are not supported for production deployments."
-                            },
-                            {
-                                "permission": "Microsoft.Compute/virtualmachines/write",
-                                "message": "Write permission is required for virtual machine deployment."
-                            },
-                            {
-                                "permission": "Microsoft.Compute/virtualMachines/extensions/write",
-                                "message": "Write permission is required for virtual machine extensions."
-                            }
-                        ]
-                    },
-                    "resourceProviders": [
-                        "Microsoft.Compute"
-                    ]
-                },
-                "resourceGroup": {
-                    "allowExisting": true
-                },
-                "location": {
-                    "label": "Region",
-                    "toolTip": "Select the Azure region for deployment. This determines resource availability and performance characteristics.",
-                    "resourceTypes": [
-                        "Microsoft.Compute/virtualMachines"
-                    ],
-                    "defaultValue": "eastus",
-                    "visible": true
-                }
-            }
-        },
+        "config": {},
         "basics": [],
         "steps": [
             {
