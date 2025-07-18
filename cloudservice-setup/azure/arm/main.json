@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "9163768314875550927"
+      "templateHash": "14768587094261828692"
     },
     "description": "Deploy AutoMQ Control Center with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -461,7 +461,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "10864195321149097936"
+              "templateHash": "15485540078698200857"
             }
           },
           "parameters": {
@@ -532,7 +532,10 @@
               "name": "[format('{0}/default/{1}', parameters('opsStorageAccountName'), parameters('opsContainerName'))]",
               "properties": {
                 "publicAccess": "None"
-              }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('opsStorageAccountName'))]"
+              ]
             }
           ],
           "outputs": {

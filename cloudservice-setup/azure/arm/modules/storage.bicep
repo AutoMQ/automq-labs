@@ -48,6 +48,7 @@ resource opsBlobContainer 'Microsoft.Storage/storageAccounts/blobServices/contai
   properties: {
     publicAccess: 'None'
   }
+  dependsOn: opsStorageAccountIsNew == 'new' ? [newStorageAccount] : [existingStorageAccount]
 }
 
 // The output uses a ternary operator to reference the correct storage account.
