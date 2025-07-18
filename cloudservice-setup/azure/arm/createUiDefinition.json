@@ -228,7 +228,7 @@
                     "opsStorageAccountResourceGroup": "[steps('storageConfig').opsStorageSection.opsStorageAccount.resourceGroup]",
                     "opsStorageAccountType": "[steps('storageConfig').opsStorageSection.opsStorageAccount.type]",
                     "opsStorageAccountKind": "[steps('storageConfig').opsStorageSection.opsStorageAccount.kind]",
-                    "opsStorageAccountIsNew": "[steps('storageConfig').opsStorageSection.opsStorageAccount.isNew]",
+                    "opsStorageAccountIsNew": "[steps('storageConfig').opsStorageSection.opsStorageAccount.newOrExisting]",
                     "opsContainerName": "[steps('storageConfig').opsStorageSection.opsContainerName]"
                 }
             }
