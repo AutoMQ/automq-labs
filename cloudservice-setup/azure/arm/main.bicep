@@ -95,6 +95,7 @@ module network 'modules/network.bicep' = {
 
 module storage 'modules/storage.bicep' = {
   name: 'storage-deployment-${uniqueId}'
+  scope: resourceGroup(opsStorageAccountResourceGroup)
   params: {
     opsStorageAccountName: opsStorageAccountName
     opsStorageAccountResourceGroup: opsStorageAccountResourceGroup

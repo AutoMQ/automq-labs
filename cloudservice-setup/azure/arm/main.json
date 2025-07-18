@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "14768587094261828692"
+      "templateHash": "12251565898531781993"
     },
     "description": "Deploy AutoMQ Control Center with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -429,6 +429,7 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "[format('storage-deployment-{0}', variables('uniqueId'))]",
+      "resourceGroup": "[parameters('opsStorageAccountResourceGroup')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
