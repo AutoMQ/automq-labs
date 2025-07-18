@@ -41,11 +41,9 @@
                         "name": "vmCredentials",
                         "type": "Microsoft.Compute.CredentialsCombo",
                         "label": {
-                            "username": "Administrator Username",
                             "sshPublicKey": "SSH Public Key"
                         },
                         "toolTip": {
-                            "username": "Administrator username for the virtual machine (default: azureuser).",
                             "sshPublicKey": "SSH public key for secure authentication to the virtual machine."
                         },
                         "constraints": {
