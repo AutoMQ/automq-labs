@@ -1,197 +1,236 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
-    "handler": "Microsoft.Azure.CreateUIDef",
-    "version": "0.1.2-preview",
-    "parameters": {
-        "config": {},
-        "basics": [],
-        "steps": [
-            {
-                "name": "vmConfig",
-                "label": "Virtual Machine Configuration",
-                "elements": [
-                    {
-                        "name": "vmSize",
-                        "type": "Microsoft.Compute.SizeSelector",
-                        "label": "VM Size",
-                        "toolTip": "Select the virtual machine size based on your performance and cost requirements.",
-                        "recommendedSizes": [
-                            "Standard_D2s_v3",
-                            "Standard_D4s_v3",
-                            "Standard_D8s_v3"
-                        ],
-                        "osPlatform": "Linux",
-                        "visible": true
-                    },
-                    {
-                        "name": "adminUsername",
-                        "type": "Microsoft.Compute.UserNameTextBox",
-                        "label": "Admin Username",
-                        "defaultValue": "azureuser",
-                        "toolTip": "Provide a username for the administrator account.",
-                        "constraints": {
-                            "required": true,
-                            "regex": "^[a-z0-9A-Z]{1,30}$",
-                            "validationMessage": "Only alphanumeric characters are allowed, and the value must be 1-30 characters long."
-                        },
-                        "osPlatform": "Linux",
-                        "visible": true
-                    },
-                    {
-                        "name": "vmCredentials",
-                        "type": "Microsoft.Compute.CredentialsCombo",
-                        "label": {
-                            "sshPublicKey": "SSH Public Key"
-                        },
-                        "toolTip": {
-                            "sshPublicKey": "SSH public key for secure authentication to the virtual machine."
-                        },
-                        "constraints": {
-                            "required": true
-                        },
-                        "options": {
-                            "hidePassword": true
-                        },
-                        "osPlatform": "Linux",
-                        "visible": true
-                    }
-                ]
-            },
-            {
-                "name": "networkConfig",
-                "label": "Network Configuration",
-                "elements": [
-                    {
-                        "name": "networkingInfo",
-                        "type": "Microsoft.Common.TextBlock",
-                        "visible": true,
-                        "options": {
-                            "text": "Configure network settings for your AutoMQ Control Center deployment, including virtual network and public IP address configuration."
+    "$schema": "https://schema.management.azure.com/schemas/2021-09-09/uiFormDefinition.schema.json",
+    "view": {
+        "kind": "Form",
+        "properties": {
+            "title": "AutoMQ Control Center Deployment",
+            "steps": [
+                {
+                    "name": "basics",
+                    "label": "Basics",
+                    "elements": [
+                        {
+                            "name": "resourceScope",
+                            "type": "Microsoft.Common.ResourceScope"
                         }
-                    },
-                    {
-                        "name": "publicIPSection",
-                        "type": "Microsoft.Common.Section",
-                        "label": "Public IP Address",
-                        "elements": [
-                            {
-                                "name": "publicIp",
-                                "type": "Microsoft.Network.PublicIpAddressCombo",
-                                "label": {
-                                    "publicIpAddress": "Public IP Address",
-                                    "domainNameLabel": "Domain Name Label"
-                                },
-                                "toolTip": {
-                                    "publicIpAddress": "Choose to create a new public IP address, use an existing one, or deploy without public IP access."
-                                },
-                                "defaultValue": {
-                                    "publicIpAddressName": "pip-automq-control-center"
-                                },
-                                "options": {
-                                    "hideNone": false,
-                                    "hideDomainNameLabel": true,
-                                    "hideExisting": false
-                                },
-                                "visible": true
+                    ]
+                },
+                {
+                    "name": "vmConfig",
+                    "label": "Virtual Machine Configuration",
+                    "elements": [
+                        {
+                            "name": "vmSize",
+                            "type": "Microsoft.Compute.SizeSelector",
+                            "label": "VM Size",
+                            "toolTip": "Select the virtual machine size based on your performance and cost requirements.",
+                            "recommendedSizes": [
+                                "Standard_D2s_v3",
+                                "Standard_D4s_v3",
+                                "Standard_D8s_v3"
+                            ],
+                            "osPlatform": "Linux",
+                            "visible": true,
+                            "scope": {
+                                "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                "location": "[steps('basics').resourceScope.location.name]"
                             }
-                        ]
-                    },
-                    {
-                        "name": "vnetSection",
-                        "type": "Microsoft.Common.Section",
-                        "label": "Virtual Network",
-                        "elements": [
-                            {
-                                "name": "vnet",
-                                "type": "Microsoft.Network.VirtualNetworkCombo",
-                                "label": {
-                                    "virtualNetwork": "Virtual Network",
-                                    "subnets": "Subnets"
-                                },
-                                "toolTip": {
-                                    "virtualNetwork": "Create a new virtual network or select an existing one for the AutoMQ Control Center deployment.",
-                                    "subnets": "Configure the subnet where the virtual machine will be deployed."
-                                },
-                                "constraints": {
-                                    "minAddressPrefixSize": "/16"
-                                },
-                                "options": {
-                                    "hideExisting": false
-                                },
-                                "subnets": {
-                                    "subnet1": {
-                                        "label": "Control Center Subnet",
-                                        "constraints": {
-                                            "minAddressPrefixSize": "/24",
-                                            "minAddressCount": 12,
-                                            "requireContiguousAddresses": true
+                        },
+                        {
+                            "name": "adminUsername",
+                            "type": "Microsoft.Compute.UserNameTextBox",
+                            "label": "Admin Username",
+                            "defaultValue": "azureuser",
+                            "toolTip": "Provide a username for the administrator account.",
+                            "constraints": {
+                                "required": true,
+                                "regex": "^[a-z0-9A-Z]{1,30}$",
+                                "validationMessage": "Only alphanumeric characters are allowed, and the value must be 1-30 characters long."
+                            },
+                            "osPlatform": "Linux",
+                            "visible": true
+                        },
+                        {
+                            "name": "vmCredentials",
+                            "type": "Microsoft.Compute.CredentialsCombo",
+                            "label": {
+                                "authenticationType": "Authentication Type",
+                                "password": "Password",
+                                "confirmPassword": "Confirm Password",
+                                "sshPublicKey": "SSH Public Key"
+                            },
+                            "toolTip": {
+                                "authenticationType": "Choose authentication method for the virtual machine.",
+                                "password": "Password for the administrator account.",
+                                "sshPublicKey": "SSH public key for secure authentication to the virtual machine."
+                            },
+                            "constraints": {
+                                "required": true
+                            },
+                            "options": {
+                                "hidePassword": true
+                            },
+                            "osPlatform": "Linux",
+                            "visible": true
+                        }
+                    ]
+                },
+                {
+                    "name": "networkConfig",
+                    "label": "Network Configuration",
+                    "elements": [
+                        {
+                            "name": "networkingInfo",
+                            "type": "Microsoft.Common.TextBlock",
+                            "visible": true,
+                            "options": {
+                                "text": "Configure network settings for your AutoMQ Control Center deployment, including virtual network and public IP address configuration."
+                            }
+                        },
+                        {
+                            "name": "publicIPSection",
+                            "type": "Microsoft.Common.Section",
+                            "label": "Public IP Address",
+                            "elements": [
+                                {
+                                    "name": "publicIp",
+                                    "type": "Microsoft.Network.PublicIpAddressCombo",
+                                    "label": {
+                                        "publicIpAddress": "Public IP Address",
+                                        "domainNameLabel": "Domain Name Label"
+                                    },
+                                    "toolTip": {
+                                        "publicIpAddress": "Choose to create a new public IP address, use an existing one, or deploy without public IP access."
+                                    },
+                                    "defaultValue": {
+                                        "publicIpAddressName": "pip-automq-control-center"
+                                    },
+                                    "options": {
+                                        "hideNone": false,
+                                        "hideDomainNameLabel": true,
+                                        "hideExisting": false
+                                    },
+                                    "visible": true,
+                                    "scope": {
+                                        "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                        "resourceGroupName": "[steps('basics').resourceScope.resourceGroup.name]",
+                                        "location": "[steps('basics').resourceScope.location.name]"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "vnetSection",
+                            "type": "Microsoft.Common.Section",
+                            "label": "Virtual Network",
+                            "elements": [
+                                {
+                                    "name": "vnet",
+                                    "type": "Microsoft.Network.VirtualNetworkCombo",
+                                    "label": {
+                                        "virtualNetwork": "Virtual Network",
+                                        "subnets": "Subnets"
+                                    },
+                                    "toolTip": {
+                                        "virtualNetwork": "Create a new virtual network or select an existing one for the AutoMQ Control Center deployment.",
+                                        "subnets": "Configure the subnet where the virtual machine will be deployed."
+                                    },
+                                    "constraints": {
+                                        "minAddressPrefixSize": "/16"
+                                    },
+                                    "options": {
+                                        "hideExisting": false
+                                    },
+                                    "subnets": {
+                                        "subnet1": {
+                                            "label": "Control Center Subnet",
+                                            "constraints": {
+                                                "minAddressPrefixSize": "/24",
+                                                "minAddressCount": 12,
+                                                "requireContiguousAddresses": true
+                                            }
                                         }
+                                    },
+                                    "visible": true,
+                                    "scope": {
+                                        "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                        "resourceGroupName": "[steps('basics').resourceScope.resourceGroup.name]",
+                                        "location": "[steps('basics').resourceScope.location.name]"
+                                    }
+                                }
+                            ],
+                            "visible": true
+                        }
+                    ]
+                },
+                {
+                    "name": "storageConfig",
+                    "label": "Storage Configuration",
+                    "elements": [
+                        {
+                            "name": "opsStorageSection",
+                            "type": "Microsoft.Common.Section",
+                            "label": "Operations Storage",
+                            "elements": [
+                                {
+                                    "name": "opsStorageAccount",
+                                    "type": "Microsoft.Storage.StorageAccountSelector",
+                                    "label": "Operations Storage Account",
+                                    "toolTip": "Select an existing storage account or create a new one for AutoMQ operations data.",
+                                    "options": {
+                                        "hideExisting": false
+                                    },
+                                    "visible": true,
+                                    "scope": {
+                                        "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                        "resourceGroupName": "[steps('basics').resourceScope.resourceGroup.name]",
+                                        "location": "[steps('basics').resourceScope.location.name]"
                                     }
                                 },
-                                "visible": true
-                            }
-                        ],
-                        "visible": true
-                    }
-                ]
-            },
-            {
-                "name": "storageConfig",
-                "label": "Storage Configuration",
-                "elements": [
-                    {
-                        "name": "opsStorageSection",
-                        "type": "Microsoft.Common.Section",
-                        "label": "Operations Storage",
-                        "elements": [
-                            {
-                                "name": "opsStorageAccount",
-                                "type": "Microsoft.Storage.StorageAccountSelector",
-                                "label": "Operations Storage Account",
-                                "toolTip": "Select an existing storage account or create a new one for AutoMQ operations data.",
-                                "options": {
-                                    "hideExisting": false
-                                },
-                                "visible": true
-                            },
-                            {
-                                "name": "opsContainerName",
-                                "type": "Microsoft.Common.TextBox",
-                                "label": "Operations Container Name",
-                                "defaultValue": "automq-ops",
-                                "toolTip": "Name of the blob container for AutoMQ operations data. A new container with this name will be created. Must be a valid DNS name (3-63 characters, lowercase letters, numbers, and hyphens only).",
-                                "constraints": {
-                                    "required": true,
-                                    "regex": "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$",
-                                    "validationMessage": "Container name must be 3-63 characters long, start and end with a letter or number, and contain only lowercase letters, numbers, and hyphens."
-                                },
-                                "visible": true
-                            }
-                        ]
-                    }
-                ]
-            }
-        ],
+                                {
+                                    "name": "opsContainerName",
+                                    "type": "Microsoft.Common.TextBox",
+                                    "label": "Operations Container Name",
+                                    "defaultValue": "automq-ops",
+                                    "toolTip": "Name of the blob container for AutoMQ operations data. A new container with this name will be created. Must be a valid DNS name (3-63 characters, lowercase letters, numbers, and hyphens only).",
+                                    "constraints": {
+                                        "required": true,
+                                        "regex": "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$",
+                                        "validationMessage": "Container name must be 3-63 characters long, start and end with a letter or number, and contain only lowercase letters, numbers, and hyphens."
+                                    },
+                                    "visible": true
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
         "outputs": {
-            "location": "[location()]",
-            "virtualNetworkNewOrExisting": "[steps('networkConfig').vnetSection.vnet.newOrExisting]",
-            "virtualNetworkName": "[steps('networkConfig').vnetSection.vnet.name]",
-            "virtualNetworkResourceGroup": "[steps('networkConfig').vnetSection.vnet.resourceGroup]",
-            "virtualNetworkAddressPrefix": "[steps('networkConfig').vnetSection.vnet.addressPrefix]",
-            "subnetName": "[steps('networkConfig').vnetSection.vnet.subnets.subnet1.name]",
-            "subnetAddressPrefix": "[steps('networkConfig').vnetSection.vnet.subnets.subnet1.addressPrefix]",
-            "publicIPNewOrExisting": "[steps('networkConfig').publicIPSection.publicIp.newOrExistingOrNone]",
-            "publicIPName": "[steps('networkConfig').publicIPSection.publicIp.name]",
-            "publicIPResourceGroup": "[steps('networkConfig').publicIPSection.publicIp.resourceGroup]",
-            "vmSize": "[steps('vmConfig').vmSize]",
-            "adminUsername": "[steps('vmConfig').adminUsername]",
-            "sshPublicKey": "[steps('vmConfig').vmCredentials.sshPublicKey]",
-            "opsStorageAccountName": "[steps('storageConfig').opsStorageSection.opsStorageAccount.name]",
-            "opsStorageAccountResourceGroup": "[steps('storageConfig').opsStorageSection.opsStorageAccount.resourceGroup]",
-            "opsStorageAccountType": "[steps('storageConfig').opsStorageSection.opsStorageAccount.type]",
-            "opsStorageAccountKind": "[steps('storageConfig').opsStorageSection.opsStorageAccount.kind]",
-            "opsStorageAccountIsNew": "[steps('storageConfig').opsStorageSection.opsStorageAccount.isNew]",
-            "opsContainerName": "[steps('storageConfig').opsStorageSection.opsContainerName]"
-        }
+                "kind": "ResourceGroup",
+                "location": "[steps('basics').resourceScope.location.name]",
+                "resourceGroupId": "[steps('basics').resourceScope.resourceGroup.id]",
+                "parameters": {
+                    "location": "[steps('basics').resourceScope.location.name]",
+                    "virtualNetworkNewOrExisting": "[steps('networkConfig').vnetSection.vnet.newOrExisting]",
+                    "virtualNetworkName": "[steps('networkConfig').vnetSection.vnet.name]",
+                    "virtualNetworkResourceGroup": "[steps('networkConfig').vnetSection.vnet.resourceGroup]",
+                    "virtualNetworkAddressPrefix": "[steps('networkConfig').vnetSection.vnet.addressPrefix]",
+                    "subnetName": "[steps('networkConfig').vnetSection.vnet.subnets.subnet1.name]",
+                    "subnetAddressPrefix": "[steps('networkConfig').vnetSection.vnet.subnets.subnet1.addressPrefix]",
+                    "publicIPNewOrExisting": "[steps('networkConfig').publicIPSection.publicIp.newOrExistingOrNone]",
+                    "publicIPName": "[steps('networkConfig').publicIPSection.publicIp.name]",
+                    "publicIPResourceGroup": "[steps('networkConfig').publicIPSection.publicIp.resourceGroup]",
+                    "vmSize": "[steps('vmConfig').vmSize]",
+                    "adminUsername": "[steps('vmConfig').adminUsername]",
+                    "sshPublicKey": "[steps('vmConfig').vmCredentials.sshPublicKey]",
+                    "opsStorageAccountName": "[steps('storageConfig').opsStorageSection.opsStorageAccount.name]",
+                    "opsStorageAccountResourceGroup": "[steps('storageConfig').opsStorageSection.opsStorageAccount.resourceGroup]",
+                    "opsStorageAccountType": "[steps('storageConfig').opsStorageSection.opsStorageAccount.type]",
+                    "opsStorageAccountKind": "[steps('storageConfig').opsStorageSection.opsStorageAccount.kind]",
+                    "opsStorageAccountIsNew": "[steps('storageConfig').opsStorageSection.opsStorageAccount.isNew]",
+                    "opsContainerName": "[steps('storageConfig').opsStorageSection.opsContainerName]"
+                }
+            }
     }
 }
