@@ -103,7 +103,6 @@ public class TransactionalProducer {
             } catch (ProducerFencedException | OutOfOrderSequenceException | AuthorizationException e) {
                 // These exceptions indicate the transaction cannot continue, producer must be closed
                 System.err.println("Critical error, transaction cannot continue: " + e.getMessage());
-                producer.close();
             } catch (KafkaException e) {
                 // Other Kafka-related exceptions, can try to abort the transaction
                 System.err.println("Kafka exception, attempting to abort transaction: " + e.getMessage());
