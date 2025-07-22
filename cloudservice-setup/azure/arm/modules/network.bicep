@@ -61,6 +61,9 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-06-01' = if (vir
         name: subnetName
         properties: {
           addressPrefix: subnetAddressPrefix
+          serviceEndpoints: [
+            { service: 'Microsoft.Storage' }
+          ]
         }
       }
     ]

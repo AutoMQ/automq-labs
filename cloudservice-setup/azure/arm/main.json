@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "12251565898531781993"
+      "templateHash": "1086382785223472660"
     },
     "description": "Deploy AutoMQ Control Center with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -213,7 +213,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "17283948244643068565"
+              "templateHash": "8189324221983833830"
             }
           },
           "parameters": {
@@ -319,7 +319,12 @@
                   {
                     "name": "[parameters('subnetName')]",
                     "properties": {
-                      "addressPrefix": "[parameters('subnetAddressPrefix')]"
+                      "addressPrefix": "[parameters('subnetAddressPrefix')]",
+                      "serviceEndpoints": [
+                        {
+                          "service": "Microsoft.Storage"
+                        }
+                      ]
                     }
                   }
                 ]
