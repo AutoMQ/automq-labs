@@ -17,14 +17,14 @@
     </properties>
 
     <dependencies>
-        <!-- Kafka 客户端 -->
+        <!-- Kafka client -->
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
             <version>${kafka.version}</version>
         </dependency>
 
-        <!-- 日志依赖 -->
+        <!-- Logging dependencies -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
