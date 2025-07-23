@@ -2,6 +2,7 @@ package com.automq.examples;
 
 import java.util.Properties;
 import java.util.concurrent.Future;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -11,7 +12,9 @@ import org.apache.kafka.common.serialization.StringSerializer;
 /**
  * Kafka regular message producer example
  */
+@Slf4j
 public class SimpleProducer {
+
 
     public static void main(String[] args) {
         String bootstrapServers = AutoMQExampleConstants.BOOTSTRAP_SERVERS;
@@ -23,6 +26,8 @@ public class SimpleProducer {
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
+        // Set acknowledgment to all
+        props.put(ProducerConfig.ACKS_CONFIG, AutoMQExampleConstants.ACKS_CONFIG);
         // Set metadata max age
         props.put(ProducerConfig.METADATA_MAX_AGE_CONFIG, AutoMQExampleConstants.METADATA_MAX_AGE_MS);
         // Set batch size
@@ -35,7 +40,7 @@ public class SimpleProducer {
         props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, AutoMQExampleConstants.MAX_REQUEST_SIZE);
 
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
-            System.out.println("Kafka producer created successfully, starting to send messages...");
+            log.info("Kafka producer created successfully, starting to send messages...");
 
             // Send 10 messages
             for (int i = 0; i < 10; i++) {
@@ -48,19 +53,19 @@ public class SimpleProducer {
                 // Send message
                 Future<RecordMetadata> future = producer.send(record, (metadata, exception) -> {
                     if (exception == null) {
-                        System.out.printf("Message sent successfully: topic=%s, partition=%d, offset=%d%n",
+                        log.info("Message sent successfully: topic={}, partition={}, offset={}",
                             metadata.topic(), metadata.partition(), metadata.offset());
                     } else {
-                        System.err.println("Failed to send message: " + exception.getMessage());
+                        log.error("Failed to send message", exception);
                     }
                 });
             }
 
             // Ensure all messages are sent
             producer.flush();
-            System.out.println("All messages sent successfully");
+            log.info("All messages sent successfully");
         } catch (Exception e) {
-            System.err.println("Error occurred while sending messages: " + e.getMessage());
+            log.error("Error occurred while sending messages", e);
             e.printStackTrace();
         }
     }

@@ -1,5 +1,6 @@
 package com.automq.examples;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -15,6 +16,7 @@ import java.util.UUID;
 /**
  * Kafka transactional message producer example
  */
+@Slf4j
 public class TransactionalProducer {
 
     public static void main(String[] args) {
@@ -52,12 +54,12 @@ public class TransactionalProducer {
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
             // Initialize transaction
             producer.initTransactions();
-            System.out.println("Transaction initialized successfully, starting to send transactional messages...");
+            log.info("Transaction initialized successfully, starting to send transactional messages...");
 
             try {
                 // Begin transaction
                 producer.beginTransaction();
-                System.out.println("Transaction started");
+                log.info("Transaction started");
 
                 // Send multiple messages in one transaction
                 for (int i = 0; i < 5; i++) {
@@ -70,22 +72,22 @@ public class TransactionalProducer {
                     // Send message
                     producer.send(record, (metadata, exception) -> {
                         if (exception == null) {
-                            System.out.printf("Transactional message sent successfully: topic=%s, partition=%d, offset=%d%n", 
+                            log.info("Transactional message sent successfully: topic={}, partition={}, offset={}",
                                     metadata.topic(), metadata.partition(), metadata.offset());
                         } else {
-                            System.err.println("Failed to send transactional message: " + exception.getMessage());
+                            log.error("Failed to send transactional message: " + exception.getMessage());
                         }
                     });
                 }
 
                 // Commit transaction
                 producer.commitTransaction();
-                System.out.println("Transaction committed");
+                log.info("Transaction committed");
 
                 // Demonstrate transaction rollback
                 // Start a new transaction
                 producer.beginTransaction();
-                System.out.println("Starting second transaction (will be rolled back)");
+                log.info("Starting second transaction (will be rolled back)");
 
                 // Send some messages
                 for (int i = 5; i < 10; i++) {
@@ -98,21 +100,21 @@ public class TransactionalProducer {
 
                 // Abort transaction
                 producer.abortTransaction();
-                System.out.println("Second transaction rolled back, these messages won't be visible to consumers");
+                log.info("Second transaction rolled back, these messages won't be visible to consumers");
 
             } catch (ProducerFencedException | OutOfOrderSequenceException | AuthorizationException e) {
                 // These exceptions indicate the transaction cannot continue, producer must be closed
-                System.err.println("Critical error, transaction cannot continue: " + e.getMessage());
+                log.error("Critical error, transaction cannot continue: ", e);
                 producer.close();
             } catch (KafkaException e) {
                 // Other Kafka-related exceptions, can try to abort the transaction
-                System.err.println("Kafka exception, attempting to abort transaction: " + e.getMessage());
+                log.error("Kafka exception, attempting to abort transaction: ", e);
                 producer.abortTransaction();
             }
-            
-            System.out.println("Transactional message sending completed");
+
+            log.info("Transactional message sending completed");
         } catch (Exception e) {
-            System.err.println("Error occurred while sending transactional messages: " + e.getMessage());
+            log.error("Error occurred while sending transactional messages: ", e);
             e.printStackTrace();
         }
     }

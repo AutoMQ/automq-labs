@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -14,6 +15,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 /**
  * Kafka transactional message consumer example
  */
+@Slf4j
 public class TransactionalConsumer {
 
     public static void main(String[] args) {
@@ -45,7 +47,7 @@ public class TransactionalConsumer {
 
         // Register shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Shutting down consumer...");
+            log.info("Shutting down consumer...");
             consumer.wakeup();
             try {
                 latch.await();
@@ -57,28 +59,28 @@ public class TransactionalConsumer {
         try {
             // Subscribe to topic
             consumer.subscribe(Collections.singletonList(topicName));
-            System.out.println("Subscribed to topic: " + topicName);
-            System.out.println("Starting to consume transactional messages, will only receive committed transaction messages, press Ctrl+C to exit...");
+            log.info("Subscribed to topic: {}", topicName);
+            log.info("Starting to consume transactional messages, will only receive committed transaction messages, press Ctrl+C to exit...");
 
             // Continuously consume messages
             while (true) {
                 ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<String, String> record : records) {
-                    System.out.printf("Received transactional message: topic=%s, partition=%d, offset=%d, key=%s, value=%s%n",
+                    log.info("Received transactional message: topic={}, partition={}, offset={}, key={}, value={}",
                         record.topic(), record.partition(), record.offset(), record.key(), record.value());
                 }
             }
         } catch (WakeupException e) {
             // Ignore, this is triggered by the shutdown hook calling wakeup()
-            System.out.println("Received shutdown signal");
+            log.info("Received shutdown signal");
         } catch (Exception e) {
-            System.err.println("Error occurred while consuming messages: " + e.getMessage());
+            log.error("Error occurred while consuming messages: ", e);
             e.printStackTrace();
         } finally {
             // Close consumer
             consumer.close();
             latch.countDown();
-            System.out.println("Consumer closed");
+            log.info("Consumer closed");
         }
     }
 }
