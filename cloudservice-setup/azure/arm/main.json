@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "5498029737421274931"
+      "templateHash": "11612638881511364266"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -880,14 +880,6 @@
     }
   },
   "outputs": {
-    "vmId": {
-      "type": "string",
-      "value": "[reference('vm').outputs.vmId.value]"
-    },
-    "vmIPAddress": {
-      "type": "string",
-      "value": "[reference('network').outputs.publicIPAddress.value]"
-    },
     "automqByocEndpoint": {
       "type": "string",
       "value": "[format('http://{0}:8080', reference('network').outputs.publicIPAddress.value)]"
