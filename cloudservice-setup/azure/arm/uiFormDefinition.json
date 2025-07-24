@@ -14,6 +14,15 @@
                             "type": "Microsoft.Common.ResourceScope"
                         },
                         {
+                            "name": "resourceScopeInfo",
+                            "type": "Microsoft.Common.InfoBox",
+                            "visible": true,
+                            "options": {
+                                "style": "Info",
+                                "text": "Select the resource group for AutoMQ. We recommend using this resource group for all future AutoMQ resources to ensure consistency."
+                            }
+                        },
+                        {
                             "name": "regionInfo",
                             "type": "Microsoft.Common.InfoBox",
                             "visible": true,
