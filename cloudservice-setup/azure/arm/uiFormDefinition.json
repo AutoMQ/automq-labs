@@ -121,7 +121,7 @@
                                         "publicIpAddress": "Set the public IP address for external access to the AutoMQ console. You can create a new public IP or use an existing unused one. If your organization supports internal access via VPN or other methods, you may choose 'None' to skip public IP assignment."
                                     },
                                     "defaultValue": {
-                                        "publicIpAddressName": ""
+                                        "publicIpAddressName": "NEW-PIP"
                                     },
                                     "options": {
                                         "hideNone": false,

@@ -40,14 +40,14 @@ param publicIPResourceGroup string
 @description('A unique identifier for the deployment, used to generate resource names.')
 param uniqueId string
 
-var newPublicIpAddressName = 'pip-${uniqueId}'
-var newVnetName = 'vnet-${uniqueId}'
-var newSubnetName = 'subnet-${uniqueId}'
+var newPublicIpAddressName = (publicIPName != '' || publicIPName != 'NEW-PIP') ? publicIPName : 'pip-${uniqueId}'
+var newVnetName = virtualNetworkName != '' ? virtualNetworkName : 'vnet-${uniqueId}'
+var newSubnetName = subnetName != '' ? subnetName : 'subnet-${uniqueId}'
 var networkInterfaceName = 'nic-${uniqueId}'
 var networkSecurityGroupName = 'nsg-${uniqueId}'
 
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-06-01' = if (virtualNetworkNewOrExisting == 'new') {
-  name: virtualNetworkName
+  name: newVnetName
   location: location
   tags: {
     automqVendor: 'automq'
@@ -136,7 +136,7 @@ var subnetId = resourceId(
   virtualNetworkNewOrExisting == 'new' ? resourceGroup().name : virtualNetworkResourceGroup,
   'Microsoft.Network/virtualNetworks/subnets',
   virtualNetworkName,
-  subnetName != newSubnetName ? subnetName : newVnetName
+  newSubnetName
 )
 
 resource networkInterface 'Microsoft.Network/networkInterfaces@2023-06-01' = {
