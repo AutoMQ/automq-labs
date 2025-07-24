@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "87924136058170930"
+      "templateHash": "12347159740676650529"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -207,7 +207,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "18173772305558758695"
+              "templateHash": "10197630101214792430"
             }
           },
           "parameters": {
@@ -421,7 +421,7 @@
             },
             "publicIPAddress": {
               "type": "string",
-              "value": "[if(and(equals(parameters('publicIPNewOrExisting'), 'new'), not(equals(parameters('publicIPName'), ''))), reference(resourceId('Microsoft.Network/publicIPAddresses', if(not(equals(parameters('publicIPName'), '')), parameters('publicIPName'), variables('newPublicIpAddressName'))), '2023-06-01').ipAddress, if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')), '2023-06-01').ipAddress, reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2023-06-01').ipConfigurations[0].properties.privateIPAddress))]"
+              "value": "[if(equals(parameters('publicIPNewOrExisting'), 'new'), reference(resourceId('Microsoft.Network/publicIPAddresses', if(not(equals(parameters('publicIPName'), '')), parameters('publicIPName'), variables('newPublicIpAddressName'))), '2023-06-01').ipAddress, if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')), '2023-06-01').ipAddress, reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2023-06-01').ipConfigurations[0].properties.privateIPAddress))]"
             }
           }
         }
