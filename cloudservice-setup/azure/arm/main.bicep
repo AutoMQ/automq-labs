@@ -12,7 +12,7 @@ param location string = resourceGroup().location
 param virtualNetworkNewOrExisting string = 'new'
 
 @description('Name of the virtual network for the AutoMQ BYOC Console deployment')
-param virtualNetworkName string = 'vnet-${resourceGroup().name}'
+param virtualNetworkName string = ''
 
 @description('Resource group name containing the virtual network (defaults to current resource group)')
 param virtualNetworkResourceGroup string = resourceGroup().name
@@ -21,7 +21,7 @@ param virtualNetworkResourceGroup string = resourceGroup().name
 param virtualNetworkAddressPrefix string = '10.0.0.0/16'
 
 @description('Name of the subnet for the AutoMQ BYOC Console virtual machine')
-param subnetName string = 'subnet1'
+param subnetName string = ''
 
 @description('Address prefix for the subnet (CIDR notation)')
 param subnetAddressPrefix string = '10.0.0.0/24'
@@ -35,7 +35,7 @@ param subnetAddressPrefix string = '10.0.0.0/24'
 param publicIPNewOrExisting string = 'new'
 
 @description('Name of the public IP address (required unless publicIPNewOrExisting is "none")')
-param publicIPName string = 'pip-${resourceGroup().name}'
+param publicIPName string = ''
 
 @description('Resource group name containing the public IP address (defaults to current resource group)')
 param publicIPResourceGroup string = resourceGroup().name

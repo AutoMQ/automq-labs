@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "16525157530882625152"
+      "templateHash": "226046679707284437"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -31,7 +31,7 @@
     },
     "virtualNetworkName": {
       "type": "string",
-      "defaultValue": "[format('vnet-{0}', resourceGroup().name)]",
+      "defaultValue": "",
       "metadata": {
         "description": "Name of the virtual network for the AutoMQ BYOC Console deployment"
       }
@@ -52,7 +52,7 @@
     },
     "subnetName": {
       "type": "string",
-      "defaultValue": "subnet1",
+      "defaultValue": "",
       "metadata": {
         "description": "Name of the subnet for the AutoMQ BYOC Console virtual machine"
       }
@@ -78,7 +78,7 @@
     },
     "publicIPName": {
       "type": "string",
-      "defaultValue": "[format('pip-{0}', resourceGroup().name)]",
+      "defaultValue": "",
       "metadata": {
         "description": "Name of the public IP address (required unless publicIPNewOrExisting is \"none\")"
       }
