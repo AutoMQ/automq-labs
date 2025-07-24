@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "7330396090397554007"
+      "templateHash": "14269856861209252744"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -207,7 +207,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "10758461769021110344"
+              "templateHash": "7083868919986039795"
             }
           },
           "parameters": {
@@ -288,7 +288,7 @@
             }
           },
           "variables": {
-            "newPublicIpAddressName": "[if(or(not(equals(parameters('publicIPName'), '')), not(equals(parameters('publicIPName'), 'NEW-PIP'))), parameters('publicIPName'), format('pip-{0}', parameters('uniqueId')))]",
+            "newPublicIpAddressName": "[if(and(not(equals(parameters('publicIPName'), '')), not(equals(parameters('publicIPName'), 'NEW-PIP'))), parameters('publicIPName'), format('pip-{0}', parameters('uniqueId')))]",
             "newVnetName": "[if(not(equals(parameters('virtualNetworkName'), '')), parameters('virtualNetworkName'), format('vnet-{0}', parameters('uniqueId')))]",
             "newSubnetName": "[if(not(equals(parameters('subnetName'), '')), parameters('subnetName'), format('subnet-{0}', parameters('uniqueId')))]",
             "networkInterfaceName": "[format('nic-{0}', parameters('uniqueId'))]",

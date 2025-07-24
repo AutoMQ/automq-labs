@@ -40,7 +40,7 @@ param publicIPResourceGroup string
 @description('A unique identifier for the deployment, used to generate resource names.')
 param uniqueId string
 
-var newPublicIpAddressName = (publicIPName != '' || publicIPName != 'NEW-PIP') ? publicIPName : 'pip-${uniqueId}'
+var newPublicIpAddressName = (publicIPName != '' && publicIPName != 'NEW-PIP') ? publicIPName : 'pip-${uniqueId}'
 var newVnetName = virtualNetworkName != '' ? virtualNetworkName : 'vnet-${uniqueId}'
 var newSubnetName = subnetName != '' ? subnetName : 'subnet-${uniqueId}'
 var networkInterfaceName = 'nic-${uniqueId}'
