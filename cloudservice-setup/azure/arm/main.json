@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "18393299209730729691"
+      "templateHash": "16525157530882625152"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -207,7 +207,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "8189324221983833830"
+              "templateHash": "18173772305558758695"
             }
           },
           "parameters": {
@@ -288,9 +288,12 @@
             }
           },
           "variables": {
+            "newPublicIpAddressName": "[format('pip-{0}', parameters('uniqueId'))]",
+            "newVnetName": "[format('vnet-{0}', parameters('uniqueId'))]",
+            "newSubnetName": "[format('subnet-{0}', parameters('uniqueId'))]",
             "networkInterfaceName": "[format('nic-{0}', parameters('uniqueId'))]",
             "networkSecurityGroupName": "[format('nsg-{0}', parameters('uniqueId'))]",
-            "subnetId": "[resourceId(if(equals(parameters('virtualNetworkNewOrExisting'), 'new'), resourceGroup().name, parameters('virtualNetworkResourceGroup')), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('subnetName'))]"
+            "subnetId": "[resourceId(if(equals(parameters('virtualNetworkNewOrExisting'), 'new'), resourceGroup().name, parameters('virtualNetworkResourceGroup')), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), if(not(equals(parameters('subnetName'), variables('newSubnetName'))), parameters('subnetName'), variables('newVnetName')))]"
           },
           "resources": [
             {
@@ -365,10 +368,10 @@
               }
             },
             {
-              "condition": "[and(equals(parameters('publicIPNewOrExisting'), 'new'), not(equals(parameters('publicIPName'), '')))]",
+              "condition": "[equals(parameters('publicIPNewOrExisting'), 'new')]",
               "type": "Microsoft.Network/publicIPAddresses",
               "apiVersion": "2023-06-01",
-              "name": "[parameters('publicIPName')]",
+              "name": "[if(not(equals(parameters('publicIPName'), '')), parameters('publicIPName'), variables('newPublicIpAddressName'))]",
               "location": "[parameters('location')]",
               "tags": {
                 "automqVendor": "automq",
@@ -393,8 +396,8 @@
               "properties": {
                 "ipConfigurations": [
                   {
-                    "name": "ipConfig1",
-                    "properties": "[union(createObject('privateIPAllocationMethod', 'Dynamic', 'subnet', createObject('id', variables('subnetId'))), if(and(equals(parameters('publicIPNewOrExisting'), 'new'), not(equals(parameters('publicIPName'), ''))), createObject('publicIPAddress', createObject('id', resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPName')))), if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), createObject('publicIPAddress', createObject('id', extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')))), createObject())))]"
+                    "name": "[format('ipConfig-{0}', parameters('uniqueId'))]",
+                    "properties": "[union(createObject('privateIPAllocationMethod', 'Dynamic', 'subnet', createObject('id', variables('subnetId'))), if(and(equals(parameters('publicIPNewOrExisting'), 'new'), not(equals(parameters('publicIPName'), ''))), createObject('publicIPAddress', createObject('id', resourceId('Microsoft.Network/publicIPAddresses', if(not(equals(parameters('publicIPName'), '')), parameters('publicIPName'), variables('newPublicIpAddressName'))))), if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), createObject('publicIPAddress', createObject('id', extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')))), createObject())))]"
                   }
                 ],
                 "networkSecurityGroup": {
@@ -403,7 +406,7 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
-                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPName'))]"
+                "[resourceId('Microsoft.Network/publicIPAddresses', if(not(equals(parameters('publicIPName'), '')), parameters('publicIPName'), variables('newPublicIpAddressName')))]"
               ]
             }
           ],
@@ -418,7 +421,7 @@
             },
             "publicIPAddress": {
               "type": "string",
-              "value": "[if(and(equals(parameters('publicIPNewOrExisting'), 'new'), not(equals(parameters('publicIPName'), ''))), reference(resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPName')), '2023-06-01').ipAddress, if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')), '2023-06-01').ipAddress, reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2023-06-01').ipConfigurations[0].properties.privateIPAddress))]"
+              "value": "[if(and(equals(parameters('publicIPNewOrExisting'), 'new'), not(equals(parameters('publicIPName'), ''))), reference(resourceId('Microsoft.Network/publicIPAddresses', if(not(equals(parameters('publicIPName'), '')), parameters('publicIPName'), variables('newPublicIpAddressName'))), '2023-06-01').ipAddress, if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')), '2023-06-01').ipAddress, reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2023-06-01').ipConfigurations[0].properties.privateIPAddress))]"
             }
           }
         }
