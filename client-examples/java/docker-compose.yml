@@ -1,0 +1,15 @@
+services:
+  automq-java-examples:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: automq-kafka-examples
+    environment:
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    networks:
+      - automq-network
+    restart: "no"
+
+networks:
+  automq-network:
+    driver: bridge
