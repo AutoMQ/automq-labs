@@ -57,7 +57,7 @@
                         {
                             "name": "adminUsername",
                             "type": "Microsoft.Compute.UserNameTextBox",
-                            "label": "Admin Username",
+                            "label": "Username",
                             "defaultValue": "azureuser",
                             "toolTip": "Set the username for SSH access to the console VM.",
                             "constraints": {
