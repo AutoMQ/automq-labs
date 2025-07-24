@@ -40,6 +40,9 @@ param publicIPResourceGroup string
 @description('A unique identifier for the deployment, used to generate resource names.')
 param uniqueId string
 
+var newPublicIpAddressName = 'pip-${uniqueId}'
+var newVnetName = 'vnet-${uniqueId}'
+var newSubnetName = 'subnet-${uniqueId}'
 var networkInterfaceName = 'nic-${uniqueId}'
 var networkSecurityGroupName = 'nsg-${uniqueId}'
 
@@ -114,8 +117,8 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-06-0
   }
 }
 
-resource publicIP 'Microsoft.Network/publicIPAddresses@2023-06-01' = if (publicIPNewOrExisting == 'new' && publicIPName != '') {
-  name: publicIPName
+resource publicIP 'Microsoft.Network/publicIPAddresses@2023-06-01' = if (publicIPNewOrExisting == 'new') {
+  name: (publicIPName != '' ? publicIPName : newPublicIpAddressName)
   location: location
   tags: {
     automqVendor: 'automq'
@@ -133,7 +136,7 @@ var subnetId = resourceId(
   virtualNetworkNewOrExisting == 'new' ? resourceGroup().name : virtualNetworkResourceGroup,
   'Microsoft.Network/virtualNetworks/subnets',
   virtualNetworkName,
-  subnetName
+  subnetName != newSubnetName ? subnetName : newVnetName
 )
 
 resource networkInterface 'Microsoft.Network/networkInterfaces@2023-06-01' = {
@@ -146,7 +149,7 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2023-06-01' = {
   properties: {
     ipConfigurations: [
       {
-        name: 'ipConfig1'
+        name: 'ipConfig-${uniqueId}'
         properties: union({
           privateIPAllocationMethod: 'Dynamic'
           subnet: {

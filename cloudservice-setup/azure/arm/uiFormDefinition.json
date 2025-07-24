@@ -121,7 +121,7 @@
                                         "publicIpAddress": "Set the public IP address for external access to the AutoMQ console. You can create a new public IP or use an existing unused one. If your organization supports internal access via VPN or other methods, you may choose 'None' to skip public IP assignment."
                                     },
                                     "defaultValue": {
-                                        "publicIpAddressName": "pip-automq-control-center"
+                                        "publicIpAddressName": ""
                                     },
                                     "options": {
                                         "hideNone": false,
@@ -159,6 +159,9 @@
                                     "options": {
                                         "hideExisting": false
                                     },
+                                    "defaultValue": {
+                                        "name": ""
+                                    },
                                     "subnets": {
                                         "subnet1": {
                                             "label": "Subnet",
@@ -166,6 +169,9 @@
                                                 "minAddressPrefixSize": "/24",
                                                 "minAddressCount": 12,
                                                 "requireContiguousAddresses": true
+                                            },
+                                            "defaultValue": {
+                                                "name": ""
                                             }
                                         }
                                     },
