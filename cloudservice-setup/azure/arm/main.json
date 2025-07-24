@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "226046679707284437"
+      "templateHash": "87924136058170930"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -892,7 +892,7 @@
       "value": "admin"
     },
     "automqByocInitialPassword": {
-      "type": "securestring",
+      "type": "string",
       "value": "[reference('vm').outputs.vmId.value]"
     },
     "automqByocManagedIdentityClientId": {

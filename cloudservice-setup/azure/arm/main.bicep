@@ -129,6 +129,5 @@ module rbac 'modules/rbac.bicep' = {
 
 output automqByocEndpoint string = 'http://${network.outputs.publicIPAddress}:8080'
 output automqByocInitialUsername string = 'admin'
-@secure()
 output automqByocInitialPassword string = vm.outputs.vmId
 output automqByocManagedIdentityClientId string = vm.outputs.managedIdentityClientId
