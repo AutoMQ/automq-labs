@@ -156,7 +156,7 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2023-06-01' = {
             id: subnetId
           }
         },
-        (publicIPNewOrExisting == 'new' && publicIPName != '') ? {
+        (publicIPNewOrExisting == 'new') ? {
           publicIPAddress: {
             id: publicIP.id
           }
@@ -175,4 +175,4 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2023-06-01' = {
 
 output subnetId string = subnetId
 output networkInterfaceId string = networkInterface.id
-output publicIPAddress string = (publicIPNewOrExisting == 'new' ? publicIP.properties.ipAddress : publicIPNewOrExisting == 'existing' && publicIPName != '' && publicIPResourceGroup != '' ? existingPublicIP.properties.ipAddress : networkInterface.properties.ipConfigurations[0].properties.privateIPAddress)
+output publicIPAddress string = (publicIPNewOrExisting == 'new' && publicIPName != '' ? publicIP.properties.ipAddress : publicIPNewOrExisting == 'existing' && publicIPName != '' && publicIPResourceGroup != '' ? existingPublicIP.properties.ipAddress : networkInterface.properties.ipConfigurations[0].properties.privateIPAddress)
