@@ -118,7 +118,7 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-06-0
 }
 
 resource publicIP 'Microsoft.Network/publicIPAddresses@2023-06-01' = if (publicIPNewOrExisting == 'new') {
-  name: (publicIPName != '' ? publicIPName : newPublicIpAddressName)
+  name: newPublicIpAddressName
   location: location
   tags: {
     automqVendor: 'automq'
