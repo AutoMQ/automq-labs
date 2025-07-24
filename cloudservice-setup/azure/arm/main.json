@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "12159886018944420872"
+      "templateHash": "7330396090397554007"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -207,7 +207,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "16932544153191732708"
+              "templateHash": "10758461769021110344"
             }
           },
           "parameters": {
@@ -288,19 +288,19 @@
             }
           },
           "variables": {
-            "newPublicIpAddressName": "[format('pip-{0}', parameters('uniqueId'))]",
-            "newVnetName": "[format('vnet-{0}', parameters('uniqueId'))]",
-            "newSubnetName": "[format('subnet-{0}', parameters('uniqueId'))]",
+            "newPublicIpAddressName": "[if(or(not(equals(parameters('publicIPName'), '')), not(equals(parameters('publicIPName'), 'NEW-PIP'))), parameters('publicIPName'), format('pip-{0}', parameters('uniqueId')))]",
+            "newVnetName": "[if(not(equals(parameters('virtualNetworkName'), '')), parameters('virtualNetworkName'), format('vnet-{0}', parameters('uniqueId')))]",
+            "newSubnetName": "[if(not(equals(parameters('subnetName'), '')), parameters('subnetName'), format('subnet-{0}', parameters('uniqueId')))]",
             "networkInterfaceName": "[format('nic-{0}', parameters('uniqueId'))]",
             "networkSecurityGroupName": "[format('nsg-{0}', parameters('uniqueId'))]",
-            "subnetId": "[resourceId(if(equals(parameters('virtualNetworkNewOrExisting'), 'new'), resourceGroup().name, parameters('virtualNetworkResourceGroup')), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), if(not(equals(parameters('subnetName'), variables('newSubnetName'))), parameters('subnetName'), variables('newVnetName')))]"
+            "subnetId": "[resourceId(if(equals(parameters('virtualNetworkNewOrExisting'), 'new'), resourceGroup().name, parameters('virtualNetworkResourceGroup')), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), variables('newSubnetName'))]"
           },
           "resources": [
             {
               "condition": "[equals(parameters('virtualNetworkNewOrExisting'), 'new')]",
               "type": "Microsoft.Network/virtualNetworks",
               "apiVersion": "2023-06-01",
-              "name": "[parameters('virtualNetworkName')]",
+              "name": "[variables('newVnetName')]",
               "location": "[parameters('location')]",
               "tags": {
                 "automqVendor": "automq",
