@@ -9,6 +9,10 @@
                     "name": "basics",
                     "label": "Basics",
                     "elements": [
+                                                {
+                            "name": "resourceScope",
+                            "type": "Microsoft.Common.ResourceScope"
+                        },
                         {
                             "name": "resourceScopeInfo",
                             "type": "Microsoft.Common.InfoBox",
@@ -17,10 +21,6 @@
                                 "style": "Info",
                                 "text": "Select the resource group for AutoMQ. We recommend using this resource group for all future AutoMQ resources to ensure consistency."
                             }
-                        },
-                        {
-                            "name": "resourceScope",
-                            "type": "Microsoft.Common.ResourceScope"
                         },
                         {
                             "name": "regionInfo",
