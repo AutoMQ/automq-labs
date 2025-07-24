@@ -1,7 +1,7 @@
 @description('Azure region for resource deployment')
 param location string
 
-@description('Virtual machine size for the AutoMQ Control Center')
+@description('Virtual machine size for the AutoMQ BYOC Console')
 param vmSize string
 
 @description('Administrator username for the virtual machine')
@@ -11,7 +11,7 @@ param adminUsername string
 @secure()
 param sshPublicKey string
 
-@description('VM image reference configuration for AutoMQ Control Center')
+@description('VM image reference configuration for AutoMQ BYOC Console')
 param imageReference object
 
 @description('Unique identifier for the deployment, used to generate resource names')
@@ -19,9 +19,6 @@ param uniqueId string
 
 @description('Resource ID of the network interface for the virtual machine')
 param networkInterfaceId string
-
-@description('Name of the blob container for AutoMQ operations data')
-param opsContainerName string
 
 @description('Endpoint URL of the operations storage account')
 param opsStorageAccountEndpoint string
@@ -48,7 +45,7 @@ var linuxConfiguration = {
 
 var customData = reduce(items({
   '\${managedIdentityClientId}': managedIdentity.properties.clientId
-  '\${opsContainerName}': opsContainerName
+  '\${opsContainerName}': 'automq-ops-${uniqueId}'
   '\${opsStorageAccountEndpoint}': opsStorageAccountEndpoint
   '\${uniqueId}': uniqueId
   '\${vpcResourceGroupName}': vpcResourceGroupName
@@ -141,4 +138,5 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-07-01' = {
 
 output vmId string = vm.id
 output managedIdentityPrincipalId string = managedIdentity.properties.principalId
+output managedIdentityClientId string = managedIdentity.properties.clientId
 

@@ -3,7 +3,7 @@
     "view": {
         "kind": "Form",
         "properties": {
-            "title": "AutoMQ Control Center Deployment",
+            "title": "AutoMQ BYOC Console Deployment",
             "steps": [
                 {
                     "name": "basics",
@@ -12,6 +12,15 @@
                         {
                             "name": "resourceScope",
                             "type": "Microsoft.Common.ResourceScope"
+                        },
+                        {
+                            "name": "regionInfo",
+                            "type": "Microsoft.Common.InfoBox",
+                            "visible": true,
+                            "options": {
+                                "style": "Info",
+                                "text": "Select the target region for AutoMQ deployment. Ensure it matches the region of your Producer and Consumer applications, as cross-region access is not supported."
+                            }
                         }
                     ]
                 },
@@ -23,7 +32,7 @@
                             "name": "vmSize",
                             "type": "Microsoft.Compute.SizeSelector",
                             "label": "VM Size",
-                            "toolTip": "Select the virtual machine size based on your performance and cost requirements.",
+                            "toolTip": "Select the VM size for the AutoMQ console. A minimum of 2 vCPUs and 8 GB memory is required. We recommend keeping the default selection.",
                             "recommendedSizes": [
                                 "Standard_D2s_v3",
                                 "Standard_D4s_v3",
@@ -41,7 +50,7 @@
                             "type": "Microsoft.Compute.UserNameTextBox",
                             "label": "Admin Username",
                             "defaultValue": "azureuser",
-                            "toolTip": "Provide a username for the administrator account.",
+                            "toolTip": "Set the username for SSH access to the console VM.",
                             "constraints": {
                                 "required": true,
                                 "regex": "^[a-z0-9A-Z]{1,30}$",
@@ -84,7 +93,7 @@
                             "type": "Microsoft.Common.TextBlock",
                             "visible": true,
                             "options": {
-                                "text": "Configure network settings for your AutoMQ Control Center deployment, including virtual network and public IP address configuration."
+                                "text": "Configure network settings for your AutoMQ BYOC Console deployment, including virtual network and public IP address configuration."
                             }
                         },
                         {
@@ -100,7 +109,7 @@
                                         "domainNameLabel": "Domain Name Label"
                                     },
                                     "toolTip": {
-                                        "publicIpAddress": "Choose to create a new public IP address, use an existing one, or deploy without public IP access."
+                                        "publicIpAddress": "Set the public IP address for external access to the AutoMQ console. You can create a new public IP or use an existing unused one. If your organization supports internal access via VPN or other methods, you may choose 'None' to skip public IP assignment."
                                     },
                                     "defaultValue": {
                                         "publicIpAddressName": "pip-automq-control-center"
@@ -132,8 +141,8 @@
                                         "subnets": "Subnets"
                                     },
                                     "toolTip": {
-                                        "virtualNetwork": "Create a new virtual network or select an existing one for the AutoMQ Control Center deployment.",
-                                        "subnets": "Configure the subnet where the virtual machine will be deployed."
+                                        "virtualNetwork": "Set the target Virtual Network for deploying the AutoMQ console. It should be consistent with the Virtual Network used by your Producer and Consumer applications. Please refer to the documentation to select an appropriate Virtual Network.",
+                                        "subnets": "Set the target Subnet for deploying the AutoMQ console. This Subnet must be configured with a public NAT gateway to enable the AutoMQ console to access public network services."
                                     },
                                     "constraints": {
                                         "minAddressPrefixSize": "/16"
@@ -143,7 +152,7 @@
                                     },
                                     "subnets": {
                                         "subnet1": {
-                                            "label": "Control Center Subnet",
+                                            "label": "Subnet",
                                             "constraints": {
                                                 "minAddressPrefixSize": "/24",
                                                 "minAddressCount": 12,
@@ -170,13 +179,13 @@
                         {
                             "name": "opsStorageSection",
                             "type": "Microsoft.Common.Section",
-                            "label": "Operations Storage",
+                            "label": "Ops Bucket Config",
                             "elements": [
                                 {
                                     "name": "opsStorageAccount",
                                     "type": "Microsoft.Storage.StorageAccountSelector",
-                                    "label": "Operations Storage Account",
-                                    "toolTip": "Select an existing storage account or create a new one for AutoMQ operations data.",
+                                    "label": "Storage Account",
+                                    "toolTip": "Select the Storage Account to be used for the AutoMQ Ops Bucket. You can choose an existing Storage Account or create a new one. After selection, AutoMQ will create a Blob Container in the chosen Storage Account for the Ops Bucket. System logs, metrics, and other data will be collected and uploaded to this bucket for monitoring and analysis.",
                                     "options": {
                                         "hideExisting": false
                                     },
@@ -186,19 +195,6 @@
                                         "resourceGroupName": "[steps('basics').resourceScope.resourceGroup.name]",
                                         "location": "[steps('basics').resourceScope.location.name]"
                                     }
-                                },
-                                {
-                                    "name": "opsContainerName",
-                                    "type": "Microsoft.Common.TextBox",
-                                    "label": "Operations Container Name",
-                                    "defaultValue": "automq-ops",
-                                    "toolTip": "Name of the blob container for AutoMQ operations data. A new container with this name will be created. Must be a valid DNS name (3-63 characters, lowercase letters, numbers, and hyphens only).",
-                                    "constraints": {
-                                        "required": true,
-                                        "regex": "^[a-z0-9](?!.*--)[a-z0-9-]{1,61}[a-z0-9]$",
-                                        "validationMessage": "Container name must be 3-63 characters long, start and end with a letter or number, and contain only lowercase letters, numbers, and hyphens."
-                                    },
-                                    "visible": true
                                 }
                             ]
                         }
@@ -228,8 +224,7 @@
                     "opsStorageAccountResourceGroup": "[steps('storageConfig').opsStorageSection.opsStorageAccount.resourceGroup]",
                     "opsStorageAccountType": "[steps('storageConfig').opsStorageSection.opsStorageAccount.type]",
                     "opsStorageAccountKind": "[steps('storageConfig').opsStorageSection.opsStorageAccount.kind]",
-                    "opsStorageAccountIsNew": "[steps('storageConfig').opsStorageSection.opsStorageAccount.newOrExisting]",
-                    "opsContainerName": "[steps('storageConfig').opsStorageSection.opsContainerName]"
+                    "opsStorageAccountIsNew": "[steps('storageConfig').opsStorageSection.opsStorageAccount.newOrExisting]"
                 }
             }
     }

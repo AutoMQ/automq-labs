@@ -6,9 +6,9 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "1086382785223472660"
+      "templateHash": "5498029737421274931"
     },
-    "description": "Deploy AutoMQ Control Center with secure virtual machine configuration, SSH authentication, and customizable networking options"
+    "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
   "parameters": {
     "location": {
@@ -33,7 +33,7 @@
       "type": "string",
       "defaultValue": "[format('vnet-{0}', resourceGroup().name)]",
       "metadata": {
-        "description": "Name of the virtual network for the AutoMQ Control Center deployment"
+        "description": "Name of the virtual network for the AutoMQ BYOC Console deployment"
       }
     },
     "virtualNetworkResourceGroup": {
@@ -54,7 +54,7 @@
       "type": "string",
       "defaultValue": "subnet1",
       "metadata": {
-        "description": "Name of the subnet for the AutoMQ Control Center virtual machine"
+        "description": "Name of the subnet for the AutoMQ BYOC Console virtual machine"
       }
     },
     "subnetAddressPrefix": {
@@ -94,7 +94,7 @@
       "type": "string",
       "defaultValue": "Standard_D2s_v3",
       "metadata": {
-        "description": "Virtual machine size for the AutoMQ Control Center"
+        "description": "Virtual machine size for the AutoMQ BYOC Console"
       }
     },
     "adminUsername": {
@@ -146,12 +146,6 @@
       ],
       "metadata": {
         "description": "Determines whether to create a new storage account or use an existing one"
-      }
-    },
-    "opsContainerName": {
-      "type": "string",
-      "metadata": {
-        "description": "Name of the blob container for AutoMQ operations data"
       }
     }
   },
@@ -456,8 +450,8 @@
           "opsStorageAccountIsNew": {
             "value": "[parameters('opsStorageAccountIsNew')]"
           },
-          "opsContainerName": {
-            "value": "[parameters('opsContainerName')]"
+          "uniqueId": {
+            "value": "[variables('uniqueId')]"
           }
         },
         "template": {
@@ -467,7 +461,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "15485540078698200857"
+              "templateHash": "9302715569106556622"
             }
           },
           "parameters": {
@@ -508,10 +502,10 @@
                 "description": "Determines whether to create a new storage account or use an existing one"
               }
             },
-            "opsContainerName": {
+            "uniqueId": {
               "type": "string",
               "metadata": {
-                "description": "Name of the blob container for AutoMQ operations data"
+                "description": "A unique identifier for the deployment, used to generate resource names"
               }
             }
           },
@@ -535,7 +529,7 @@
             {
               "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
               "apiVersion": "2023-01-01",
-              "name": "[format('{0}/default/{1}', parameters('opsStorageAccountName'), parameters('opsContainerName'))]",
+              "name": "[format('{0}/default/automq-ops-{1}', parameters('opsStorageAccountName'), parameters('uniqueId'))]",
               "properties": {
                 "publicAccess": "None"
               },
@@ -584,9 +578,6 @@
           "networkInterfaceId": {
             "value": "[reference('network').outputs.networkInterfaceId.value]"
           },
-          "opsContainerName": {
-            "value": "[parameters('opsContainerName')]"
-          },
           "opsStorageAccountEndpoint": {
             "value": "[reference('storage').outputs.opsStorageAccountEndpoint.value]"
           },
@@ -601,7 +592,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "4756210763458748418"
+              "templateHash": "2543473683982992321"
             }
           },
           "parameters": {
@@ -614,7 +605,7 @@
             "vmSize": {
               "type": "string",
               "metadata": {
-                "description": "Virtual machine size for the AutoMQ Control Center"
+                "description": "Virtual machine size for the AutoMQ BYOC Console"
               }
             },
             "adminUsername": {
@@ -632,7 +623,7 @@
             "imageReference": {
               "type": "object",
               "metadata": {
-                "description": "VM image reference configuration for AutoMQ Control Center"
+                "description": "VM image reference configuration for AutoMQ BYOC Console"
               }
             },
             "uniqueId": {
@@ -645,12 +636,6 @@
               "type": "string",
               "metadata": {
                 "description": "Resource ID of the network interface for the virtual machine"
-              }
-            },
-            "opsContainerName": {
-              "type": "string",
-              "metadata": {
-                "description": "Name of the blob container for AutoMQ operations data"
               }
             },
             "opsStorageAccountEndpoint": {
@@ -739,7 +724,7 @@
                   "computerName": "[variables('vmName')]",
                   "adminUsername": "[parameters('adminUsername')]",
                   "linuxConfiguration": "[variables('linuxConfiguration')]",
-                  "customData": "[base64(reduce(items(createObject('${managedIdentityClientId}', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').clientId, '${opsContainerName}', parameters('opsContainerName'), '${opsStorageAccountEndpoint}', parameters('opsStorageAccountEndpoint'), '${uniqueId}', parameters('uniqueId'), '${vpcResourceGroupName}', parameters('vpcResourceGroupName'))), variables('$fxv#0'), lambda('cur', 'next', replace(string(lambdaVariables('cur')), lambdaVariables('next').key, lambdaVariables('next').value))))]"
+                  "customData": "[base64(reduce(items(createObject('${managedIdentityClientId}', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').clientId, '${opsContainerName}', format('automq-ops-{0}', parameters('uniqueId')), '${opsStorageAccountEndpoint}', parameters('opsStorageAccountEndpoint'), '${uniqueId}', parameters('uniqueId'), '${vpcResourceGroupName}', parameters('vpcResourceGroupName'))), variables('$fxv#0'), lambda('cur', 'next', replace(string(lambdaVariables('cur')), lambdaVariables('next').key, lambdaVariables('next').value))))]"
                 },
                 "storageProfile": {
                   "imageReference": "[parameters('imageReference')]",
@@ -786,6 +771,10 @@
             "managedIdentityPrincipalId": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]"
+            },
+            "managedIdentityClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').clientId]"
             }
           }
         }
@@ -898,6 +887,22 @@
     "vmIPAddress": {
       "type": "string",
       "value": "[reference('network').outputs.publicIPAddress.value]"
+    },
+    "automqByocEndpoint": {
+      "type": "string",
+      "value": "[format('http://{0}:8080', reference('network').outputs.publicIPAddress.value)]"
+    },
+    "automqByocInitialUsername": {
+      "type": "string",
+      "value": "admin"
+    },
+    "automqByocInitialPassword": {
+      "type": "securestring",
+      "value": "[reference('vm').outputs.vmId.value]"
+    },
+    "automqByocManagedIdentityClientId": {
+      "type": "string",
+      "value": "[reference('vm').outputs.managedIdentityClientId.value]"
     }
   }
 }

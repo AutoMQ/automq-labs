@@ -17,8 +17,8 @@ param opsStorageAccountKind string = 'StorageV2'
 ])
 param opsStorageAccountIsNew string
 
-@description('Name of the blob container for AutoMQ operations data')
-param opsContainerName string
+@description('A unique identifier for the deployment, used to generate resource names')
+param uniqueId string
 
 // Conditionally create the storage account if it's new
 resource newStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = if (opsStorageAccountIsNew == 'new') {
@@ -44,7 +44,7 @@ resource existingStorageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' e
 // Create blob container for both new and existing storage accounts
 // The name format 'parent/child' establishes the dependency.
 resource opsBlobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${opsStorageAccountName}/default/${opsContainerName}'
+  name: '${opsStorageAccountName}/default/automq-ops-${uniqueId}'
   properties: {
     publicAccess: 'None'
   }
