@@ -80,8 +80,6 @@ public class SimpleMessageExample {
     }
 
     public static Properties createProducerConfig() {
-        String bootstrapServers = AutoMQExampleConstants.BOOTSTRAP_SERVERS;
-
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
