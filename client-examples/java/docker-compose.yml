@@ -6,13 +6,7 @@ services:
     container_name: automq-kafka-examples
     environment:
       - JAVA_OPTS=-Xmx512m -Xms256m
-      # Default to single-node mode and adjust according to the mode you deployed.
-      - BOOTSTRAP_SERVERS=server1:9092
-    networks:
-      - automq_net
+      - BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS:-localhost:9092}
+    # Use host network mode for direct access to host services
+    network_mode: host
     restart: "no"
-
-networks:
-  automq_net:
-    external: true
-    name: automq_net
