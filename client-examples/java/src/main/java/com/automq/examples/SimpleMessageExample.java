@@ -168,7 +168,7 @@ public class SimpleMessageExample {
                     if (currentCount == 1) {
                         firstMessageTime = System.currentTimeMillis();
                     }
-                    synchronized (latencyLock) {
+                    synchronized (e2eLatencyLock) {
                         totalE2ELatency += latency;
                     }
 

@@ -165,8 +165,6 @@ public class TransactionalMessageExample {
     }
 
     private static Properties createTransactionalProducerConfig() {
-        String bootstrapServers = AutoMQExampleConstants.BOOTSTRAP_SERVERS;
-
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
@@ -233,8 +231,8 @@ public class TransactionalMessageExample {
             receivedCount.get(),
             totalTime,
             consumeTime,
-            (double) totalProduceLatency / MESSAGE_COUNT,
-            (double) totalE2ELatency / MESSAGE_COUNT
+            String.format("%.2f", (double) totalProduceLatency / MESSAGE_COUNT),
+            String.format("%.2f", (double) totalE2ELatency / MESSAGE_COUNT)
         );
     }
 }
