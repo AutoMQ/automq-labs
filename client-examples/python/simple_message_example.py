@@ -72,7 +72,7 @@ class SimpleMessageExample:
             'fetch_max_wait_ms': 500,
             'max_poll_records': 500,
             'api_version': (2, 0, 0),  # Use stable API version
-            'request_timeout_ms': 40000,  # 40 second timeout for requests (must be > session_timeout_ms)
+            'request_timeout_ms': 40000,  # 40 second timeout for requests (must be > session_timeout_ms + heartbeat_interval_ms)
             'connections_max_idle_ms': 540000,  # 9 minutes
             'retry_backoff_ms': 100,  # Retry backoff time
         }
@@ -137,7 +137,7 @@ class SimpleMessageExample:
         finally:
             try:
                 producer.close(timeout=5)
-            except:
+            except Exception:
                 pass
     
     def run_consumer(self):
@@ -277,7 +277,7 @@ class SimpleMessageExample:
         finally:
             try:
                 consumer.close()
-            except:
+            except Exception:
                 pass
     
     def print_performance_metrics(self):
