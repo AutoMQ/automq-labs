@@ -1,0 +1,6 @@
+# Python Kafka Client Dependencies
+# Using kafka-python - pure Python implementation of Kafka client
+kafka-python==2.2.15
+
+# Additional dependencies for logging and utilities
+loguru==0.7.2
