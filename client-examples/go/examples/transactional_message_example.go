@@ -110,7 +110,7 @@ func (t *TransactionalMessageExample) runTransactionalProducer(ctx context.Conte
 
 	// Begin transaction
 	if err := client.BeginTransaction(); err != nil {
-		log.Printf("Error beginning transaction: %v", err)
+		log.Printf("failed to begin transaction for transactional producer: %v", err)
 		return
 	}
 
