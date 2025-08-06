@@ -172,7 +172,7 @@ func (t *TransactionalMessageExample) runTransactionalProducer(ctx context.Conte
 
 	// Commit transaction
 	if err := client.EndTransaction(ctx, kgo.TryCommit); err != nil {
-		log.Printf("Error committing transaction: %v", err)
+		log.Printf("Failed to commit transaction (transactionalID=%q, messages=%d): %v", "go-transactional-producer", t.messageCount, err)
 		return
 	}
 
