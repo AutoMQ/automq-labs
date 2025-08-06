@@ -1,0 +1,20 @@
+services:
+  automq-go-examples:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: automq-kafka-go-examples
+    environment:
+      # Default to single-node mode and adjust according to the mode you deployed.
+      - BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS:-server1:9092}
+    networks:
+      - automq_net
+    restart: "no"
+    # Optional: Mount logs directory for debugging
+    volumes:
+      - ./logs:/app/logs
+
+networks:
+  automq_net:
+    external: true
+    name: automq_net
