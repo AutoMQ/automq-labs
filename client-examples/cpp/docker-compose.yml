@@ -1,0 +1,26 @@
+services:
+  automq-cpp-examples:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: automq-cpp-examples
+    environment:
+      # Default to single-node mode and adjust according to the mode you deployed.
+      - BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS:-server1:9092}
+      - TOPIC_NAME=${TOPIC_NAME:-automq-cpp-example-topic}
+      - CONSUMER_GROUP_ID=${CONSUMER_GROUP_ID:-automq-cpp-example-group}
+      - MESSAGE_COUNT=${MESSAGE_COUNT:-1000}
+      - MESSAGE_SIZE=${MESSAGE_SIZE:-1024}
+      # AutoMQ performance tuning
+      - BATCH_SIZE=${BATCH_SIZE:-65536}
+      - LINGER_MS=${LINGER_MS:-100}
+      - BUFFER_MEMORY=${BUFFER_MEMORY:-67108864}
+      - MAX_REQUEST_SIZE=${MAX_REQUEST_SIZE:-10485760}
+    networks:
+      - automq_net
+    restart: "no"
+
+networks:
+  automq_net:
+    external: true
+    name: automq_net

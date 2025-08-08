@@ -1,0 +1,72 @@
+# Compiled binaries
+bin/
+!bin/.gitkeep
+
+# Object files
+obj/
+*.o
+*.obj
+
+# Executables
+automq-cpp-examples
+automq-cpp-examples.exe
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Log files
+logs/*.log
+logs/*.txt
+!logs/.gitkeep
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build artifacts
+*.a
+*.so
+*.dylib
+*.dll
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Docker volumes
+.docker/
+
+# Environment files
+.env
+.env.local
