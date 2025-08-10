@@ -1,0 +1,246 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2021-09-09/uiFormDefinition.schema.json",
+    "view": {
+        "kind": "Form",
+        "properties": {
+            "title": "AutoMQ BYOC Console Deployment",
+            "steps": [
+                {
+                    "name": "basics",
+                    "label": "Basics",
+                    "elements": [
+                                                {
+                            "name": "resourceScope",
+                            "type": "Microsoft.Common.ResourceScope"
+                        },
+                        {
+                            "name": "resourceScopeInfo",
+                            "type": "Microsoft.Common.InfoBox",
+                            "visible": true,
+                            "options": {
+                                "style": "Info",
+                                "text": "Select the resource group for AutoMQ. We recommend using this resource group for all future AutoMQ resources to ensure consistency."
+                            }
+                        },
+                        {
+                            "name": "regionInfo",
+                            "type": "Microsoft.Common.InfoBox",
+                            "visible": true,
+                            "options": {
+                                "style": "Info",
+                                "text": "Select the target region for AutoMQ deployment. Ensure it matches the region of your Producer and Consumer applications, as cross-region access is not supported."
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "vmConfig",
+                    "label": "Virtual Machine Configuration",
+                    "elements": [
+                        {
+                            "name": "vmSize",
+                            "type": "Microsoft.Compute.SizeSelector",
+                            "label": "VM Size",
+                            "toolTip": "Select the VM size for the AutoMQ console. A minimum of 2 vCPUs and 8 GB memory is required. We recommend keeping the default selection.",
+                            "recommendedSizes": [
+                                "Standard_D2s_v3",
+                                "Standard_D4s_v3",
+                                "Standard_D8s_v3"
+                            ],
+                            "osPlatform": "Linux",
+                            "visible": true,
+                            "scope": {
+                                "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                "location": "[steps('basics').resourceScope.location.name]"
+                            }
+                        },
+                        {
+                            "name": "adminUsername",
+                            "type": "Microsoft.Compute.UserNameTextBox",
+                            "label": "Username",
+                            "defaultValue": "azureuser",
+                            "toolTip": "Set the username for SSH access to the console VM.",
+                            "constraints": {
+                                "required": true,
+                                "regex": "^[a-z0-9A-Z]{1,30}$",
+                                "validationMessage": "Only alphanumeric characters are allowed, and the value must be 1-30 characters long."
+                            },
+                            "osPlatform": "Linux",
+                            "visible": true
+                        },
+                        {
+                            "name": "vmCredentials",
+                            "type": "Microsoft.Compute.CredentialsCombo",
+                            "label": {
+                                "authenticationType": "Authentication Type",
+                                "password": "Password",
+                                "confirmPassword": "Confirm Password",
+                                "sshPublicKey": "SSH Public Key"
+                            },
+                            "toolTip": {
+                                "authenticationType": "Choose authentication method for the virtual machine.",
+                                "password": "Password for the administrator account.",
+                                "sshPublicKey": "SSH public key for secure authentication to the virtual machine."
+                            },
+                            "constraints": {
+                                "required": true
+                            },
+                            "options": {
+                                "hidePassword": true
+                            },
+                            "osPlatform": "Linux",
+                            "visible": true
+                        }
+                    ]
+                },
+                {
+                    "name": "networkConfig",
+                    "label": "Network Configuration",
+                    "elements": [
+                        {
+                            "name": "networkingInfo",
+                            "type": "Microsoft.Common.TextBlock",
+                            "visible": true,
+                            "options": {
+                                "text": "Configure network settings for your AutoMQ BYOC Console deployment, including virtual network and public IP address configuration."
+                            }
+                        },
+                        {
+                            "name": "publicIPSection",
+                            "type": "Microsoft.Common.Section",
+                            "label": "Public IP Address",
+                            "elements": [
+                                {
+                                    "name": "publicIp",
+                                    "type": "Microsoft.Network.PublicIpAddressCombo",
+                                    "label": {
+                                        "publicIpAddress": "Public IP Address",
+                                        "domainNameLabel": "Domain Name Label"
+                                    },
+                                    "toolTip": {
+                                        "publicIpAddress": "Set the public IP address for external access to the AutoMQ console. You can create a new public IP or use an existing unused one. If your organization supports internal access via VPN or other methods, you may choose 'None' to skip public IP assignment."
+                                    },
+                                    "defaultValue": {
+                                        "publicIpAddressName": "NEW-PIP"
+                                    },
+                                    "options": {
+                                        "hideNone": false,
+                                        "hideDomainNameLabel": true,
+                                        "hideExisting": false
+                                    },
+                                    "visible": true,
+                                    "scope": {
+                                        "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                        "resourceGroupName": "[steps('basics').resourceScope.resourceGroup.name]",
+                                        "location": "[steps('basics').resourceScope.location.name]"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "vnetSection",
+                            "type": "Microsoft.Common.Section",
+                            "label": "Virtual Network",
+                            "elements": [
+                                {
+                                    "name": "vnet",
+                                    "type": "Microsoft.Network.VirtualNetworkCombo",
+                                    "label": {
+                                        "virtualNetwork": "Virtual Network",
+                                        "subnets": "Subnets"
+                                    },
+                                    "toolTip": {
+                                        "virtualNetwork": "Set the target Virtual Network for deploying the AutoMQ console. It should be consistent with the Virtual Network used by your Producer and Consumer applications. Please refer to the documentation to select an appropriate Virtual Network.",
+                                        "subnets": "Set the target Subnet for deploying the AutoMQ console. This Subnet must be configured with a public NAT gateway to enable the AutoMQ console to access public network services."
+                                    },
+                                    "constraints": {
+                                        "minAddressPrefixSize": "/16"
+                                    },
+                                    "options": {
+                                        "hideExisting": false
+                                    },
+                                    "defaultValue": {
+                                        "name": ""
+                                    },
+                                    "subnets": {
+                                        "subnet1": {
+                                            "label": "Subnet",
+                                            "constraints": {
+                                                "minAddressPrefixSize": "/24",
+                                                "minAddressCount": 12,
+                                                "requireContiguousAddresses": true
+                                            },
+                                            "defaultValue": {
+                                                "name": ""
+                                            }
+                                        }
+                                    },
+                                    "visible": true,
+                                    "scope": {
+                                        "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                        "resourceGroupName": "[steps('basics').resourceScope.resourceGroup.name]",
+                                        "location": "[steps('basics').resourceScope.location.name]"
+                                    }
+                                }
+                            ],
+                            "visible": true
+                        }
+                    ]
+                },
+                {
+                    "name": "storageConfig",
+                    "label": "Storage Configuration",
+                    "elements": [
+                        {
+                            "name": "opsStorageSection",
+                            "type": "Microsoft.Common.Section",
+                            "label": "Ops Bucket Config",
+                            "elements": [
+                                {
+                                    "name": "opsStorageAccount",
+                                    "type": "Microsoft.Storage.StorageAccountSelector",
+                                    "label": "Storage Account",
+                                    "toolTip": "Select the Storage Account to be used for the AutoMQ Ops Bucket. You can choose an existing Storage Account or create a new one. After selection, AutoMQ will create a Blob Container in the chosen Storage Account for the Ops Bucket. System logs, metrics, and other data will be collected and uploaded to this bucket for monitoring and analysis.",
+                                    "options": {
+                                        "hideExisting": false
+                                    },
+                                    "visible": true,
+                                    "scope": {
+                                        "subscriptionId": "[steps('basics').resourceScope.subscription.subscriptionId]",
+                                        "resourceGroupName": "[steps('basics').resourceScope.resourceGroup.name]",
+                                        "location": "[steps('basics').resourceScope.location.name]"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "outputs": {
+                "kind": "ResourceGroup",
+                "location": "[steps('basics').resourceScope.location.name]",
+                "resourceGroupId": "[steps('basics').resourceScope.resourceGroup.id]",
+                "parameters": {
+                    "location": "[steps('basics').resourceScope.location.name]",
+                    "virtualNetworkNewOrExisting": "[steps('networkConfig').vnetSection.vnet.newOrExisting]",
+                    "virtualNetworkName": "[steps('networkConfig').vnetSection.vnet.name]",
+                    "virtualNetworkResourceGroup": "[steps('networkConfig').vnetSection.vnet.resourceGroup]",
+                    "virtualNetworkAddressPrefix": "[steps('networkConfig').vnetSection.vnet.addressPrefix]",
+                    "subnetName": "[steps('networkConfig').vnetSection.vnet.subnets.subnet1.name]",
+                    "subnetAddressPrefix": "[steps('networkConfig').vnetSection.vnet.subnets.subnet1.addressPrefix]",
+                    "publicIPNewOrExisting": "[steps('networkConfig').publicIPSection.publicIp.newOrExistingOrNone]",
+                    "publicIPName": "[steps('networkConfig').publicIPSection.publicIp.name]",
+                    "publicIPResourceGroup": "[steps('networkConfig').publicIPSection.publicIp.resourceGroup]",
+                    "vmSize": "[steps('vmConfig').vmSize]",
+                    "adminUsername": "[steps('vmConfig').adminUsername]",
+                    "sshPublicKey": "[steps('vmConfig').vmCredentials.sshPublicKey]",
+                    "opsStorageAccountName": "[steps('storageConfig').opsStorageSection.opsStorageAccount.name]",
+                    "opsStorageAccountResourceGroup": "[steps('storageConfig').opsStorageSection.opsStorageAccount.resourceGroup]",
+                    "opsStorageAccountType": "[steps('storageConfig').opsStorageSection.opsStorageAccount.type]",
+                    "opsStorageAccountKind": "[steps('storageConfig').opsStorageSection.opsStorageAccount.kind]",
+                    "opsStorageAccountIsNew": "[steps('storageConfig').opsStorageSection.opsStorageAccount.newOrExisting]"
+                }
+            }
+    }
+}
