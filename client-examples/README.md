@@ -50,9 +50,15 @@ Python examples using the kafka-python library.
 
 *Note: C++ examples are currently TODO. Implementation is planned for future releases.*
 
-### 🌐 JavaScript Examples
+### 🌐 [JavaScript Examples](./javascript/)
 
-*Note: JavaScript examples are currently TODO. Implementation is planned for future releases.*
+JavaScript/Node.js examples using the kafkajs library.
+
+**Available Examples:**
+- **SimpleMessageExample**: Basic producer/consumer operations
+- **TransactionalMessageExample**: ACID-compliant transactional messaging
+- Performance metrics and Docker support included
+- Modern ES6+ features with async/await patterns
 
 ### 🦀 Rust Examples
 
