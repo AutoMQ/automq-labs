@@ -1,5 +1,4 @@
 #include "SimpleMessageExample.h"
-#include "TransactionalMessageExample.h"
 #include "AutoMQExampleConstants.h"
 #include <iostream>
 #include <string>
@@ -10,8 +9,6 @@ void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " [example_type]" << std::endl;
     std::cout << "\nAvailable examples:" << std::endl;
     std::cout << "  simple      - Simple message producer and consumer example" << std::endl;
-    std::cout << "  transaction - Transactional message example" << std::endl;
-    std::cout << "  all         - Run all examples (default)" << std::endl;
     std::cout << "\nEnvironment variables:" << std::endl;
     std::cout << "  BOOTSTRAP_SERVERS   - Kafka bootstrap servers (default: localhost:9092)" << std::endl;
     std::cout << "  TOPIC_NAME          - Topic name (default: automq-cpp-example-topic)" << std::endl;
@@ -19,8 +16,7 @@ void printUsage(const char* programName) {
     std::cout << "  MESSAGE_SIZE        - Message size in bytes (default: 1024)" << std::endl;
     std::cout << "\nExamples:" << std::endl;
     std::cout << "  " << programName << " simple" << std::endl;
-    std::cout << "  MESSAGE_COUNT=1000 " << programName << " transaction" << std::endl;
-    std::cout << "  BOOTSTRAP_SERVERS=localhost:9092 " << programName << " all" << std::endl;
+    std::cout << "  BOOTSTRAP_SERVERS=localhost:9092 " << programName << " simple" << std::endl;
 }
 
 void printConfiguration() {
@@ -33,7 +29,6 @@ void printConfiguration() {
     std::cout << "Batch Size: " << AutoMQExampleConstants::BATCH_SIZE << " bytes" << std::endl;
     std::cout << "Linger MS: " << AutoMQExampleConstants::LINGER_MS << " ms" << std::endl;
     std::cout << "Buffer Memory: " << AutoMQExampleConstants::BUFFER_MEMORY << " bytes" << std::endl;
-    std::cout << "Transaction Timeout: " << AutoMQExampleConstants::TRANSACTION_TIMEOUT_MS << " ms" << std::endl;
     std::cout << "====================\n" << std::endl;
 }
 
@@ -41,7 +36,7 @@ int main(int argc, char* argv[]) {
     std::cout << "AutoMQ C++ Client Examples" << std::endl;
     std::cout << "===========================" << std::endl;
     
-    std::string exampleType = "all";
+    std::string exampleType = "simple";
     if (argc > 1) {
         exampleType = argv[1];
     }
@@ -57,21 +52,6 @@ int main(int argc, char* argv[]) {
         if (exampleType == "simple") {
             std::cout << "Running Simple Message Example...\n" << std::endl;
             SimpleMessageExample::run();
-        } else if (exampleType == "transaction") {
-            std::cout << "Running Transactional Message Example...\n" << std::endl;
-            TransactionalMessageExample::run();
-        } else if (exampleType == "all") {
-            std::cout << "Running All Examples...\n" << std::endl;
-            
-            std::cout << "\n[1/2] Simple Message Example" << std::endl;
-            std::cout << "=============================" << std::endl;
-            SimpleMessageExample::run();
-            
-            std::cout << "\n[2/2] Transactional Message Example" << std::endl;
-            std::cout << "===================================" << std::endl;
-            TransactionalMessageExample::run();
-            
-            std::cout << "\nAll examples completed successfully!" << std::endl;
         } else {
             std::cerr << "Unknown example type: " << exampleType << std::endl;
             std::cerr << "Use 'help' to see available options." << std::endl;

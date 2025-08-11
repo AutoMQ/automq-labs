@@ -24,7 +24,7 @@ WORKDIR /app
 
 # Copy source code
 COPY src/ ./src/
-COPY Makefile .
+COPY Makefile ./Makefile
 
 # Build the application with librdkafka support
 RUN make with-kafka

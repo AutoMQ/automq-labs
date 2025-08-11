@@ -33,7 +33,3 @@ const int AutoMQExampleConstants::MAX_REQUEST_SIZE = getEnvOrDefault("MAX_REQUES
 const int AutoMQExampleConstants::MAX_POLL_RECORDS = getEnvOrDefault("MAX_POLL_RECORDS", 1000);
 const int AutoMQExampleConstants::FETCH_MIN_BYTES = getEnvOrDefault("FETCH_MIN_BYTES", 1024);
 const int AutoMQExampleConstants::FETCH_MAX_WAIT_MS = getEnvOrDefault("FETCH_MAX_WAIT_MS", 1000);
-
-// Transaction configuration
-const std::string AutoMQExampleConstants::TRANSACTIONAL_ID_PREFIX = "automq-cpp-tx-";
-const int AutoMQExampleConstants::TRANSACTION_TIMEOUT_MS = getEnvOrDefault("TRANSACTION_TIMEOUT_MS", 60000);

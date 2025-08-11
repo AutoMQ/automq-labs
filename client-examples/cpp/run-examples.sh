@@ -1,8 +1,14 @@
 #!/bin/bash
 
 # AutoMQ C++ Client Examples Runner Script
+# This script runs the C++ Kafka client examples
+# Note: Executable should be pre-built (e.g., in Docker container)
 
 set -e
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$SCRIPT_DIR"
 
 # Colors for output
 RED='\033[0;31m'
@@ -17,7 +23,7 @@ TOPIC_NAME=${TOPIC_NAME:-"automq-cpp-example-topic"}
 CONSUMER_GROUP_ID=${CONSUMER_GROUP_ID:-"automq-cpp-example-group"}
 MESSAGE_COUNT=${MESSAGE_COUNT:-1000}
 MESSAGE_SIZE=${MESSAGE_SIZE:-1024}
-EXAMPLE_TYPE=${EXAMPLE_TYPE:-"all"}
+EXAMPLE_TYPE=${EXAMPLE_TYPE:-"simple"}
 
 # Function to print colored output
 print_info() {
@@ -36,49 +42,29 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Function to check if Kafka is available
-check_kafka_connectivity() {
-    print_info "Checking Kafka connectivity..."
-    
-    # Simple connectivity check (this would require kafka tools in real scenario)
-    # For demo purposes, we'll just check if the bootstrap server is reachable
-    if command -v nc >/dev/null 2>&1; then
-        if echo "" | nc -w 5 ${BOOTSTRAP_SERVERS%:*} ${BOOTSTRAP_SERVERS#*:} >/dev/null 2>&1; then
-            print_success "Kafka is reachable at $BOOTSTRAP_SERVERS"
-            return 0
-        else
-            print_warning "Cannot reach Kafka at $BOOTSTRAP_SERVERS"
-            return 1
-        fi
+# Function to find the executable
+find_executable() {
+    # Check if the executable exists
+    if [ -f "/app/bin/automq-cpp-examples" ]; then
+        echo "/app/bin/automq-cpp-examples"
+    elif [ -f "$PROJECT_DIR/bin/automq-cpp-examples" ]; then
+        echo "$PROJECT_DIR/bin/automq-cpp-examples"
+    elif [ -f "$PROJECT_DIR/automq-cpp-examples" ]; then
+        echo "$PROJECT_DIR/automq-cpp-examples"
     else
-        print_warning "netcat (nc) not available, skipping connectivity check"
-        return 0
+        return 1
     fi
 }
 
-# Function to create topic (simulation)
-create_topic() {
-    print_info "Creating topic: $TOPIC_NAME"
-    
-    # In a real scenario, you would use kafka-topics.sh or similar
-    # For demo purposes, we'll just simulate this
-    print_info "Topic creation simulated (in real scenario, use kafka-topics.sh)"
-    print_success "Topic '$TOPIC_NAME' is ready"
-}
-
-# Function to run the examples
-run_examples() {
+# Function to run example with error handling
+run_example() {
     local example_type=$1
+    local example_name=$2
     
-    print_info "Starting AutoMQ C++ Client Examples"
-    print_info "Configuration:"
-    echo "  Bootstrap Servers: $BOOTSTRAP_SERVERS"
-    echo "  Topic Name: $TOPIC_NAME"
-    echo "  Consumer Group: $CONSUMER_GROUP_ID"
-    echo "  Message Count: $MESSAGE_COUNT"
-    echo "  Message Size: $MESSAGE_SIZE bytes"
-    echo "  Example Type: $example_type"
     echo ""
+    echo "=== Running $example_name ==="
+    echo "Type: $example_type"
+    echo "Starting at: $(date)"
     
     # Set environment variables
     export BOOTSTRAP_SERVERS
@@ -87,30 +73,27 @@ run_examples() {
     export MESSAGE_COUNT
     export MESSAGE_SIZE
     
-    # Check if the executable exists
-    if [ -f "/app/bin/automq-cpp-examples" ]; then
-        EXECUTABLE="/app/bin/automq-cpp-examples"
-    elif [ -f "./bin/automq-cpp-examples" ]; then
-        EXECUTABLE="./bin/automq-cpp-examples"
-    elif [ -f "./automq-cpp-examples" ]; then
-        EXECUTABLE="./automq-cpp-examples"
-    else
+    # Find the executable
+    EXECUTABLE=$(find_executable)
+    if [ $? -ne 0 ]; then
         print_error "Executable not found. Please build the project first."
-        print_info "Run: make all (for demo) or make with-kafka (for real Kafka)"
+        print_info "Run: make all to build the project"
         exit 1
     fi
     
-    print_info "Running examples with: $EXECUTABLE"
+    print_info "Using executable: $EXECUTABLE"
     
     # Create logs directory
     mkdir -p logs
     
-    # Run the examples
-    if $EXECUTABLE "$example_type" 2>&1 | tee "logs/automq-cpp-examples-$(date +%Y%m%d-%H%M%S).log"; then
-        print_success "Examples completed successfully!"
+    # Run the example
+    "$EXECUTABLE" "$example_type" 2>&1 | tee "logs/automq-cpp-examples-$(date +%Y%m%d-%H%M%S).log"
+    
+    if [ $? -eq 0 ]; then
+        echo "$example_name completed successfully at: $(date)"
     else
-        print_error "Examples failed with exit code $?"
-        exit 1
+        echo "Error: $example_name failed at: $(date)"
+        return 1
     fi
 }
 
