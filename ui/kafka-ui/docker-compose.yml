@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  kafka-ui:
+    container_name: kafka-ui
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "12000:8080"
+    environment:
+      # Dynamic configuration enabled
+      DYNAMIC_CONFIG_ENABLED: 'true'
+      
+      # AutoMQ Kafka cluster configuration
+      KAFKA_CLUSTERS_0_NAME: "AutoMQ Cluster"
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "server1:9092"
+      KAFKA_CLUSTERS_0_READONLY: "false"
+      
+      # Optional: Schema Registry configuration (uncomment if available)
+      # KAFKA_CLUSTERS_0_SCHEMAREGISTRY: "http://schema-registry:8081"
+      
+      # Optional: Kafka Connect configuration (uncomment if available)
+      # KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: "AutoMQ Connect"
+      # KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: "http://kafka-connect:8083"
+      
+      # Optional: KSQL configuration (uncomment if available)
+      # KAFKA_CLUSTERS_0_KSQLDBSERVER: "http://ksqldb:8088"
+      
+      # Security configuration (uncomment and configure if needed)
+      # KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: "SASL_SSL"
+      # KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: "PLAIN"
+      # KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: "org.apache.kafka.common.security.plain.PlainLoginModule required username='your-username' password='your-password';"
+      # KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_LOCATION: "/etc/kafka/secrets/kafka.client.truststore.jks"
+      # KAFKA_CLUSTERS_0_PROPERTIES_SSL_TRUSTSTORE_PASSWORD: "your-truststore-password"
+      
+      # UI Configuration
+      SERVER_SERVLET_CONTEXT_PATH: "/"
+      LOGGING_LEVEL_COM_PROVECTUS: "INFO"
+      LOGGING_LEVEL_ROOT: "INFO"
+      
+    networks:
+      - automq_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Optional: Volume for persistent configuration
+    # volumes:
+    #   - ./config/application.yml:/etc/kafkaui/dynamic_config.yaml
+
+networks:
+  automq_net:
+    external: true
+    name: automq_net
