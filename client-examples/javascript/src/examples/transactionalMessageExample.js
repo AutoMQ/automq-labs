@@ -202,11 +202,6 @@ class TransactionalMessageExample {
                             messageData = { content: message.value.toString() };
                         }
                         
-                        logger.info(`Received transactional message ${this.receivedCount}/${this.MESSAGE_COUNT}: ` +
-                            `key=${message.key?.toString()}, partition=${partition}, ` +
-                            `offset=${message.offset}, e2eLatency=${latency} ms, ` +
-                            `txnId=${messageData.transactionId || 'unknown'}`);
-                        
                         if (this.receivedCount === this.MESSAGE_COUNT) {
                             this.lastMessageTime = receiveTime;
                             this.endTime = receiveTime;
@@ -238,7 +233,8 @@ class TransactionalMessageExample {
         const avgProduceLatency = this.sentCount > 0 ? (this.totalProduceLatency / this.sentCount) : 0;
         const avgE2ELatency = this.receivedCount > 0 ? (this.totalE2ELatency / this.receivedCount) : 0;
         
-        logger.info('=== Transactional Performance Metrics ===\n' +
+        logger.info('\n' +
+            '=== Transactional Performance Metrics ===\n' +
             `Total Messages: ${this.MESSAGE_COUNT}\n` +
             `Messages Sent: ${this.sentCount}\n` +
             `Messages Received: ${this.receivedCount}\n` +

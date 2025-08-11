@@ -174,12 +174,6 @@ class SimpleMessageExample {
                         
                         this.totalE2ELatency += latency;
                         
-                        const messageContent = message.value ? message.value.toString() : 'null';
-                        logger.info(`Received message ${this.receivedCount}/${this.MESSAGE_COUNT}: ` +
-                            `key=${message.key?.toString()}, partition=${partition}, ` +
-                            `offset=${message.offset}, e2eLatency=${latency} ms`);
-                        logger.info(`Message content: ${messageContent}`);
-                        
                         if (this.receivedCount === this.MESSAGE_COUNT) {
                             this.lastMessageTime = receiveTime;
                             this.endTime = receiveTime;
@@ -211,7 +205,8 @@ class SimpleMessageExample {
         const avgProduceLatency = this.sentCount > 0 ? (this.totalProduceLatency / this.sentCount) : 0;
         const avgE2ELatency = this.receivedCount > 0 ? (this.totalE2ELatency / this.receivedCount) : 0;
         
-        logger.info('=== Performance Metrics ===\n' +
+        logger.info('\n' +
+            '=== Simple Message Performance Metrics ===\n' +
             `Total Messages: ${this.MESSAGE_COUNT}\n` +
             `Messages Sent: ${this.sentCount}\n` +
             `Messages Received: ${this.receivedCount}\n` +
