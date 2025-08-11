@@ -74,6 +74,43 @@ class SimpleMessageExample {
     }
 
     /**
+     * Handle sendBatch result and calculate latencies
+     * @param {Object} result - The result from sendBatch
+     * @param {Array} messages - The messages that were sent
+     * @param {number} endTime - The time when sending completed
+     * @param {string} topicName - The topic name for logging
+     * @param {string} messageType - The message type for logging (e.g., 'Message', 'Transactional message')
+     */
+    handleSendBatchResult(result, messages, endTime, topicName, messageType = 'Message') {
+        if (result && result.length > 0) {
+            const topicResult = result[0]; // First topic result
+            if (topicResult && topicResult.partitions) {
+                topicResult.partitions.forEach((partitionResult, messageIndex) => {
+                    const latency = endTime - parseInt(messages[messageIndex].timestamp);
+                    this.totalProduceLatency += latency;
+                    this.sentCount++;
+                    
+                    logger.info(`${messageType} ${this.sentCount}/${this.MESSAGE_COUNT} sent successfully: ` +
+                        `topic=${topicName}, partition=${partitionResult.partition}, ` +
+                        `offset=${partitionResult.baseOffset}, produce latency=${latency}ms`);
+                });
+            } else {
+                // Fallback: just count messages as sent
+                this.sentCount = this.MESSAGE_COUNT;
+                const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
+                this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
+                logger.info(`All ${this.MESSAGE_COUNT} messages sent successfully (batch mode)`);
+            }
+        } else {
+            // Fallback: just count messages as sent
+            this.sentCount = this.MESSAGE_COUNT;
+            const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
+            this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
+            logger.info(`All ${this.MESSAGE_COUNT} messages sent successfully (fallback mode)`);
+        }
+    }
+
+    /**
      * Run the producer to send messages
      */
     async runProducer() {
@@ -113,32 +150,7 @@ class SimpleMessageExample {
             const endTime = Date.now();
             
             // Handle sendBatch result structure
-            if (result && result.length > 0) {
-                const topicResult = result[0]; // First topic result
-                if (topicResult && topicResult.partitions) {
-                    topicResult.partitions.forEach((partitionResult, messageIndex) => {
-                        const latency = endTime - parseInt(messages[messageIndex].timestamp);
-                        this.totalProduceLatency += latency;
-                        this.sentCount++;
-                        
-                        logger.info(`Message ${this.sentCount}/${this.MESSAGE_COUNT} sent successfully: ` +
-                            `topic=${AutoMQConfig.SIMPLE_TOPIC_NAME}, partition=${partitionResult.partition}, ` +
-                            `offset=${partitionResult.baseOffset}, produce latency=${latency}ms`);
-                    });
-                } else {
-                    // Fallback: just count messages as sent
-                    this.sentCount = this.MESSAGE_COUNT;
-                    const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
-                    this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
-                    logger.info(`All ${this.MESSAGE_COUNT} messages sent successfully (batch mode)`);
-                }
-            } else {
-                // Fallback: just count messages as sent
-                this.sentCount = this.MESSAGE_COUNT;
-                const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
-                this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
-                logger.info(`All ${this.MESSAGE_COUNT} messages sent successfully (fallback mode)`);
-            }
+            this.handleSendBatchResult(result, messages, endTime, AutoMQConfig.SIMPLE_TOPIC_NAME, 'Message');
 
             logger.info(`All ${this.MESSAGE_COUNT} messages sent successfully`);
             

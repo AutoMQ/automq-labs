@@ -79,6 +79,44 @@ class TransactionalMessageExample {
     }
 
     /**
+     * Handle sendBatch result and calculate latencies for transactional messages
+     * @param {Object} result - The result from sendBatch
+     * @param {Array} messages - The messages that were sent
+     * @param {number} endTime - The time when sending completed
+     * @param {string} topicName - The topic name for logging
+     * @param {string} messageType - The message type for logging (e.g., 'Transactional message')
+     */
+    handleTransactionalSendBatchResult(result, messages, endTime, topicName, messageType = 'Transactional message') {
+        if (result && result.length > 0) {
+            const topicResult = result[0]; // First topic result
+            if (topicResult && topicResult.partitions) {
+                topicResult.partitions.forEach((partitionResult, messageIndex) => {
+                    const latency = endTime - parseInt(messages[messageIndex].timestamp);
+                    this.totalProduceLatency += latency;
+                    this.sentCount++;
+                    
+                    logger.info(`${messageType} ${this.sentCount}/${this.MESSAGE_COUNT} sent: ` +
+                        `topic=${topicName}, ` +
+                        `partition=${partitionResult.partition}, ` +
+                        `offset=${partitionResult.baseOffset}, produce latency=${latency}ms`);
+                });
+            } else {
+                // Fallback: just count messages as sent
+                this.sentCount = this.MESSAGE_COUNT;
+                const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
+                this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
+                logger.info(`All ${this.MESSAGE_COUNT} transactional messages sent successfully (batch mode)`);
+            }
+        } else {
+            // Fallback: just count messages as sent
+            this.sentCount = this.MESSAGE_COUNT;
+            const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
+            this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
+            logger.info(`All ${this.MESSAGE_COUNT} transactional messages sent successfully (fallback mode)`);
+        }
+    }
+
+    /**
      * Run the transactional producer to send messages
      */
     async runTransactionalProducer() {
@@ -123,33 +161,7 @@ class TransactionalMessageExample {
                 const endTime = Date.now();
                 
                 // Handle sendBatch result structure for transactions
-                if (result && result.length > 0) {
-                    const topicResult = result[0]; // First topic result
-                    if (topicResult && topicResult.partitions) {
-                        topicResult.partitions.forEach((partitionResult, messageIndex) => {
-                            const latency = endTime - parseInt(messages[messageIndex].timestamp);
-                            this.totalProduceLatency += latency;
-                            this.sentCount++;
-                            
-                            logger.info(`Transactional message ${this.sentCount}/${this.MESSAGE_COUNT} sent: ` +
-                                `topic=${AutoMQConfig.TRANSACTIONAL_TOPIC_NAME}, ` +
-                                `partition=${partitionResult.partition}, ` +
-                                `offset=${partitionResult.baseOffset}, produce latency=${latency}ms`);
-                        });
-                    } else {
-                        // Fallback: just count messages as sent
-                        this.sentCount = this.MESSAGE_COUNT;
-                        const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
-                        this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
-                        logger.info(`All ${this.MESSAGE_COUNT} transactional messages sent successfully (batch mode)`);
-                    }
-                } else {
-                    // Fallback: just count messages as sent
-                    this.sentCount = this.MESSAGE_COUNT;
-                    const avgLatency = (endTime - this.startTime) / this.MESSAGE_COUNT;
-                    this.totalProduceLatency = avgLatency * this.MESSAGE_COUNT;
-                    logger.info(`All ${this.MESSAGE_COUNT} transactional messages sent successfully (fallback mode)`);
-                }
+                this.handleTransactionalSendBatchResult(result, messages, endTime, AutoMQConfig.TRANSACTIONAL_TOPIC_NAME, 'Transactional message');
 
                 // Commit transaction
                 await transaction.commit();
