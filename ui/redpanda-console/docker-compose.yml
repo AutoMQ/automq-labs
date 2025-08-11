@@ -24,7 +24,6 @@ services:
     networks:
       - automq_net
     restart: unless-stopped
-    detach: true
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/cluster"]
       interval: 30s
