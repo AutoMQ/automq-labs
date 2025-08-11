@@ -1,4 +1,4 @@
-const { Kafka } = require('kafkajs');
+const { Kafka, Partitioners } = require('kafkajs');
 const winston = require('winston');
 const { v4: uuidv4 } = require('uuid');
 const AutoMQConfig = require('../config/automqConfig');
@@ -36,9 +36,7 @@ class TransactionalMessageExample {
         this.kafka = new Kafka({
             clientId: 'automq-transactional-example',
             brokers: [AutoMQConfig.BOOTSTRAP_SERVERS],
-            retry: {
-                retries: AutoMQConfig.RETRIES_CONFIG
-            },
+            // Remove retry config to avoid conflicts with idempotent producer
             requestTimeout: AutoMQConfig.REQUEST_TIMEOUT_MS,
             connectionTimeout: AutoMQConfig.CONNECTION_TIMEOUT_MS
         });
@@ -49,13 +47,13 @@ class TransactionalMessageExample {
      */
     createTransactionalProducerConfig() {
         return {
-            transactionTimeout: 30000,
+            transactionTimeout: 10000,
             transactionalId: this.transactionalId,
-            maxInFlightRequests: 1,
+            maxInFlightRequests: 5, // Increased for better performance with idempotent producer
             idempotent: true,
-            retry: {
-                retries: AutoMQConfig.RETRIES_CONFIG
-            },
+            // Remove retry config to use KafkaJS defaults for idempotent producer
+            // Use LegacyPartitioner to maintain compatibility with previous versions
+            createPartitioner: Partitioners.LegacyPartitioner,
             // AutoMQ optimized settings
             metadataMaxAge: AutoMQConfig.METADATA_MAX_AGE_MS,
             allowAutoTopicCreation: true
