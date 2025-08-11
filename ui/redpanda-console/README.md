@@ -51,9 +51,7 @@ docker-compose down
 ### Broker Configuration
 
 The default configuration assumes your AutoMQ cluster has the following brokers:
-- `automq-broker-1:9092`
-- `automq-broker-2:9092`
-- `automq-broker-3:9092`
+- `server1:9092`
 
 If your broker names or ports are different, please modify the `KAFKA_BROKERS` environment variable in `docker-compose.yml`.
 
