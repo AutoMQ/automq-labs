@@ -25,7 +25,7 @@ Redpanda Console provides the following features to manage your AutoMQ cluster:
 
 ```bash
 # Navigate to directory
-cd /Users/luo/Desktop/AutoMQ/code/automq-labs/ui/redpanda-console/
+cd ui/redpanda-console/
 
 # Start services
 docker-compose up -d
