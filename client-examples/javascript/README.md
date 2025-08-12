@@ -31,9 +31,7 @@ For detailed performance tuning guidelines, refer to the [AutoMQ Performance Tun
 #### Interactive Mode (Recommended)
 
 ```bash
-npm start
-# or
-./bin/run-examples.sh
+./run-examples.sh
 ```
 
 #### Direct Commands
@@ -42,15 +40,12 @@ npm start
 # Simple Message Example
 npm run simple
 # or
-node src/index.js simple
+node src/examples/simpleMessageExample.js
 
 # Transactional Message Example
 npm run transactional
 # or
-node src/index.js transactional
-
-# Show Configuration
-node src/index.js config
+node src/examples/transactionalMessageExample.js
 ```
 
 #### Custom Message Count
@@ -58,8 +53,6 @@ node src/index.js config
 ```bash
 # Send 100 messages
 MESSAGE_COUNT=100 npm run simple
-# or
-node src/index.js simple --count 100
 ```
 
 ## Available Examples
@@ -107,7 +100,7 @@ docker run --rm automq-javascript-examples
 docker run --rm -e BOOTSTRAP_SERVERS=your-broker:9092 automq-javascript-examples
 
 # Run specific example
-docker run --rm automq-javascript-examples ./bin/run-examples.sh simple
+docker run --rm automq-javascript-examples ./run-examples.sh simple
 ```
 
 ### Docker Compose
@@ -225,12 +218,10 @@ javascript/
 ├── src/
 │   ├── config/
 │   │   └── automqConfig.js      # AutoMQ configuration constants
-│   ├── examples/
-│   │   ├── simpleMessageExample.js
-│   │   └── transactionalMessageExample.js
-│   └── index.js                 # Main CLI entry point
-├── bin/
-│   └── run-examples.sh          # Shell script runner
+│   └── examples/
+│       ├── simpleMessageExample.js
+│       └── transactionalMessageExample.js
+├── run-examples.sh              # Shell script runner
 ├── package.json                 # Dependencies and scripts
 ├── Dockerfile                   # Container image definition
 ├── docker-compose.yml           # Docker Compose configuration
@@ -241,15 +232,14 @@ javascript/
 
 1. Create a new file in `src/examples/`
 2. Implement the example class with `run()` method
-3. Add command to `src/index.js`
-4. Update `bin/run-examples.sh` if needed
+3. Add npm script to `package.json`
+4. Update `run-examples.sh` if needed
 5. Document the new example in this README
 
 ## Dependencies
 
 - **kafkajs**: Apache Kafka client for Node.js
 - **winston**: Logging library
-- **commander**: Command-line interface framework
 - **dotenv**: Environment variable loader
 - **uuid**: UUID generation for unique identifiers
 

@@ -8,7 +8,7 @@ services:
     container_name: automq-javascript-examples
     environment:
       - NODE_ENV=production
-      - BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS:-localhost:9092}
+      - BOOTSTRAP_SERVERS=${BOOTSTRAP_SERVERS:-server1:9092}
     networks:
       - automq_net
     restart: "no"
@@ -16,3 +16,4 @@ services:
 networks:
   automq_net:
     external: true
+    name: automq_net

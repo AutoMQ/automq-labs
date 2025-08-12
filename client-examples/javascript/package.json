@@ -2,12 +2,9 @@
   "name": "automq-javascript-examples",
   "version": "1.0.0",
   "description": "JavaScript/Node.js client examples for AutoMQ",
-  "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
     "simple": "node src/examples/simpleMessageExample.js",
-    "transactional": "node src/examples/transactionalMessageExample.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "transactional": "node src/examples/transactionalMessageExample.js"
   },
   "keywords": [
     "kafka",
@@ -23,7 +20,6 @@
     "kafkajs": "^2.2.4",
     "dotenv": "^16.3.1",
     "winston": "^3.11.0",
-    "commander": "^11.1.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

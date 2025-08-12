@@ -13,7 +13,7 @@ class AutoMQConfig {
      * During testing, you can replace the following configuration with the one in your environment.
      * BOOTSTRAP_SERVERS can be configured via environment variable or defaults to localhost:9092
      */
-    static BOOTSTRAP_SERVERS = process.env.BOOTSTRAP_SERVERS || 'localhost:9092';
+    static BOOTSTRAP_SERVERS = process.env.BOOTSTRAP_SERVERS || 'server1:9092';
     
     // Topic and Consumer Group Configuration
     static SIMPLE_TOPIC_NAME = 'test-topic';

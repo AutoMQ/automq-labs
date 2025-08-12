@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # AutoMQ JavaScript Client Examples Runner
 # This script provides an easy way to run different examples

@@ -12,10 +12,10 @@ RUN npm ci --only=production
 
 # Copy source code
 COPY src/ ./src/
-COPY bin/ ./bin/
+COPY run-examples.sh ./
 
 # Make run script executable
-RUN chmod +x bin/run-examples.sh
+RUN chmod +x run-examples.sh
 
 # Create non-root user
 RUN addgroup -g 1001 -S appuser && \
@@ -29,7 +29,7 @@ USER appuser
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV BOOTSTRAP_SERVERS=localhost:9092
+ENV BOOTSTRAP_SERVERS=server1:9092
 
 # Default command
-CMD ["./bin/run-examples.sh"]
+CMD ["./run-examples.sh"]
