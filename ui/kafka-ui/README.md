@@ -146,7 +146,7 @@ docker-compose logs --tail=100 kafka-ui
 ### Health Check
 
 Kafka UI includes a health check endpoint:
-- **URL**: http://localhost:8080/actuator/health
+- **URL**: http://localhost:12000/actuator/health
 - **Status**: Returning "UP" status indicates the service is healthy
 
 ### Common Issues
