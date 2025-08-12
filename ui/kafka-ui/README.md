@@ -29,7 +29,8 @@ Kafka UI provides comprehensive features for AutoMQ cluster management:
 
 After successful startup, access in your browser:
 - **URL**: http://localhost:8080
-- **Port**: 8080
+- **URL**: http://localhost:12000
+- **Port**: 12000
 
 ### Stop Services
 
