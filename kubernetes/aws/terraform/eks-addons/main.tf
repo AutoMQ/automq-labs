@@ -27,3 +27,12 @@ locals {
   cluster_autoscaler_release_name = "cluster-autoscaler"
   alb_controller_release_name     = "aws-load-balancer-controller"
 }
+
+resource "aws_vpc_security_group_ingress_rule" "automq_ingress_rule" {
+  description       = "Allow traffic from EKS cluster to Automq service"
+  from_port         = 9092
+  to_port           = 9103
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+  security_group_id = data.aws_eks_cluster.eks_cluster.vpc_config[0].cluster_security_group_id
+}
