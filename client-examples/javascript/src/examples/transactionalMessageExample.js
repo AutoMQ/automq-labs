@@ -47,7 +47,7 @@ class TransactionalMessageExample {
      */
     createTransactionalProducerConfig() {
         return {
-            transactionTimeout: 10000,
+            transactionTimeout: AutoMQConfig.TRANSACTION_TIMEOUT_MS,
             transactionalId: this.transactionalId,
             maxInFlightRequests: 5, // Increased for better performance with idempotent producer
             idempotent: true,
@@ -311,7 +311,7 @@ class TransactionalMessageExample {
             await Promise.race([
                 Promise.all([producerPromise, consumerPromise]),
                 new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Timeout waiting for completion')), 30000)
+                    setTimeout(() => reject(new Error('Timeout waiting for completion')), AutoMQConfig.TRANSACTIONAL_MESSAGE_TIMEOUT_MS)
                 )
             ]);
             
@@ -324,10 +324,7 @@ class TransactionalMessageExample {
                 logger.error('Error occurred during transactional message example:', error);
             }
         } finally {
-            // Force exit after a short delay to allow final logs
-            setTimeout(() => {
-                process.exit(0);
-            }, 1000);
+            process.exit(0);
         }
     }
 }

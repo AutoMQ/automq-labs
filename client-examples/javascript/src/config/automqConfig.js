@@ -108,6 +108,18 @@ class AutoMQConfig {
      * The maximum amount of time the client will wait for the initial connection to be established.
      */
     static CONNECTION_TIMEOUT_MS = 10000;
+
+    /**
+     * Transaction timeout (10 seconds).
+     * The maximum amount of time the client will wait for the transaction to be completed.
+     */
+    static TRANSACTION_TIMEOUT_MS = 10000;
+
+    /**
+     * Transactional message timeout (10 seconds).
+     * The maximum amount of time the client will wait for the transactional message to be completed.
+     */
+    static TRANSACTIONAL_MESSAGE_TIMEOUT_MS = 10000;
 }
 
 module.exports = AutoMQConfig;

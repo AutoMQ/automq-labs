@@ -47,7 +47,6 @@ class SimpleMessageExample {
         return {
             maxInFlightRequests: 5, // Increased for better performance with idempotent producer
             idempotent: true,
-            transactionTimeout: 10000,
             // Remove retry config to use KafkaJS defaults for idempotent producer
             // Use LegacyPartitioner to maintain compatibility with previous versions
             createPartitioner: Partitioners.LegacyPartitioner,
@@ -280,8 +279,8 @@ class SimpleMessageExample {
             // Wait for both producer and consumer to complete with timeout
             const timeout = new Promise((_, reject) => {
                 setTimeout(() => {
-                    reject(new Error('Example timeout after 30 seconds'));
-                }, 30000);
+                    reject(new Error('Example timeout after ' + AutoMQConfig.TRANSACTION_TIMEOUT_MS + 'ms'));
+                }, AutoMQConfig.TRANSACTION_TIMEOUT_MS);
             });
             
             await Promise.race([
@@ -301,10 +300,7 @@ class SimpleMessageExample {
                 process.exit(1);
             }
         } finally {
-            // Force exit after a short delay to ensure cleanup
-            setTimeout(() => {
-                process.exit(0);
-            }, 1000);
+            process.exit(0);
         }
     }
 }
