@@ -5,6 +5,7 @@ module "lb_irsa_role" {
   count = var.enable_alb_ingress_controller ? 1 : 0
 
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.60.0"
 
   role_name                              = local.alb_controller_role_name
   attach_load_balancer_controller_policy = true
@@ -24,6 +25,7 @@ module "ebs-csi-irsa-role" {
   count = var.enable_ebs_csi_driver ? 1 : 0
 
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.60.0"
 
   role_name             = local.ebs_csi_role_name
   attach_ebs_csi_policy = true
@@ -43,6 +45,7 @@ module "cluster_autoscaler_irsa_role" {
   count = var.enable_autoscaler ? 1 : 0
 
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "5.60.0"
 
   role_name                        = local.cluster_autoscaler_role_name
   attach_cluster_autoscaler_policy = true
