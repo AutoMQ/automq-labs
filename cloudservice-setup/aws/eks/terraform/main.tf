@@ -1,6 +1,6 @@
 module "automq-byoc" {
   source  = "AutoMQ/automq-byoc-environment/aws"
-  version = "0.3.1"
+  version = "0.3.2"
 
   cloud_provider_region = var.region
   automq_byoc_env_id    = var.resource_suffix
