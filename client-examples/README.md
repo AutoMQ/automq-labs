@@ -48,7 +48,13 @@ Python examples using the kafka-python library.
 
 ### ⚡ [C++ Examples](./cpp/)
 
-*Note: C++ examples are currently TODO. Implementation is planned for future releases.*
+C++ examples using the librdkafka client library with Make build system.
+
+**Available Examples:**
+- **SimpleMessageExample**: Basic producer/consumer operations with concurrent processing
+- Performance metrics and Docker support included
+- Optimized configurations for AutoMQ's object storage architecture
+- Cross-platform support (macOS, Linux, Windows with WSL)
 
 ### 🌐 JavaScript Examples
 
