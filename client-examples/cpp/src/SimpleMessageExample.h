@@ -47,6 +47,10 @@ public:
 private:
     static void runProducer(PerformanceMetrics& metrics);
     static void runConsumer(PerformanceMetrics& metrics);
+    
+    // Batch consumption method for improved performance
+    static std::vector<RdKafka::Message*> consumeBatch(
+        RdKafka::KafkaConsumer* consumer, size_t batch_size, int batch_timeout);
     // librdkafka methods
     static RdKafka::Producer* createProducer();
     static RdKafka::KafkaConsumer* createConsumer();

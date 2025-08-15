@@ -1,11 +1,10 @@
 # AutoMQ C++ Client Examples
 
-This project demonstrates how to use AutoMQ (Apache Kafka) with C++ clients, featuring both simple message examples and transactional message examples.
+This project demonstrates how to use AutoMQ (Apache Kafka) with C++ clients, featuring simple message examples.
 
 ## Features
 
 - **Simple Message Example**: Basic producer and consumer with performance metrics
-- **Transactional Message Example**: Demonstrates ACID transactions in message processing
 - **Performance Tuning**: Optimized configurations for AutoMQ
 - **Docker Support**: Easy deployment with Docker Compose
 - **Comprehensive Metrics**: Detailed performance and latency measurements
@@ -75,7 +74,6 @@ make with-kafka
 
 # Run specific example
 ./bin/automq-cpp-examples simple
-./bin/automq-cpp-examples transaction
 
 # Or use the runner script
 ./run-examples.sh
@@ -119,7 +117,7 @@ docker run --rm automq-cpp-examples
 | `LINGER_MS` | Producer linger time | `100` |
 | `BUFFER_MEMORY` | Producer buffer memory | `67108864` (64MB) |
 | `MAX_REQUEST_SIZE` | Maximum request size | `10485760` (10MB) |
-| `TRANSACTION_TIMEOUT_MS` | Transaction timeout | `60000` |
+
 
 ### Example Usage
 
@@ -130,8 +128,7 @@ MESSAGE_COUNT=5000 MESSAGE_SIZE=2048 ./bin/automq-cpp-examples simple
 # Connect to remote Kafka
 BOOTSTRAP_SERVERS=kafka.example.com:9092 ./run-examples.sh
 
-# Run with custom topic
-TOPIC_NAME=my-test-topic ./bin/automq-cpp-examples transaction
+
 ```
 
 ## Examples Description
@@ -151,20 +148,7 @@ Demonstrates basic Kafka producer and consumer functionality:
 - Real-time performance monitoring
 - Configurable message size and count
 
-### Transactional Message Example
 
-Demonstrates ACID transactions in Kafka:
-
-- **Transactional Producer**: Groups messages into atomic transactions
-- **Transaction Management**: Handles commit and abort scenarios
-- **Isolation**: Ensures consumers only see committed messages
-- **Error Handling**: Demonstrates transaction rollback on failures
-
-**Key Features:**
-- Exactly-once semantics
-- Atomic message batches
-- Transaction success/failure simulation
-- Comprehensive transaction metrics
 
 ## Performance Tuning for AutoMQ
 
@@ -200,8 +184,7 @@ cpp/
 │   ├── AutoMQExampleConstants.cpp    # Configuration implementation
 │   ├── SimpleMessageExample.h        # Simple example header
 │   ├── SimpleMessageExample.cpp      # Simple example implementation
-│   ├── TransactionalMessageExample.h # Transaction example header
-│   ├── TransactionalMessageExample.cpp # Transaction implementation
+
 │   └── main.cpp                      # Main application entry point
 ├── bin/                              # Compiled binaries (created by build)
 ├── obj/                              # Object files (created by build)
@@ -231,7 +214,7 @@ make clean
 # Run examples
 make run
 make run-simple
-make run-transaction
+
 
 # Docker operations
 make docker-build

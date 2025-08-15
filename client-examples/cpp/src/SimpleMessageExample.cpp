@@ -21,12 +21,7 @@ void PerformanceMetrics::printMetrics() const {
     std::cout << "Produce duration: " << produceDuration << " ms" << std::endl;
     std::cout << "Consume duration: " << consumeDuration << " ms" << std::endl;
     
-    if (messagesSent > 0) {
-        double produceRate = (double)messagesSent * 500.0 / produceDuration;
-        double avgProduceLatency = (double)totalProduceLatency / messagesSent;
-        std::cout << "Produce rate: " << std::fixed << std::setprecision(2) << produceRate << " msg/s" << std::endl;
-        std::cout << "Average produce latency: " << std::fixed << std::setprecision(2) << avgProduceLatency << " ms" << std::endl;
-    }
+
     
     if (messagesReceived > 0) {
         double consumeRate = (double)messagesReceived * 500.0 / consumeDuration;
@@ -48,19 +43,23 @@ void SimpleMessageExample::run() {
     PerformanceMetrics metrics;
     metrics.reset();
     
-    // Run producer and consumer simulation in parallel
+    // Start consumer subscription to topic first
+    std::cout << "Step 1: Starting consumer subscription..." << std::endl;
+    std::thread consumerThread([&metrics]() {
+        runConsumer(metrics);
+    });
+    
+    // Wait for a while to ensure consumer subscription is completed
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    
+    // Then start producer to send messages
+    std::cout << "Step 2: Starting producer..." << std::endl;
     std::thread producerThread([&metrics]() {
         runProducer(metrics);
     });
     
-    std::thread consumerThread([&metrics]() {
-        // Wait a bit for producer to start
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        runConsumer(metrics);
-    });
-    
-    producerThread.join();
     consumerThread.join();
+    producerThread.join();
     
     metrics.printMetrics();
 }
@@ -114,12 +113,50 @@ void SimpleMessageExample::runProducer(PerformanceMetrics& metrics) {
     }
     
     // Wait for all messages to be delivered
-    producer->flush(1000);
+    // Increase timeout to ensure all messages are sent
+    std::cout << "Flushing producer to ensure all messages are delivered..." << std::endl;
+    producer->flush(10000); // Increased timeout to 10 seconds
     
     metrics.endTime = std::chrono::high_resolution_clock::now();
     std::cout << "Producer finished" << std::endl;
     
     delete producer;
+}
+
+// Batch consume function inspired by librdkafka official example
+std::vector<RdKafka::Message*> SimpleMessageExample::consumeBatch(
+    RdKafka::KafkaConsumer* consumer, size_t batch_size, int batch_timeout) {
+    std::vector<RdKafka::Message*> msgs;
+    msgs.reserve(batch_size);
+    
+    auto start_time = std::chrono::high_resolution_clock::now();
+    int remaining_timeout = batch_timeout;
+    
+    while (msgs.size() < batch_size && remaining_timeout > 0) {
+        RdKafka::Message* msg = consumer->consume(remaining_timeout);
+        
+        switch (msg->err()) {
+        case RdKafka::ERR__TIMED_OUT:
+            delete msg;
+            return msgs; // Return whatever we have collected
+            
+        case RdKafka::ERR_NO_ERROR:
+            msgs.push_back(msg);
+            break;
+            
+        default:
+            std::cerr << "Consumer error: " << msg->errstr() << std::endl;
+            delete msg;
+            break;
+        }
+        
+        // Update remaining timeout
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() - start_time).count();
+        remaining_timeout = batch_timeout - static_cast<int>(elapsed);
+    }
+    
+    return msgs;
 }
 
 void SimpleMessageExample::runConsumer(PerformanceMetrics& metrics) {
@@ -144,26 +181,34 @@ void SimpleMessageExample::runConsumer(PerformanceMetrics& metrics) {
     
     metrics.consumeStartTime = std::chrono::high_resolution_clock::now();
     
+    // Use batch consumption for better performance
+    const size_t BATCH_SIZE = 100;
+    const int BATCH_TIMEOUT = 100; // Reduced from 1000ms to 100ms
+    
     while (metrics.messagesReceived < AutoMQExampleConstants::MESSAGE_COUNT) {
-        RdKafka::Message* msg = consumer->consume(1000);
+        std::vector<RdKafka::Message*> batch = consumeBatch(consumer, BATCH_SIZE, BATCH_TIMEOUT);
         
-        if (msg->err() == RdKafka::ERR_NO_ERROR) {
-            long long receiveTime = getCurrentTimeMillis();
-            long long endToEndLatency = receiveTime - msg->timestamp().timestamp;
-            
-            metrics.totalEndToEndLatency += endToEndLatency;
-            int currentCount = ++metrics.messagesReceived;
-            
-            std::cout << "Received message " << currentCount << "/" << AutoMQExampleConstants::MESSAGE_COUNT
-                      << ": key=" << (msg->key() ? *msg->key() : "null")
-                      << ", partition=" << msg->partition()
-                      << ", offset=" << msg->offset()
-                      << ", e2eLatency=" << endToEndLatency << " ms" << std::endl;
-        } else if (msg->err() != RdKafka::ERR__TIMED_OUT) {
-            std::cerr << "Consumer error: " << msg->errstr() << std::endl;
+        for (RdKafka::Message* msg : batch) {
+            if (msg->err() == RdKafka::ERR_NO_ERROR) {
+                long long receiveTime = getCurrentTimeMillis();
+                long long endToEndLatency = receiveTime - msg->timestamp().timestamp;
+                
+                metrics.totalEndToEndLatency += endToEndLatency;
+                int currentCount = ++metrics.messagesReceived;
+                
+                std::cout << "Received message " << currentCount << "/" << AutoMQExampleConstants::MESSAGE_COUNT
+                          << ": key=" << (msg->key() ? *msg->key() : "null")
+                          << ", partition=" << msg->partition()
+                          << ", offset=" << msg->offset()
+                          << ", e2eLatency=" << endToEndLatency << " ms" << std::endl;
+            }
+            delete msg;
         }
         
-        delete msg;
+        // If we got no messages in this batch, continue to next iteration
+        if (batch.empty()) {
+            continue;
+        }
     }
     
     metrics.consumeEndTime = std::chrono::high_resolution_clock::now();

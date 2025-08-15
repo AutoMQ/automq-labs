@@ -31,9 +31,6 @@ public:
     static const int FETCH_MIN_BYTES;
     static const int FETCH_MAX_WAIT_MS;
     
-    // Transaction configuration
-    static const std::string TRANSACTIONAL_ID_PREFIX;
-    static const int TRANSACTION_TIMEOUT_MS;
 };
 
 #endif // AUTOMQ_EXAMPLE_CONSTANTS_H

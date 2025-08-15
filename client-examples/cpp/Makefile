@@ -72,7 +72,7 @@ help:
 	@echo "  install-deps-mac - Install dependencies (macOS)"
 	@echo "  run           - Run all examples"
 	@echo "  run-simple    - Run simple message example"
-	@echo "  run-transaction - Run transactional message example"
+	@echo ""
 	@echo "  help          - Show this help message"
 
-.PHONY: all with-kafka clean install-deps install-deps-mac run run-simple run-transaction help
+.PHONY: all with-kafka clean install-deps install-deps-mac run run-simple help
