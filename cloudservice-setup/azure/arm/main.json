@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "10033909812571409301"
+      "templateHash": "14162668849086023053"
     },
     "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
   },
@@ -152,7 +152,7 @@
   "variables": {
     "uniqueId": "[uniqueString(resourceGroup().id, deployment().name)]",
     "imageReference": {
-      "id": "[format('/subscriptions/{0}/resourceGroups/AutoMQ/providers/Microsoft.Compute/images/AutoMQ-control-center-Test-0.0.1-SNAPSHOT-0808-03.32-x86_64', subscription().subscriptionId)]"
+      "id": "/subscriptions/218357d0-eaaf-4e3e-9ffa-6b4ccb7e2df9/resourceGroups/automq-image/providers/Microsoft.Compute/images/AutoMQ-control-center-Prod-7.7.2-x86_64"
     }
   },
   "resources": {
