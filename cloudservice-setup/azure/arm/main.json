@@ -1,0 +1,903 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "languageVersion": "2.0",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.36.1.42791",
+      "templateHash": "14162668849086023053"
+    },
+    "description": "Deploy AutoMQ BYOC Console with secure virtual machine configuration, SSH authentication, and customizable networking options"
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for resource deployment"
+      }
+    },
+    "virtualNetworkNewOrExisting": {
+      "type": "string",
+      "defaultValue": "new",
+      "allowedValues": [
+        "existing",
+        "new"
+      ],
+      "metadata": {
+        "description": "Determines whether to create a new virtual network or use an existing one"
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the virtual network for the AutoMQ BYOC Console deployment"
+      }
+    },
+    "virtualNetworkResourceGroup": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().name]",
+      "metadata": {
+        "description": "Resource group name containing the virtual network (defaults to current resource group)"
+      }
+    },
+    "virtualNetworkAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "description": "Address prefix for the new virtual network (CIDR notation)"
+      }
+    },
+    "subnetName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the subnet for the AutoMQ BYOC Console virtual machine"
+      }
+    },
+    "subnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "Address prefix for the subnet (CIDR notation)"
+      }
+    },
+    "publicIPNewOrExisting": {
+      "type": "string",
+      "defaultValue": "new",
+      "allowedValues": [
+        "new",
+        "existing",
+        "none"
+      ],
+      "metadata": {
+        "description": "Public IP address configuration: create new, use existing, or none"
+      }
+    },
+    "publicIPName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the public IP address (required unless publicIPNewOrExisting is \"none\")"
+      }
+    },
+    "publicIPResourceGroup": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().name]",
+      "metadata": {
+        "description": "Resource group name containing the public IP address (defaults to current resource group)"
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+        "description": "Virtual machine size for the AutoMQ BYOC Console"
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Administrator username for the virtual machine"
+      }
+    },
+    "sshPublicKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH public key for secure authentication to the virtual machine"
+      }
+    },
+    "opsStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Azure Storage account for AutoMQ operations data"
+      }
+    },
+    "opsStorageAccountResourceGroup": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().name]",
+      "metadata": {
+        "description": "Resource group name containing the operations storage account (defaults to current resource group)"
+      }
+    },
+    "opsStorageAccountType": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "metadata": {
+        "description": "Storage account type/SKU for the operations storage account"
+      }
+    },
+    "opsStorageAccountKind": {
+      "type": "string",
+      "defaultValue": "StorageV2",
+      "metadata": {
+        "description": "Storage account kind for the operations storage account"
+      }
+    },
+    "opsStorageAccountIsNew": {
+      "type": "string",
+      "defaultValue": "new",
+      "allowedValues": [
+        "new",
+        "existing"
+      ],
+      "metadata": {
+        "description": "Determines whether to create a new storage account or use an existing one"
+      }
+    }
+  },
+  "variables": {
+    "uniqueId": "[uniqueString(resourceGroup().id, deployment().name)]",
+    "imageReference": {
+      "id": "/subscriptions/218357d0-eaaf-4e3e-9ffa-6b4ccb7e2df9/resourceGroups/automq-image/providers/Microsoft.Compute/images/AutoMQ-control-center-Prod-7.7.2-x86_64"
+    }
+  },
+  "resources": {
+    "network": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('network-deployment-{0}', variables('uniqueId'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "virtualNetworkNewOrExisting": {
+            "value": "[parameters('virtualNetworkNewOrExisting')]"
+          },
+          "virtualNetworkName": {
+            "value": "[parameters('virtualNetworkName')]"
+          },
+          "virtualNetworkResourceGroup": {
+            "value": "[parameters('virtualNetworkResourceGroup')]"
+          },
+          "subnetName": {
+            "value": "[parameters('subnetName')]"
+          },
+          "virtualNetworkAddressPrefix": {
+            "value": "[parameters('virtualNetworkAddressPrefix')]"
+          },
+          "subnetAddressPrefix": {
+            "value": "[parameters('subnetAddressPrefix')]"
+          },
+          "publicIPNewOrExisting": {
+            "value": "[parameters('publicIPNewOrExisting')]"
+          },
+          "publicIPName": {
+            "value": "[parameters('publicIPName')]"
+          },
+          "publicIPResourceGroup": {
+            "value": "[parameters('publicIPResourceGroup')]"
+          },
+          "uniqueId": {
+            "value": "[variables('uniqueId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "12466125354461110516"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for deployment"
+              }
+            },
+            "virtualNetworkNewOrExisting": {
+              "type": "string",
+              "allowedValues": [
+                "new",
+                "existing"
+              ],
+              "metadata": {
+                "description": "Specifies whether the virtual network is new or existing."
+              }
+            },
+            "virtualNetworkName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the new or existing Virtual Network."
+              }
+            },
+            "virtualNetworkResourceGroup": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the resource group where the Virtual Network exists. Defaults to the current resource group."
+              }
+            },
+            "subnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the subnet to deploy the VM into."
+              }
+            },
+            "virtualNetworkAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "The address prefix for the new virtual network."
+              }
+            },
+            "subnetAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "The address prefix for the new subnet."
+              }
+            },
+            "publicIPNewOrExisting": {
+              "type": "string",
+              "allowedValues": [
+                "new",
+                "existing",
+                "none"
+              ],
+              "metadata": {
+                "description": "Specifies whether to create a new public IP, use an existing one, or none."
+              }
+            },
+            "publicIPName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the new or existing public IP address. Only required if publicIPNewOrExisting is not \"none\"."
+              }
+            },
+            "publicIPResourceGroup": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the resource group where the public IP exists. Defaults to the current resource group. Only required if publicIPNewOrExisting is not \"none\"."
+              }
+            },
+            "uniqueId": {
+              "type": "string",
+              "metadata": {
+                "description": "A unique identifier for the deployment, used to generate resource names."
+              }
+            }
+          },
+          "variables": {
+            "newPublicIpAddressName": "[if(and(not(equals(parameters('publicIPName'), '')), not(equals(parameters('publicIPName'), 'NEW-PIP'))), parameters('publicIPName'), format('pip-{0}', parameters('uniqueId')))]",
+            "newVnetName": "[if(not(equals(parameters('virtualNetworkName'), '')), parameters('virtualNetworkName'), format('vnet-{0}', parameters('uniqueId')))]",
+            "newSubnetName": "[if(not(equals(parameters('subnetName'), '')), parameters('subnetName'), format('subnet-{0}', parameters('uniqueId')))]",
+            "networkInterfaceName": "[format('nic-{0}', parameters('uniqueId'))]",
+            "networkSecurityGroupName": "[format('nsg-{0}', parameters('uniqueId'))]",
+            "subnetId": "[resourceId(if(equals(parameters('virtualNetworkNewOrExisting'), 'new'), resourceGroup().name, parameters('virtualNetworkResourceGroup')), 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), variables('newSubnetName'))]"
+          },
+          "resources": [
+            {
+              "condition": "[equals(parameters('virtualNetworkNewOrExisting'), 'new')]",
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-06-01",
+              "name": "[variables('newVnetName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "automqVendor": "automq",
+                "automqDeploymentID": "[parameters('uniqueId')]"
+              },
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('virtualNetworkAddressPrefix')]"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[parameters('subnetName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetAddressPrefix')]",
+                      "serviceEndpoints": [
+                        {
+                          "service": "Microsoft.Storage"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-06-01",
+              "name": "[variables('networkSecurityGroupName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "automqVendor": "automq",
+                "automqDeploymentID": "[parameters('uniqueId')]"
+              },
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "AllowSSH",
+                    "properties": {
+                      "priority": 1000,
+                      "protocol": "TCP",
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "sourcePortRange": "*",
+                      "sourceAddressPrefix": "*",
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "22"
+                    }
+                  },
+                  {
+                    "name": "AllowHTTP8080",
+                    "properties": {
+                      "priority": 1001,
+                      "protocol": "TCP",
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "sourcePortRange": "*",
+                      "sourceAddressPrefix": "*",
+                      "destinationAddressPrefix": "*",
+                      "destinationPortRange": "8080"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "condition": "[equals(parameters('publicIPNewOrExisting'), 'new')]",
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-06-01",
+              "name": "[variables('newPublicIpAddressName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "automqVendor": "automq",
+                "automqDeploymentID": "[parameters('uniqueId')]"
+              },
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-06-01",
+              "name": "[variables('networkInterfaceName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "automqVendor": "automq",
+                "automqDeploymentID": "[parameters('uniqueId')]"
+              },
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "[format('ipConfig-{0}', parameters('uniqueId'))]",
+                    "properties": "[union(createObject('privateIPAllocationMethod', 'Dynamic', 'subnet', createObject('id', variables('subnetId'))), if(equals(parameters('publicIPNewOrExisting'), 'new'), createObject('publicIPAddress', createObject('id', resourceId('Microsoft.Network/publicIPAddresses', variables('newPublicIpAddressName')))), if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), createObject('publicIPAddress', createObject('id', extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')))), createObject())))]"
+                  }
+                ],
+                "networkSecurityGroup": {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('newPublicIpAddressName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "subnetId": {
+              "type": "string",
+              "value": "[variables('subnetId')]"
+            },
+            "networkInterfaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+            },
+            "publicIPAddress": {
+              "type": "string",
+              "value": "[if(and(equals(parameters('publicIPNewOrExisting'), 'new'), not(equals(parameters('publicIPName'), ''))), reference(resourceId('Microsoft.Network/publicIPAddresses', variables('newPublicIpAddressName')), '2023-06-01').ipAddress, if(and(and(equals(parameters('publicIPNewOrExisting'), 'existing'), not(equals(parameters('publicIPName'), ''))), not(equals(parameters('publicIPResourceGroup'), ''))), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('publicIPResourceGroup')), 'Microsoft.Network/publicIPAddresses', parameters('publicIPName')), '2023-06-01').ipAddress, reference(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName')), '2023-06-01').ipConfigurations[0].properties.privateIPAddress))]"
+            }
+          }
+        }
+      }
+    },
+    "storage": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('storage-deployment-{0}', variables('uniqueId'))]",
+      "resourceGroup": "[parameters('opsStorageAccountResourceGroup')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "opsStorageAccountName": {
+            "value": "[parameters('opsStorageAccountName')]"
+          },
+          "opsStorageAccountResourceGroup": {
+            "value": "[parameters('opsStorageAccountResourceGroup')]"
+          },
+          "opsStorageAccountType": {
+            "value": "[parameters('opsStorageAccountType')]"
+          },
+          "opsStorageAccountKind": {
+            "value": "[parameters('opsStorageAccountKind')]"
+          },
+          "opsStorageAccountIsNew": {
+            "value": "[parameters('opsStorageAccountIsNew')]"
+          },
+          "uniqueId": {
+            "value": "[variables('uniqueId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "9302715569106556622"
+            }
+          },
+          "parameters": {
+            "opsStorageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Azure Storage account for AutoMQ operations data"
+              }
+            },
+            "opsStorageAccountResourceGroup": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().name]",
+              "metadata": {
+                "description": "Resource group name containing the operations storage account"
+              }
+            },
+            "opsStorageAccountType": {
+              "type": "string",
+              "defaultValue": "Standard_LRS",
+              "metadata": {
+                "description": "Storage account type/SKU for the operations storage account"
+              }
+            },
+            "opsStorageAccountKind": {
+              "type": "string",
+              "defaultValue": "StorageV2",
+              "metadata": {
+                "description": "Storage account kind for the operations storage account"
+              }
+            },
+            "opsStorageAccountIsNew": {
+              "type": "string",
+              "allowedValues": [
+                "new",
+                "existing"
+              ],
+              "metadata": {
+                "description": "Determines whether to create a new storage account or use an existing one"
+              }
+            },
+            "uniqueId": {
+              "type": "string",
+              "metadata": {
+                "description": "A unique identifier for the deployment, used to generate resource names"
+              }
+            }
+          },
+          "resources": [
+            {
+              "condition": "[equals(parameters('opsStorageAccountIsNew'), 'new')]",
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('opsStorageAccountName')]",
+              "location": "[resourceGroup().location]",
+              "sku": {
+                "name": "[parameters('opsStorageAccountType')]"
+              },
+              "kind": "[parameters('opsStorageAccountKind')]",
+              "properties": {
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": true,
+                "supportsHttpsTrafficOnly": true
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/default/automq-ops-{1}', parameters('opsStorageAccountName'), parameters('uniqueId'))]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('opsStorageAccountName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "opsStorageAccountEndpoint": {
+              "type": "string",
+              "value": "[if(equals(parameters('opsStorageAccountIsNew'), 'new'), reference(resourceId('Microsoft.Storage/storageAccounts', parameters('opsStorageAccountName')), '2023-01-01', 'full'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('opsStorageAccountResourceGroup')), 'Microsoft.Storage/storageAccounts', parameters('opsStorageAccountName')), '2023-01-01', 'full')).properties.primaryEndpoints.blob]"
+            }
+          }
+        }
+      }
+    },
+    "vm": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('vm-deployment-{0}', variables('uniqueId'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "sshPublicKey": {
+            "value": "[parameters('sshPublicKey')]"
+          },
+          "imageReference": {
+            "value": "[variables('imageReference')]"
+          },
+          "uniqueId": {
+            "value": "[variables('uniqueId')]"
+          },
+          "networkInterfaceId": {
+            "value": "[reference('network').outputs.networkInterfaceId.value]"
+          },
+          "opsStorageAccountEndpoint": {
+            "value": "[reference('storage').outputs.opsStorageAccountEndpoint.value]"
+          },
+          "vpcResourceGroupName": {
+            "value": "[parameters('virtualNetworkResourceGroup')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "2543473683982992321"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region for resource deployment"
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual machine size for the AutoMQ BYOC Console"
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Administrator username for the virtual machine"
+              }
+            },
+            "sshPublicKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "SSH public key for secure authentication to the virtual machine"
+              }
+            },
+            "imageReference": {
+              "type": "object",
+              "metadata": {
+                "description": "VM image reference configuration for AutoMQ BYOC Console"
+              }
+            },
+            "uniqueId": {
+              "type": "string",
+              "metadata": {
+                "description": "Unique identifier for the deployment, used to generate resource names"
+              }
+            },
+            "networkInterfaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the network interface for the virtual machine"
+              }
+            },
+            "opsStorageAccountEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "Endpoint URL of the operations storage account"
+              }
+            },
+            "vpcResourceGroupName": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().name]",
+              "metadata": {
+                "description": "Resource group name of the virtual network"
+              }
+            }
+          },
+          "variables": {
+            "$fxv#0": "#!/bin/bash\n\nmkdir -p /opt/cmp \n\ncat > /opt/cmp/config.properties <<EOF\ncmp.provider.credential=vm-role://${managedIdentityClientId}@azure\ncmp.provider.opsBucket=${opsContainerName}\ncmp.provider.opsBucket.endpoint=${opsStorageAccountEndpoint}\ncmp.environmentId=${uniqueId}\ncmp.provider.opsBucket.product.code=ObjectStorage\nEOF\n",
+            "vmName": "[format('vm-{0}', parameters('uniqueId'))]",
+            "osDiskName": "[format('osdisk-{0}', parameters('uniqueId'))]",
+            "dataDiskName": "[format('datadisk-{0}', parameters('uniqueId'))]",
+            "managedIdentityName": "[format('id-{0}', parameters('uniqueId'))]",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": true,
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[format('/home/{0}/.ssh/authorized_keys', parameters('adminUsername'))]",
+                    "keyData": "[parameters('sshPublicKey')]"
+                  }
+                ]
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[variables('managedIdentityName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "automqVendor": "automq",
+                "automqDeploymentID": "[parameters('uniqueId')]"
+              }
+            },
+            {
+              "type": "Microsoft.Compute/disks",
+              "apiVersion": "2023-04-02",
+              "name": "[variables('dataDiskName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "automqVendor": "automq",
+                "automqDeploymentID": "[parameters('uniqueId')]"
+              },
+              "sku": {
+                "name": "Premium_LRS"
+              },
+              "properties": {
+                "diskSizeGB": 20,
+                "creationData": {
+                  "createOption": "Empty"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-07-01",
+              "name": "[variables('vmName')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Name": "[variables('vmName')]",
+                "automqVendor": "automq",
+                "automqDeploymentID": "[parameters('uniqueId')]"
+              },
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')))]": {}
+                }
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                  "computerName": "[variables('vmName')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "linuxConfiguration": "[variables('linuxConfiguration')]",
+                  "customData": "[base64(reduce(items(createObject('${managedIdentityClientId}', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').clientId, '${opsContainerName}', format('automq-ops-{0}', parameters('uniqueId')), '${opsStorageAccountEndpoint}', parameters('opsStorageAccountEndpoint'), '${uniqueId}', parameters('uniqueId'), '${vpcResourceGroupName}', parameters('vpcResourceGroupName'))), variables('$fxv#0'), lambda('cur', 'next', replace(string(lambdaVariables('cur')), lambdaVariables('next').key, lambdaVariables('next').value))))]"
+                },
+                "storageProfile": {
+                  "imageReference": "[parameters('imageReference')]",
+                  "osDisk": {
+                    "name": "[variables('osDiskName')]",
+                    "caching": "ReadWrite",
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Premium_LRS"
+                    },
+                    "diskSizeGB": 30
+                  },
+                  "dataDisks": [
+                    {
+                      "lun": 0,
+                      "name": "[variables('dataDiskName')]",
+                      "createOption": "Attach",
+                      "caching": "ReadWrite",
+                      "managedDisk": {
+                        "id": "[resourceId('Microsoft.Compute/disks', variables('dataDiskName'))]"
+                      }
+                    }
+                  ]
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[parameters('networkInterfaceId')]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/disks', variables('dataDiskName'))]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+            },
+            "managedIdentityPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').principalId]"
+            },
+            "managedIdentityClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('managedIdentityName')), '2023-01-31').clientId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "network",
+        "storage"
+      ]
+    },
+    "rbac": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[format('rbac-deployment-{0}', variables('uniqueId'))]",
+      "subscriptionId": "[subscription().subscriptionId]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "managedIdentityPrincipalId": {
+            "value": "[reference('vm').outputs.managedIdentityPrincipalId.value]"
+          },
+          "uniqueId": {
+            "value": "[variables('uniqueId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "11234791375166013411"
+            }
+          },
+          "parameters": {
+            "managedIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The principal ID of the managed identity."
+              }
+            },
+            "uniqueId": {
+              "type": "string",
+              "metadata": {
+                "description": "A unique identifier for the deployment, used to generate resource names."
+              }
+            }
+          },
+          "variables": {
+            "managedIdentityName": "[format('id-{0}', parameters('uniqueId'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(subscription().id, variables('managedIdentityName'), 'StorageBlobDataOwner')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')]",
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(subscription().id, variables('managedIdentityName'), 'Reader')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(subscription().id, variables('managedIdentityName'), 'PrivateDNSZoneContributor')]",
+              "properties": {
+                "roleDefinitionId": "[format('/subscriptions/{0}/providers/Microsoft.Authorization/roleDefinitions/b12aa53e-6015-4669-85d0-8515ebb3ae7f', subscription().subscriptionId)]",
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(subscription().id, variables('managedIdentityName'), 'AzureKubernetesServiceClusterAdminRole')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0ab0b1a8-8aac-4efd-b8c2-3ee1fb270be8')]",
+                "principalId": "[parameters('managedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "vm"
+      ]
+    }
+  },
+  "outputs": {
+    "automqByocEndpoint": {
+      "type": "string",
+      "value": "[format('http://{0}:8080', reference('network').outputs.publicIPAddress.value)]"
+    },
+    "automqByocInitialUsername": {
+      "type": "string",
+      "value": "admin"
+    },
+    "automqByocInitialPassword": {
+      "type": "string",
+      "value": "[reference('vm').outputs.vmId.value]"
+    },
+    "automqByocManagedIdentityClientId": {
+      "type": "string",
+      "value": "[reference('vm').outputs.managedIdentityClientId.value]"
+    }
+  }
+}
