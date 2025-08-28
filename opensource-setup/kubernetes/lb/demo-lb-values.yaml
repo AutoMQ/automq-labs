@@ -46,6 +46,7 @@ controller:
   automountServiceAccountToken: true
 
 broker:
+  minId: 1000
   replicaCount: 1
   resources:
     requests:
