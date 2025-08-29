@@ -77,7 +77,7 @@ To verify the mTLS setup, we will launch a client pod, generate client certifica
     *   **Send messages:**
         ```bash
         kubectl exec -it kafka-client -n automq -- bash -c "
-          kafka-console-producer.sh \
+          ./kafka-console-producer.sh \
             --bootstrap-server automq-release-kafka.automq.svc.cluster.local:9092 \
             --producer.config /opt/bitnami/kafka/config/client.properties \
             --topic test-mtls
@@ -88,7 +88,7 @@ To verify the mTLS setup, we will launch a client pod, generate client certifica
     *   **Receive messages:**
         ```bash
         kubectl exec -it kafka-client -n automq -- bash -c "
-          kafka-console-consumer.sh \
+          ./kafka-console-consumer.sh \
             --bootstrap-server automq-release-kafka.automq.svc.cluster.local:9092 \
             --consumer.config /opt/bitnami/kafka/config/client.properties \
             --topic test-mtls \

@@ -117,10 +117,10 @@ After the installation is complete, it may take a few minutes for the cloud prov
     Port `9095` is used for external access, as specified in the `demo-lb-values.yaml` file.
     ```shell
     # Replace <EXTERNAL-IP> with the address from the previous step
-    kafka-console-producer.sh \
+    ./kafka-console-producer.sh \
       --bootstrap-server <EXTERNAL-IP>:9095 \
       --topic test-lb \
-      --producer.config client.properties \
+      --producer.config client.properties
     ```
 
 ## Cleanup
