@@ -95,7 +95,7 @@ This will delete all Kubernetes resources associated with the Helm release.
 
 ### LoadBalancer
 1.  **Find the External Address**:
-    Run the following command and wait for the `EXTERNAL-IP` to be assigned. You will have a different external IP for each Kafka broker. You can get the list of external IPs using the command below:
+    Run the following command and wait for the `EXTERNAL-IP` to be assigned. You can get and choose the LoadBalancer external IP using the command below:
     ```shell
     kubectl get svc --namespace automq -l "app.kubernetes.io/component=controller" -w
     ```
