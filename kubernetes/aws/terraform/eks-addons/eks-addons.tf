@@ -21,7 +21,7 @@ resource "aws_eks_addon" "aws_ebs_csi_driver" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  service_account_role_arn = module.ebs-csi-irsa-role[0].iam_role_arn
+  service_account_role_arn = module.ebs-csi-irsa-role[0].arn
 
   preserve   = true
   depends_on = [module.ebs-csi-irsa-role]

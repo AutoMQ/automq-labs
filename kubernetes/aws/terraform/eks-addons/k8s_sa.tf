@@ -6,7 +6,7 @@ resource "kubernetes_service_account" "lb_controller_sa" {
     name      = local.lb_service_account
     namespace = "kube-system"
     annotations = {
-      "eks.amazonaws.com/role-arn" = module.lb_irsa_role[0].iam_role_arn
+      "eks.amazonaws.com/role-arn" = module.lb_irsa_role[0].arn
     }
     labels = {
       "app.kubernetes.io/name"       = local.lb_service_account

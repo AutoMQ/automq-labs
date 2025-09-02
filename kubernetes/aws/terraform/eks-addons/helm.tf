@@ -17,7 +17,7 @@ resource "helm_release" "autoscaler" {
         region       = var.region,
         svc_account  = local.cluster_autoscaler_service_account
         cluster_name = local.cluster_name,
-        role_arn     = module.cluster_autoscaler_irsa_role[0].iam_role_arn
+        role_arn     = module.cluster_autoscaler_irsa_role[0].arn
       }
     )
   ]
