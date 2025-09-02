@@ -54,6 +54,7 @@ controller:
     size: 20Gi
 
 broker:
+  minId: 1000
   replicaCount: 3
   resources:
     requests:
