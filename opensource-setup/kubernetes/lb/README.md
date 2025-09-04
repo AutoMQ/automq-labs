@@ -10,7 +10,7 @@ The `autoDiscovery` feature further simplifies connectivity by automatically det
 
 ## Prerequisites
 
-Ensure you have met the prerequisites outlined in the main [Kubernetes deployment guide](../README.md), including having a running Kubernetes cluster and Helm installed.
+Ensure you have met the prerequisites outlined in the main [Kubernetes deployment guide](../bitnami/README.md), including having a running Kubernetes cluster and Helm installed.
 
 ## Configuration for LoadBalancer Deployment
 

@@ -11,7 +11,7 @@ For a detailed explanation of the mechanism, please refer to our official docume
 
 ## Prerequisites
 
-Ensure you have met the prerequisites outlined in the main [Kubernetes deployment guide](../README.md), including having a running Kubernetes cluster and Helm installed. Your Kubernetes cluster must span multiple availability zones.
+Ensure you have met the prerequisites outlined in the main [Kubernetes deployment guide](../bitnami/README.md), including having a running Kubernetes cluster and Helm installed. Your Kubernetes cluster must span multiple availability zones.
 
 ## Configuration for Multi-AZ Deployment
 
