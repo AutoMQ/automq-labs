@@ -38,7 +38,7 @@ First, we need to generate the CA and the server certificates that the AutoMQ br
 Now, deploy AutoMQ using the Bitnami Helm chart, configured to use the secrets we just created.
 
 1.  **Customize `demo-tls-values.yaml`**:
-    Review the provided `demo-tls-values.yaml` file. You must replace the placeholder values for your S3 buckets (`${ops-bucket}`, `${data-bucket}`), region, and endpoint.
+    Review the provided [demo-tls-values.yaml](demo-tls-values.yaml) file. You must replace the placeholder values for your S3 buckets (`${ops-bucket}`, `${data-bucket}`), region, and endpoint.
 
 2.  **Install the Helm Chart**:
     Deploy AutoMQ using your customized values file. We recommend using a version from the `31.x` series of the Bitnami Kafka chart.

@@ -19,7 +19,7 @@ Before you begin, ensure you have the following:
 
 ### 1. Configure `demo-values.yaml`
 
-The key to deploying AutoMQ is to provide a custom `values.yaml` file that configures the Bitnami Kafka chart to use AutoMQ's container image and settings.
+The key to deploying AutoMQ is to provide a custom [values.yaml](demo-values.yaml) file that configures the Bitnami Kafka chart to use AutoMQ's container image and settings.
 
 We provide a `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on AWS using `m7g.xlarge` instances.
 
