@@ -160,15 +160,12 @@ spec:
       autobalancer.client.listener.name: PLAIN1-9092
     template:
       kafkaContainer:
+        # Replace the following with your own config.
         env:
-          - name: AWS_ACCESS_KEY_ID
+          - name: KAFKA_S3_ACCESS_KEY
             value: "${access-key}"
-          - name: AWS_SECRET_ACCESS_KEY
+          - name: KAFKA_S3_SECRET_KEY
             value: "${secret-key}"
-          - name: AWS_SESSION_TOKEN
-            value: "${session-token}"
-          - name: AWS_DEFAULT_REGION
-            value: "${region}"
     rack:
       topologyKey: topology.kubernetes.io/zone
   entityOperator:
