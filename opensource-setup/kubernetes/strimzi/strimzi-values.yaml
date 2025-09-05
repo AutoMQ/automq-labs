@@ -7,15 +7,3 @@ extraEnvs:
       3.9.0=automqinc/automq:1.5.5-strimzi
       3.9.1=quay.io/strimzi/kafka:0.47.0-kafka-3.9.1
       4.0.0=quay.io/strimzi/kafka:0.47.0-kafka-4.0.0
-
-  - name: STRIMZI_KAFKA_CONNECT_IMAGES
-    value: |
-      3.9.0=automqinc/automq:1.5.5-strimzi
-      3.9.1=quay.io/strimzi/kafka:latest-kafka-3.9.1
-      4.0.0=quay.io/strimzi/kafka:latest-kafka-4.0.0
-
-  - name: STRIMZI_KAFKA_MIRROR_MAKER_2_IMAGES
-    value: |
-      3.9.0=automqinc/automq:1.5.5-strimzi
-      3.9.1=quay.io/strimzi/kafka:latest-kafka-3.9.1
-      4.0.0=quay.io/strimzi/kafka:latest-kafka-4.0.0

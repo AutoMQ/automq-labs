@@ -100,7 +100,7 @@ kubectl apply -f automq-demo.yaml -n automq
 
 **Important:** When uninstalling, remove the AutoMQ cluster first, then the Strimzi Operator, to ensure proper cleanup.
 
-1. **Remove the AutoMQ cluster:**
+#### 1. **Remove the AutoMQ Cluster**
 
 ```shell
 kubectl delete -f automq-demo.yaml -n automq
@@ -108,13 +108,15 @@ kubectl delete -f automq-demo.yaml -n automq
 
 Wait for the cluster resources to be fully deleted before proceeding to the next step.
 
-2. **Remove the Strimzi Operator:**
+#### 2. **Remove the Strimzi Operator**
 
 ```shell
 helm uninstall automq-strimzi-operator --namespace automq
 ```
 
-3. **Optional - Remove the namespace** (if you no longer need it):
+#### 3. **Remove the Namespace** (Recommended)
+
+Since we created a dedicated namespace when deploying AutoMQ, it is recommended to remove it completely to ensure thorough cleanup.
 
 ```shell
 kubectl delete namespace automq
