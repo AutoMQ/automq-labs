@@ -72,7 +72,7 @@ metadata:
   annotations:
     strimzi.io/next-node-ids: "[1000-9999]"
 spec:
-  replicas: 2
+  replicas: 1
   roles:
     - broker
   storage:
