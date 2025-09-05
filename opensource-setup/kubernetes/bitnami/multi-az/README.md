@@ -11,7 +11,7 @@ For a detailed explanation of the mechanism, please refer to our official docume
 
 ## Prerequisites
 
-Ensure you have met the prerequisites outlined in the main [Kubernetes deployment guide](../bitnami/README.md), including having a running Kubernetes cluster and Helm installed. Your Kubernetes cluster must span multiple availability zones.
+Ensure you have met the prerequisites outlined in the main [Kubernetes deployment guide](../README.md), including having a running Kubernetes cluster and Helm installed. Your Kubernetes cluster must span multiple availability zones.
 
 ## Configuration for Multi-AZ Deployment
 
@@ -51,7 +51,7 @@ The key to a multi-AZ deployment lies in the `demo-multi-az-values.yaml` file. I
 ## Deployment Steps
 
 1.  **Edit `demo-multi-az-values.yaml`**:
-    Open the `demo-multi-az-values.yaml` file and replace the placeholder values for your S3 buckets (`${ops-bucket}`, `${data-bucket}`), AWS region, and endpoint.
+    Open the [demo-multi-az-values.yaml](demo-multi-az-values.yaml) file and replace the placeholder values for your S3 buckets (`${ops-bucket}`, `${data-bucket}`), AWS region, and endpoint.
 
 2.  **Install the Helm Chart**:
     Use the `helm install` command with the multi-az values file.
