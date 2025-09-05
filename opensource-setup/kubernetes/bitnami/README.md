@@ -8,7 +8,7 @@ AutoMQ is a cloud-native streaming platform that is fully compatible with the Ka
 
 Before you begin, ensure you have the following:
 
-1.  **A Kubernetes Cluster**: If you don't have one, you can quickly provision a cluster on AWS EKS by following our [Terraform guide for AWS EKS](../../kubernetes/aws/terraform/README.md).
+1.  **A Kubernetes Cluster**: If you don't have one, you can quickly provision a cluster on AWS EKS by following our [Terraform guide for AWS EKS](../../../kubernetes/aws/terraform/README.md).
 2.  **Helm (v3.8.0+)**: The package manager for Kubernetes. You can verify your installation by running:
     ```shell
     helm version
