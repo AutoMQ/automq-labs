@@ -61,7 +61,7 @@ services:
   # Three nodes for AutoMQ cluster
   server1:
     container_name: "automq-server1"
-    image: docker.io/automqinc/automq:1.5.0-bitnami
+    image: docker.io/automqinc/automq:1.6.0-rc0-bitnami
     ports:
       - "9092"
     volumes:
@@ -91,7 +91,7 @@ services:
   # Three nodes for AutoMQ cluster
   server2:
     container_name: "automq-server2"
-    image: docker.io/automqinc/automq:1.5.0-bitnami
+    image: docker.io/automqinc/automq:1.6.0-rc0-bitnami
     ports:
       - "9092"
     volumes:
@@ -121,7 +121,7 @@ services:
   # Three nodes for AutoMQ cluster
   server3:
     container_name: "automq-server3"
-    image: docker.io/automqinc/automq:1.5.0-bitnami
+    image: docker.io/automqinc/automq:1.6.0-rc0-bitnami
     ports:
       - "9092"
     volumes:
