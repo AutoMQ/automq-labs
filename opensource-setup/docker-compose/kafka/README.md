@@ -29,7 +29,7 @@ docker compose -f docker-compose-kafka.yaml up -d
 This setup simulates a production-like environment with three brokers.
 
 ```shell
-docker compose -f docker-compose-cluster-kafka.yaml up -d
+docker compose -f docker-compose-kafka-cluster.yaml up -d
 ```
 
 ## Testing the Deployment
