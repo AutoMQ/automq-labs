@@ -78,9 +78,9 @@ services:
       - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
       - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-      - KAFKA_S3_DATA_BUCKETS=0@s3://automq-data?region=us-east-1\&endpoint=http://minio:9000\&pathStyle=true
-      - KAFKA_S3_OPS_BUCKETS=1@s3://automq-ops?region=us-east-1\&endpoint=http://minio:9000\&pathStyle=true
-      - KAFKA_S3_WAL_PATH=0@s3://automq-data?region=us-east-1\&endpoint=http://minio:9000\&pathStyle=true
+      - KAFKA_S3_DATA_BUCKETS=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+      - KAFKA_S3_OPS_BUCKETS=1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+      - KAFKA_S3_WAL_PATH=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
       - KAFKA_ELASTICSTREAM_ENABLE=true
 
     networks:
