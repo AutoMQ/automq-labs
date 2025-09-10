@@ -61,7 +61,7 @@ services:
   # Single node with combined controller and broker roles
   server1:
     container_name: "automq-server1"
-    image: docker.io/automqinc/automq:1.5.5-kafka
+    image: docker.io/automqinc/automq:1.6.0-rc0-kafka
     stop_grace_period: 1m
     environment:
       - AWS_ACCESS_KEY_ID=minioadmin
