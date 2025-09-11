@@ -2,6 +2,11 @@ global:
   security:
     # Enable this to allow the Bitnami Chart to use the AutoMQ image.
     allowInsecureImages: true
+extraEnvVars:
+  - name: AWS_ACCESS_KEY_ID
+    value: "${access-key}"
+  - name: AWS_SECRET_ACCESS_KEY
+    value: "${secret-key}"
 image:
   registry: automqinc
   repository: automq
