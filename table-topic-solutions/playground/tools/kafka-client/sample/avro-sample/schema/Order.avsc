@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "namespace": "examples.clients.avro",
+  "name": "Order",
+  "fields": [
+    {
+      "name": "order_id",
+      "type": "long"
+    },
+    {
+      "name": "product_name",
+      "type": "string"
+    },
+    {
+      "name": "order_description",
+      "type": "string"
+    }
+  ]
+}

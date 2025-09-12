@@ -1,0 +1,73 @@
+services:
+  # Frontend application (Next.js)
+  nimtable-web:
+    image: ghcr.io/nimtable/nimtable-web:nightly
+    hostname: nimtable-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - JAVA_API_URL=http://nimtable:8182
+      - DATABASE_URL=postgresql://nimtable_user:password@database:5432/nimtable
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+    depends_on:
+      - nimtable
+
+  # Backend application
+  nimtable:
+    image: ghcr.io/nimtable/nimtable:nightly
+    restart: unless-stopped
+    hostname: nimtable
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8182:8182"
+    # Mount configuration files
+    configs:
+      - source: config.yaml
+        target: /nimtable/config.yaml
+    environment:
+      JAVA_OPTS: -Xmx32g -Xms512m
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+
+  # Database to persist nimtable data.
+  # Make sure the setting in config.yaml is consistent with this.
+  database:
+    image: postgres:17
+    restart: unless-stopped
+    hostname: database
+    ports:
+      - "5432:5432"
+    volumes:
+      - nimtable-data-postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: nimtable_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: nimtable
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nimtable_user -d nimtable"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nimtable-data-postgres:
+
+configs:
+  config.yaml:
+    content: |
+      # Nimtable config file to be mounted into the Docker containers.
+      # See backend/config.yaml for more complete example
+      server:
+        port: 8182
+        host: 0.0.0.0
+      database:
+        # You can also point to your own Postgres database, instead of using the one provided by docker-compose.
+        url: jdbc:postgresql://database:5432/nimtable
+        username: nimtable_user
+        password: password

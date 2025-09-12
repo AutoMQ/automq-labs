@@ -1,0 +1,10 @@
+version: '3'
+services:
+  dremio:
+    image: dremio/dremio-oss:latest
+    container_name: dremio-cdc
+    ports:
+      - "9047:9047"
+      - "31010:31010"
+      - "45678:45678"
+

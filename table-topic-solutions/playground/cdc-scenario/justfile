@@ -1,0 +1,305 @@
+# AutoMQ CDC Scenario
+set working-directory := ".."
+
+# Configuration variables
+CONNECTOR_NAME := "mysql-demo-connector-avro"
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+BOOTSTRAP_SERVERS := "automq:9092"
+DEFAULT_TABLE := "demo.sampledb.users"
+DEFAULT_TOPIC := "demo.sampledb.users"
+
+# Default action: display help
+default: help
+
+# Display all available commands
+help:
+    @echo "AutoMQ CDC Scenario (Debezium + flatten_debezium)"
+    @echo "Environment"
+    @echo "  up                           Start services"
+    @echo "  down                         Stop and remove services"
+    @echo "  status                       Check service status"
+    @echo "  health                       Check service health"
+    @echo "  logs [service]               View logs"
+    @echo "Connectors"
+    @echo "  create-avro-connector        Create Debezium MySQL Avro connector"
+    @echo "  list-connectors              List connectors"
+    @echo "  connector-status [name]      Show connector status"
+    @echo "  delete-connector [name]      Delete connector"
+    @echo "Topics"
+    @echo "  list-topics                  List topics"
+    @echo "  describe-topic [topic]       Describe topic (default: demo.sampledb.users)"
+    @echo "  consume-avro [topic]         Consume Avro messages (default: demo.sampledb.users)"
+    @echo "  create-table-topic [topic]   Create table topic (default: demo.sampledb.users)"
+    @echo "Query (Trino)"
+    @echo "  query [table]                Query full table (default: demo.sampledb.users)"
+    @echo "  query-table [table]          Query table (default: demo.sampledb.users)"
+    @echo "  show-table-ddl [table]       Show CREATE TABLE (default: demo.sampledb.users)"
+    @echo "Database (MySQL)"
+    @echo "  show-table                   Show current table data"
+    @echo "  insert-random                Insert random user"
+    @echo "  update-random [id]           Update random user (or by ID)"
+    @echo "  delete-random [id]           Delete random user (or by ID)"
+    @echo "  batch-insert [count]         Batch insert users (default: 10)"
+    @echo "  add-column <name> <type>     Add column (schema evolution)"
+    @echo "  drop-column <name>           Drop column (schema evolution)"
+    @echo "  truncate-table [table]       Clear table (default: users)"
+
+
+# =============================================================================
+# Environment Management (Essential)
+# =============================================================================
+
+# Start all services
+up:
+    @echo "Starting services..."
+    docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml up -d
+    @echo "Waiting for services..."
+    just --justfile cdc-scenario/justfile _wait-for-services
+
+# Stop services  
+down:
+    @echo "Stopping services..."
+    docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml down -v
+
+# Service status
+status:
+    @echo "Service Status:"
+    docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml ps
+
+# View logs
+logs service="":
+    #!/bin/bash
+    if [ "{{ service }}" = "" ]; then
+        echo "All service logs:"
+        docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml logs -f
+    else
+        echo "Logs for {{ service }}:"
+        docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml logs -f {{ service }}
+    fi
+
+# =============================================================================
+# Connector Management (Core CDC Functionality)
+# =============================================================================
+
+# Create Avro connector
+create-avro-connector:
+    @echo "Creating Avro connector..."
+    @just -f cdc-scenario/justfile _wait-for-connect
+    curl -X POST -H "Content-Type:application/json" \
+        localhost:8083/connectors/ -d @cdc-scenario/connect-config/mysql-inventory-connector-avro.json
+    @echo "\n Avro connector created"
+
+# List connectors
+list-connectors:
+    @echo "Connectors:"
+    @curl -s localhost:8083/connectors | jq -r '.[]' || echo "No connectors found"
+
+# Connector status
+connector-status name="mysql-demo-connector-avro":
+    #!/bin/bash
+    if [ "{{ name }}" = "" ]; then
+        echo "All connector status:"
+        for connector in $(curl -s localhost:8083/connectors | jq -r '.[]'); do
+            echo "=== $connector ==="
+            curl -s localhost:8083/connectors/$connector/status | jq .
+        done
+    else
+        echo "Status for {{ name }}:"
+        curl -s localhost:8083/connectors/{{ name }}/status | jq .
+    fi
+
+# Delete connector
+delete-connector name="mysql-demo-connector-avro":
+    #!/bin/bash
+    if [ "{{ name }}" = "" ]; then
+        echo "Deleting all connectors..."
+        for connector in $(curl -s localhost:8083/connectors | jq -r '.[]'); do
+            curl -X DELETE localhost:8083/connectors/$connector
+            echo "Deleted $connector"
+        done
+    else
+        echo "Deleting {{ name }}..."
+        curl -X DELETE localhost:8083/connectors/{{ name }}
+    fi
+
+# =============================================================================
+# Topic Management (Monitoring & Debugging)
+# =============================================================================
+
+# List topics
+list-topics:
+    @echo "Topics:"
+    docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec automq \
+        /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+# Describe topic
+describe-topic topic=DEFAULT_TOPIC:
+    @echo "Topic {{ topic }} details:"
+    docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec automq \
+        /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic {{ topic }}
+
+# Consume Avro messages
+consume-avro topic=DEFAULT_TOPIC:
+    @echo "Consuming {{ topic }} (Avro format, Ctrl+C to exit):"
+    docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec kafka-client kafka-avro-console-consumer \
+        --bootstrap-server {{ BOOTSTRAP_SERVERS }} \
+        --topic {{ topic }} \
+        --from-beginning \
+        --property schema.registry.url={{ SCHEMA_REGISTRY_URL }} \
+        --property print.key=true
+
+# Create table topic
+create-table-topic topic=DEFAULT_TOPIC:
+    @echo "Creating table topic {{ topic }}..."
+    docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec automq \
+        /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+        --create --topic {{ topic }} \
+        --partitions 16 \
+        --config automq.table.topic.enable=true \
+        --config automq.table.topic.commit.interval.ms=2000 \
+        --config automq.table.topic.convert.value.type=by_schema_id \
+        --config automq.table.topic.transform.value.type=flatten_debezium \
+        --config automq.table.topic.namespace=default \
+        --config automq.table.topic.id.columns=[id] \
+        --config automq.table.topic.cdc.field=_cdc.op
+    @echo "Table topic created"
+
+# Query Iceberg table via Trino
+query table=DEFAULT_TABLE:
+    @just trino-sql 'SELECT * FROM iceberg.default."{{ table }}" ORDER BY id LIMIT 50'
+
+query-table table=DEFAULT_TABLE:
+    @just trino-sql 'SELECT id, first_name, last_name, email, created_at, updated_at, phone, status FROM iceberg.default."{{ table }}" ORDER BY id LIMIT 50'
+
+show-table-ddl table=DEFAULT_TABLE:
+    @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{ table }}"'
+
+# =============================================================================
+# Database Operations (CDC Testing)
+# =============================================================================
+
+# Show table data
+show-table:
+    @cdc-scenario/scripts/mysql-ops.sh show-table
+
+# Insert random user
+insert-random:
+    @cdc-scenario/scripts/mysql-ops.sh insert-random
+
+# Update random user
+update-random id="":
+    @cdc-scenario/scripts/mysql-ops.sh update-random {{ id }}
+
+# Delete random user
+delete-random id="":
+    @cdc-scenario/scripts/mysql-ops.sh delete-random {{ id }}
+
+# Batch insert random users
+batch-insert count="10":
+    @cdc-scenario/scripts/mysql-ops.sh batch-insert {{ count }}
+
+# Add column for schema evolution testing
+add-column name type:
+    @echo "This will trigger a schema evolution event in CDC"
+    @cdc-scenario/scripts/mysql-ops.sh add-column {{ name }} "{{ type }}"
+
+# Drop column for schema evolution testing
+drop-column name:
+    @echo "This will trigger a schema evolution event in CDC"
+    @cdc-scenario/scripts/mysql-ops.sh drop-column {{ name }}
+
+# Clear all table data
+truncate-table table=DEFAULT_TABLE:
+    @cdc-scenario/scripts/mysql-ops.sh truncate-table {{ table }}
+
+
+# =============================================================================
+# Health Checks (Essential for Operations)
+# =============================================================================
+
+# Health check
+health:
+    @echo "Health Check:"
+    @just -f cdc-scenario/justfile _check-mysql
+    @just -f cdc-scenario/justfile _check-automq  
+    @just -f cdc-scenario/justfile _check-schema-registry
+    @just -f cdc-scenario/justfile _check-connect
+
+# =============================================================================
+# Internal Helper Functions
+# =============================================================================
+
+# Wait for services to be ready
+_wait-for-services:
+    @echo "Waiting for services..."
+    @just -f cdc-scenario/justfile _wait-for-mysql
+    @just -f cdc-scenario/justfile _wait-for-automq
+    @just -f cdc-scenario/justfile _wait-for-schema-registry  
+    @just -f cdc-scenario/justfile _wait-for-connect
+    @echo "All services ready!"
+
+# Wait for MySQL
+_wait-for-mysql:
+    @echo "Waiting for MySQL..."
+    @until docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec -T mysql mysqladmin ping -h localhost -u root -pdebezium --silent; do \
+        sleep 2; \
+    done
+    @echo "MySQL ready"
+
+# Wait for AutoMQ
+_wait-for-automq:
+    @echo "Waiting for AutoMQ..."
+    @until docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec -T automq \
+        /opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; do \
+        sleep 2; \
+    done
+    @echo "AutoMQ ready"
+
+# Wait for Schema Registry
+_wait-for-schema-registry:
+    @echo "Waiting for Schema Registry..."
+    @until curl -s localhost:8081/subjects >/dev/null 2>&1; do \
+        sleep 2; \
+    done
+    @echo "Schema Registry ready"
+
+# Wait for Kafka Connect
+_wait-for-connect:
+    @echo "Waiting for Kafka Connect..."
+    @until curl -s localhost:8083/connectors >/dev/null 2>&1; do \
+        sleep 2; \
+    done
+    @echo "Kafka Connect ready"
+
+# Check MySQL health
+_check-mysql:
+    @if docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec -T mysql mysqladmin ping -h localhost -u root -pdebezium --silent 2>/dev/null; then \
+        echo "MySQL: Running"; \
+    else \
+        echo "MySQL: Not accessible"; \
+    fi
+
+# Check AutoMQ health
+_check-automq:
+    @if docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml exec -T automq \
+        /opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then \
+        echo "AutoMQ: Running"; \
+    else \
+        echo "AutoMQ: Not accessible"; \
+    fi
+
+# Check Schema Registry health
+_check-schema-registry:
+    @if curl -s --max-time 5 localhost:8081/subjects >/dev/null 2>&1; then \
+        echo "Schema Registry: Running"; \
+    else \
+        echo "Schema Registry: Not accessible"; \
+    fi
+
+# Check Kafka Connect health  
+_check-connect:
+    @if curl -s --max-time 5 localhost:8083/connectors >/dev/null 2>&1; then \
+        echo "Kafka Connect: Running"; \
+    else \
+        echo "Kafka Connect: Not accessible"; \
+    fi

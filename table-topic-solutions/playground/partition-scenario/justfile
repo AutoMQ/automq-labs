@@ -1,0 +1,31 @@
+set working-directory := ".."
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+
+default: help
+
+help:
+    @echo "Partition Scenario (Avro by_schema_id + partition.by)"
+    @echo "  create-topic [topic]                 default: order-with-ts"
+    @echo "  send-auto [topic] [count]            default: order-with-ts 10"
+    @echo "  show-partitions [table]              default: order-with-ts"
+    @echo "  query [table]                        default: order-with-ts"
+
+create-topic topic='order-with-ts':
+    docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config automq.table.topic.commit.interval.ms=2000 \
+      --config automq.table.topic.convert.value.type=by_schema_id \
+      --config automq.table.topic.transform.value.type=flatten \
+      --config automq.table.topic.namespace=default \
+      --config automq.table.topic.partition.by='[month(ts)]' || true
+
+send-auto topic='order-with-ts' count='10':
+    @echo "Producing {{count}} Avro messages with ts to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash partition-scenario/scripts/produce-partitioned-auto.sh {{topic}} {{count}}
+
+show-partitions table='order-with-ts':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}"$partitions LIMIT 50'
+
+query table='order-with-ts':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}" LIMIT 50'
