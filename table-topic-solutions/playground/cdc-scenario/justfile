@@ -34,6 +34,9 @@ help:
     @echo "  query [table]                Query full table (default: demo.sampledb.users)"
     @echo "  query-table [table]          Query table (default: demo.sampledb.users)"
     @echo "  show-table-ddl [table]       Show CREATE TABLE (default: demo.sampledb.users)"
+    @echo "  show-table-snapshots [table] Show snapshots (default: demo.sampledb.users)"
+    @echo "  show-table-history [table]   Show history (default: demo.sampledb.users)"
+    @echo "  show-table-files [table]     Show data files (default: demo.sampledb.users)"
     @echo "Database (MySQL)"
     @echo "  show-table                   Show current table data"
     @echo "  insert-random                Insert random user"
@@ -173,6 +176,15 @@ query-table table=DEFAULT_TABLE:
 
 show-table-ddl table=DEFAULT_TABLE:
     @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{ table }}"'
+
+show-table-snapshots table=DEFAULT_TABLE:
+    @just trino-sql 'SELECT * FROM iceberg.default."{{ table }}$snapshots" ORDER BY committed_at DESC LIMIT 20'
+
+show-table-history table=DEFAULT_TABLE:
+    @just trino-sql 'SELECT * FROM iceberg.default."{{ table }}$history" ORDER BY made_current_at DESC LIMIT 20'
+
+show-table-files table=DEFAULT_TABLE:
+    @just trino-sql 'SELECT content, file_format, record_count, file_size_in_bytes, file_path FROM iceberg.default."{{ table }}$files" LIMIT 50'
 
 # =============================================================================
 # Database Operations (CDC Testing)

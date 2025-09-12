@@ -7,9 +7,8 @@ This scenario demonstrates how to stream Avro records into an Iceberg table with
 ## 2. Core Configuration
 
 This scenario relies on the following key Table Topic configurations to handle upserts:
-
-- `automq.table.topic.convert.value.type=by_schema_id`: Decodes the Avro message using its schema from Schema Registry.
-- `automq.table.topic.transform.value.type=flatten`: Flatten the Kafka value payload into table columns (nested structures → columns).
+- `automq.table.topic.convert.value.type=by_schema_id` (see root README “Common Configuration”)
+- `automq.table.topic.transform.value.type=flatten` (see root README “Common Configuration”)
 - `automq.table.topic.id.columns=[id]`: Specifies the primary key column (`id`) used to identify rows for updates.
 - `automq.table.topic.upsert.enable=true`: Enables the upsert behavior, where new data for an existing primary key replaces the old data.
 
@@ -49,7 +48,19 @@ This command sends a new record for an existing user (`id='u-1'`), which will tr
 just -f insert-scenario/justfile update-one
 ```
 
-### Step 5: Query Iceberg Data
+### Step 5: View Table Info
+
+Inspect table metadata and definition.
+
+```bash
+just -f insert-scenario/justfile show-ddl
+just -f insert-scenario/justfile show-snapshots
+just -f insert-scenario/justfile show-history
+just -f insert-scenario/justfile show-files
+just -f insert-scenario/justfile show-manifests
+```
+
+### Step 6: Query Iceberg Data
 
 Query the Iceberg table via Trino to see the result of the upsert. The record for `id='u-1'` will be updated.
 

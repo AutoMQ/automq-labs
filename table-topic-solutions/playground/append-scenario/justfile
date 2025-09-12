@@ -7,6 +7,12 @@ help:
     @echo "Append Scenario (Avro by_schema_id + flatten)"
     @echo "  create-topic topic=orders"
     @echo "  send-auto topic=orders [count=10]"
+    @echo "  send-auto-v2 topic=orders [count=10]   (evolved schema: add/optional/widen)"
+    @echo "  show-ddl table=orders"
+    @echo "  show-snapshots table=orders"
+    @echo "  show-history table=orders"
+    @echo "  show-files table=orders"
+    @echo "  show-manifests table=orders"
     @echo "  query table=orders"
 
 create-topic topic='orders':
@@ -22,5 +28,25 @@ send-auto topic='orders' count='10':
     @echo "Producing {{count}} Avro messages (auto-register) to {{topic}}"
     SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
 
+send-auto-v2 topic='orders' count='10':
+    @echo "Producing {{count}} Avro messages (OrderV2 aggregated evolution) to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV2.avsc \
+      bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
+
 query table='orders':
     @just trino-sql "SELECT * FROM iceberg.default.\"{{table}}\" LIMIT 20"
+
+show-ddl table='orders':
+    @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{table}}"'
+
+show-snapshots table='orders':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$snapshots" ORDER BY committed_at DESC LIMIT 20'
+
+show-history table='orders':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$history" ORDER BY made_current_at DESC LIMIT 20'
+
+show-files table='orders':
+    @just trino-sql 'SELECT content, file_format, record_count, file_size_in_bytes, file_path FROM iceberg.default."{{table}}$files" LIMIT 50'
+
+show-manifests table='orders':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$manifests" LIMIT 50'

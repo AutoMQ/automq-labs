@@ -56,7 +56,18 @@ just -f cdc-scenario/justfile update-random
 just -f cdc-scenario/justfile delete-random
 ```
 
-### Step 5: Query Iceberg Data
+### Step 5: View Table Info
+
+Inspect table metadata and definition.
+
+```bash
+just -f cdc-scenario/justfile show-table-ddl
+just -f cdc-scenario/justfile show-table-snapshots
+just -f cdc-scenario/justfile show-table-history
+just -f cdc-scenario/justfile show-table-files
+```
+
+### Step 6: Query Iceberg Data
 
 Query the Iceberg table via Trino to see the merged results of the CDC operations.
 

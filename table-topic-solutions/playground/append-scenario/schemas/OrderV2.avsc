@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "Order",
+  "namespace": "demo.append",
+  "fields": [
+    {"name": "order_id", "type": "long"},
+    {"name": "product_name", "type": "string"},
+    {"name": "order_description", "type": ["null", "string"], "default": null},
+    {"name": "price", "type": "double", "default": 0.0},
+    {"name": "quantity", "type": "long", "default": 0}
+  ]
+}

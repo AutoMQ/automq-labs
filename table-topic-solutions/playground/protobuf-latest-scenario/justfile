@@ -6,10 +6,15 @@ default: help
 help:
     @echo "Protobuf latest-schema Scenario (raw + by_latest_schema)"
     @echo "  register                                Register sample protobuf schemas (required)"
-    @echo "  create-product-topic [topic]            default: product (subject+messageFullName)"
-    @echo "  create-user-topic [topic]               default: user    (subject+messageFullName)"
+    @echo "  create-product-topic [topic]            default: product (messageFullName)"
+    @echo "  create-user-topic [topic]               default: user    (messageFullName)"
     @echo "  send-product-raw [topic]                default: product"
     @echo "  send-user-raw [topic]                   default: user"
+    @echo "  show-ddl [table]                        Show CREATE TABLE (product/user)"
+    @echo "  show-snapshots [table]                  Show snapshots"
+    @echo "  show-history [table]                    Show history"
+    @echo "  show-files [table]                      Show data files"
+    @echo "  show-manifests [table]                  Show manifests"
     @echo "  query-product                           Query product table"
     @echo "  query-user                              Query user table"
 
@@ -18,7 +23,7 @@ register:
     docker compose -f docker-compose.yml exec -w /home/kafka-client/sample/protobuf-sample kafka-client mvn schema-registry:register@register
 
 
-create-product-topic topic='product' subject='product-value' message_full_name='examples.clients.proto.ProductData':
+create-product-topic topic='product' message_full_name='examples.clients.proto.ProductData':
     docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
       --create --topic {{topic}} --partitions 16 \
       --config automq.table.topic.enable=true \
@@ -26,10 +31,9 @@ create-product-topic topic='product' subject='product-value' message_full_name='
       --config automq.table.topic.convert.value.type=by_latest_schema \
       --config automq.table.topic.transform.value.type=flatten \
       --config automq.table.topic.namespace=default \
-      --config automq.table.topic.convert.value.subject={{subject}} \
-      --config automq.table.topic.convert.value.message.full.name={{message_full_name}} || true
+      --config automq.table.topic.convert.value.by_latest_schema.message.full.name={{message_full_name}} || true
 
-create-user-topic topic='user' subject='user-value' message_full_name='examples.clients.proto.UserData':
+create-user-topic topic='user' message_full_name='examples.clients.proto.UserData':
     docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
       --create --topic {{topic}} --partitions 16 \
       --config automq.table.topic.enable=true \
@@ -37,8 +41,7 @@ create-user-topic topic='user' subject='user-value' message_full_name='examples.
       --config automq.table.topic.convert.value.type=by_latest_schema \
       --config automq.table.topic.transform.value.type=flatten \
       --config automq.table.topic.namespace=default \
-      --config automq.table.topic.convert.value.subject={{subject}} \
-      --config automq.table.topic.convert.value.message.full.name={{message_full_name}} || true
+      --config automq.table.topic.convert.value.by_latest_schema.message.full.name={{message_full_name}} || true
 
 send-product-raw topic='product':
     @echo "Producing Protobuf raw (product) to {{topic}}"
@@ -54,3 +57,18 @@ query-product:
 
 query-user:
     @just trino-sql 'SELECT * FROM iceberg.default."user" LIMIT 20'
+
+show-ddl table='product':
+    @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{table}}"'
+
+show-snapshots table='product':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$snapshots" ORDER BY committed_at DESC LIMIT 20'
+
+show-history table='product':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$history" ORDER BY made_current_at DESC LIMIT 20'
+
+show-files table='product':
+    @just trino-sql 'SELECT content, file_format, record_count, file_size_in_bytes, file_path FROM iceberg.default."{{table}}$files" LIMIT 50'
+
+show-manifests table='product':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$manifests" LIMIT 50'

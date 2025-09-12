@@ -1,5 +1,6 @@
 set working-directory := ".."
 SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+NEW_PARTITION_BY := "[month(ts), bucket(16, id)]"
 
 default: help
 
@@ -7,7 +8,14 @@ help:
     @echo "Partition Scenario (Avro by_schema_id + partition.by)"
     @echo "  create-topic [topic]                 default: order-with-ts"
     @echo "  send-auto [topic] [count]            default: order-with-ts 10"
+    @echo "  show-topic-config [topic]            default: order-with-ts"
     @echo "  show-partitions [table]              default: order-with-ts"
+    @echo "  show-ddl [table]                     default: order-with-ts"
+    @echo "  show-snapshots [table]               default: order-with-ts"
+    @echo "  show-history [table]                 default: order-with-ts"
+    @echo "  show-files [table]                   default: order-with-ts"
+    @echo "  show-manifests [table]               default: order-with-ts"
+    @echo "  add-iceberg-partition [topic]        evolve Iceberg partition spec"
     @echo "  query [table]                        default: order-with-ts"
 
 create-topic topic='order-with-ts':
@@ -25,7 +33,32 @@ send-auto topic='order-with-ts' count='10':
     SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash partition-scenario/scripts/produce-partitioned-auto.sh {{topic}} {{count}}
 
 show-partitions table='order-with-ts':
-    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}"$partitions LIMIT 50'
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$partitions" LIMIT 50'
+
+show-ddl table='order-with-ts':
+    @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{table}}"'
+
+show-snapshots table='order-with-ts':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$snapshots" ORDER BY committed_at DESC LIMIT 20'
+
+show-history table='order-with-ts':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$history" ORDER BY made_current_at DESC LIMIT 20'
+
+show-files table='order-with-ts':
+    @just trino-sql 'SELECT content, file_format, record_count, file_size_in_bytes, file_path FROM iceberg.default."{{table}}$files" LIMIT 50'
+
+show-manifests table='order-with-ts':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$manifests" LIMIT 50'
+
+add-iceberg-partition topic='order-with-ts':
+    @echo "Altering Iceberg partition spec for {{topic}} to {{NEW_PARTITION_BY}}..."
+    docker exec automq /opt/automq/kafka/bin/kafka-configs.sh --bootstrap-server localhost:9092 \
+      --entity-type topics --entity-name {{topic}} \
+      --alter --add-config automq.table.topic.partition.by='{{NEW_PARTITION_BY}}'
 
 query table='order-with-ts':
     @just trino-sql 'SELECT * FROM iceberg.default."{{table}}" LIMIT 50'
+
+show-topic-config topic='order-with-ts':
+    docker exec automq /opt/automq/kafka/bin/kafka-configs.sh --bootstrap-server localhost:9092 \
+      --entity-type topics --entity-name {{topic}} --describe

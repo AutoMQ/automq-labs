@@ -8,6 +8,11 @@ help:
     @echo "  create-topic topic=user-info"
     @echo "  send-auto topic=user-info [count=10]"
     @echo "  update-one topic=user-info id=u-1"
+    @echo "  show-ddl table=user-info"
+    @echo "  show-snapshots table=user-info"
+    @echo "  show-history table=user-info"
+    @echo "  show-files table=user-info"
+    @echo "  show-manifests table=user-info"
     @echo "  query table=user-info"
 
 create-topic topic='user-info':
@@ -31,3 +36,18 @@ update-one topic='user-info' id='u-1':
 
 query table='user-info':
     @just trino-sql 'SELECT * FROM iceberg.default."{{table}}" ORDER BY id LIMIT 50'
+
+show-ddl table='user-info':
+    @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{table}}"'
+
+show-snapshots table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$snapshots" ORDER BY committed_at DESC LIMIT 20'
+
+show-history table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$history" ORDER BY made_current_at DESC LIMIT 20'
+
+show-files table='user-info':
+    @just trino-sql 'SELECT content, file_format, record_count, file_size_in_bytes, file_path FROM iceberg.default."{{table}}$files" LIMIT 50'
+
+show-manifests table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$manifests" LIMIT 50'

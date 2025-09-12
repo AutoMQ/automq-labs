@@ -8,8 +8,8 @@ This scenario demonstrates how to ingest data into a **partitioned** Iceberg tab
 
 This scenario relies on the following key Table Topic configurations to create a partitioned table:
 
-- `automq.table.topic.convert.value.type=by_schema_id`: Decodes the Avro message using its schema from Schema Registry.
-- `automq.table.topic.transform.value.type=flatten`: Flatten the Kafka value payload into table columns (nested structures → columns).
+- `automq.table.topic.convert.value.type=by_schema_id` (see root README “Common Configuration”)
+- `automq.table.topic.transform.value.type=flatten` (see root README “Common Configuration”)
 - `automq.table.topic.partition.by=[month(ts)]`: Defines the partitioning strategy. In this case, the table will be partitioned by the month extracted from the `ts` (timestamp) column.
 
 ## 3. Steps to Run
@@ -32,7 +32,7 @@ This command creates a Table Topic named `order-with-ts` with the specified mont
 just -f partition-scenario/justfile create-topic
 ```
 
-### Step 3: Produce Data
+### Step 3: Produce Initial Data
 
 This command produces Avro records containing a timestamp field and sends them to the `order-with-ts` topic.
 
@@ -40,24 +40,69 @@ This command produces Avro records containing a timestamp field and sends them t
 just -f partition-scenario/justfile send-auto
 ```
 
-### Step 4: Show Partitions and Query Data
+### Step 4: Inspect Current Partitioning & Table Info
 
-Check the partitions created in the Iceberg table and then query the data.
+Check current topic configuration, Iceberg partitions, and the table DDL.
 
 ```bash
-# Show the partitions that have been created
+# Show current topic config (includes partition.by)
+just -f partition-scenario/justfile show-topic-config
+
+# Show the partitions that have been created so far
 just -f partition-scenario/justfile show-partitions
 
-# Query the data from the table
+# Show the current table DDL and other metadata
+just -f partition-scenario/justfile show-ddl
+just -f partition-scenario/justfile show-snapshots
+just -f partition-scenario/justfile show-history
+just -f partition-scenario/justfile show-files
+just -f partition-scenario/justfile show-manifests
+```
+
+### Step 5: Evolve Partition Spec (Iceberg)
+
+Add a new Iceberg partition by modifying the topic configuration `automq.table.topic.partition.by`. The target partition spec is fixed in the scenario `justfile`.
+
+```bash
+just -f partition-scenario/justfile add-iceberg-partition
+```
+
+### Step 6: Produce More Data
+
+Produce another batch of records so that new data is written using the updated partition spec.
+
+```bash
+just -f partition-scenario/justfile send-auto
+```
+
+### Step 7: Inspect After Change
+
+Check topic config, partitions, and DDL again to observe the changes.
+
+```bash
+just -f partition-scenario/justfile show-topic-config
+just -f partition-scenario/justfile show-partitions
+just -f partition-scenario/justfile show-ddl
+just -f partition-scenario/justfile show-snapshots
+just -f partition-scenario/justfile show-history
+just -f partition-scenario/justfile show-files
+just -f partition-scenario/justfile show-manifests
+```
+
+### Step 8: Query Data
+
+Query the data from the table.
+
+```bash
 just -f partition-scenario/justfile query
 ```
 
 ## 4. Expected Outcome
 
-1.  **Partitioned Table Creation**: An Iceberg table named `order-with-ts` is created in the `iceberg.default` database, partitioned by `month(ts)`.
-2.  **Data Ingestion**: Ingested data is physically organized into different directories in storage based on the month of the `ts` field.
-3.  **Partition Discovery**: Running `show-partitions` displays the distinct partitions that have been created in the table, confirming that the partitioning logic is working.
-4.  **Query Verification**: Queries against the table return the ingested data. Queries that include a filter on the `ts` column (e.g., `WHERE ts >= ...`) will benefit from partition pruning, leading to faster execution on large datasets.
+1.  **Partitioned Table Creation**: An Iceberg table named `order-with-ts` is created in the `iceberg.default` database, initially partitioned by `month(ts)`.
+2.  **Spec Evolution + Ingestion**: After evolving the spec (e.g., adding `bucket(16, id)`), new data is written under the updated partition spec.
+3.  **Partition Discovery**: `show-partitions` reflects partitions corresponding to the data written before and after the spec evolution.
+4.  **Query Verification**: Queries return all ingested data. Filters on partition columns can enable pruning and improve performance.
 
 ## 5. Cleanup
 

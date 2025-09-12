@@ -2,18 +2,18 @@
 
 ## 1. Scenario Objective
 
-This scenario demonstrates how to stream Avro records into an Iceberg table using an **append-only** ingestion pattern. The server leverages Schema Registry to decode Avro messages and flattens the nested structure before writing to Iceberg.
+This scenario demonstrates how to stream Avro records into an Iceberg table using an **append-only** ingestion pattern. The server leverages Schema Registry to decode Avro messages and maps the Kafka record value fields into table columns before writing to Iceberg.
 
 ## 2. Core Configuration
 
-This scenario relies on the following key Table Topic configurations to handle simple append-only ingestion:
+This scenario relies on the following key Table Topic configurations (see root README “Common Configuration” for details):
 
-- `automq.table.topic.convert.value.type=by_schema_id`: Decode the Avro message using its schema in Schema Registry.
-- `automq.table.topic.transform.value.type=flatten`: Flatten the Kafka value payload into table columns (nested structures → columns).
+- `automq.table.topic.convert.value.type=by_schema_id`
+- `automq.table.topic.transform.value.type=flatten`
 
 ## 3. Steps to Run
 
-Follow these steps to run the demonstration.
+This scenario demonstrates: write with the initial schema, then upgrade the schema and continue writing, and finally observe Iceberg's automatic schema evolution in the table.
 
 ### Step 1: Start Services
 
@@ -25,23 +25,58 @@ just up
 
 ### Step 2: Create Table Topic
 
-This command creates a Table Topic named `order` with the required append-only configuration.
+This command creates a Table Topic named `orders` with the required append-only configuration.
 
 ```bash
 just -f append-scenario/justfile create-topic
 ```
 
-### Step 3: Produce Data
+### Step 3: Produce Initial Data (Schema v1)
 
-This command automatically generates Avro-formatted data based on the `schemas/Order.avsc` file and sends it to the `order` topic.
+Generate Avro data based on `schemas/Order.avsc` and send it to `orders`.
 
 ```bash
 just -f append-scenario/justfile send-auto
 ```
 
-### Step 4: Query Iceberg Data
+### Step 4: View Table Info
 
-Query the Iceberg table via Trino to see the ingested data.
+Inspect table metadata and definition.
+
+```bash
+just -f append-scenario/justfile show-ddl
+just -f append-scenario/justfile show-snapshots
+just -f append-scenario/justfile show-history
+just -f append-scenario/justfile show-files
+just -f append-scenario/justfile show-manifests
+```
+
+### Step 5: Produce Data with Evolved Schema (Aggregated)
+
+Register and write data using a single evolved schema that aggregates common compatible changes:
+- Add a new field `price: double` (with default)
+- Make `order_description` optional (nullable)
+- Add `quantity: long` (with default)
+
+The evolved schema is at `schemas/OrderV2.avsc`.
+
+```bash
+just -f append-scenario/justfile send-auto-v2
+```
+
+### Step 6: View Table Info Again
+
+```bash
+just -f append-scenario/justfile show-ddl
+just -f append-scenario/justfile show-snapshots
+just -f append-scenario/justfile show-history
+just -f append-scenario/justfile show-files
+just -f append-scenario/justfile show-manifests
+```
+
+### Step 7: Query Iceberg Data
+
+Query the table to see all records across versions.
 
 ```bash
 just -f append-scenario/justfile query

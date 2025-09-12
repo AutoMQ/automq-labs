@@ -98,6 +98,6 @@ spark-sql SQL:
       -e '{{SQL}}'
 
 trino-sql SQL:
-    @echo "Executing SQL (Trino): {{SQL}}"
+    @echo 'Executing SQL (Trino): {{SQL}}'
     docker compose -f docker-compose.yml exec trino trino \
       --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg --schema default
