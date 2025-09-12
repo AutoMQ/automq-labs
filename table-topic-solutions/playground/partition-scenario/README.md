@@ -7,9 +7,8 @@ This scenario demonstrates how to ingest data into a **partitioned** Iceberg tab
 ## 2. Core Configuration
 
 This scenario relies on the following key Table Topic configurations to create a partitioned table:
-
-- `automq.table.topic.convert.value.type=by_schema_id` (see root README “Common Configuration”)
-- `automq.table.topic.transform.value.type=flatten` (see root README “Common Configuration”)
+- `automq.table.topic.convert.value.type=by_schema_id`
+- `automq.table.topic.transform.value.type=flatten`
 - `automq.table.topic.partition.by=[month(ts)]`: Defines the partitioning strategy. In this case, the table will be partitioned by the month extracted from the `ts` (timestamp) column.
 
 ## 3. Steps to Run

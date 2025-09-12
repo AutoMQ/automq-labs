@@ -1,24 +1,33 @@
 # AutoMQ Table Topic Playground
 
-This playground provides a collection of hands-on labs to help you learn how to stream data from Kafka topics into Apache Iceberg tables in real-time using the AutoMQ Table Topic feature.
+Welcome to the AutoMQ Table Topic Playground!
 
-## 1. Getting Started
+This repository provides a collection of hands-on labs designed to help you master streaming data from Kafka topics into Apache Iceberg tables in real-time using AutoMQ's built-in **Table Topic** feature. No external data integration services like Flink or Spark are required.
 
-Please ensure you have `docker` and `just` installed on your system.
 
-### Step 1: Start the Services
 
-Run the following command to start all the necessary background services, including AutoMQ, Schema Registry, Trino, and MinIO.
+## 1. Prerequisites
+
+Before you begin, ensure you have the following installed on your system:
+
+- `docker`: To run all the containerized services.
+- `just`: A convenient command runner to simplify operations.
+
+## 2. Quick Start
+
+### Step 1: Start All Services
+
+Run the following command to start all background services, including AutoMQ, Schema Registry, Trino, and MinIO.
 
 ```bash
 just up
 ```
 
-### Step 2: Choose a Scenario
+### Step 2: Explore a Scenario
 
-Navigate to the directory of a scenario you are interested in and follow the instructions in its `README.md` file. Each scenario is designed to demonstrate a specific capability.
+Navigate to a scenario directory you are interested in (e.g., `append-scenario/`) and follow the instructions in its `README.md` file. Each scenario is designed to demonstrate a specific capability.
 
-## 2. Core Scenarios
+## 3. Core Scenarios
 
 This project includes the following core scenarios. Each is self-contained in its own directory with a detailed guide.
 
@@ -30,44 +39,36 @@ This project includes the following core scenarios. Each is self-contained in it
 | **CDC Ingestion** | `cdc-scenario/` | `Debezium CDC` | Demonstrates capturing row-level changes (INSERT/UPDATE/DELETE) from MySQL using Debezium and automatically syncing them to an Iceberg table. |
 | **Protobuf Ingestion** | `protobuf-latest-scenario/` | `Protobuf` | Demonstrates ingesting raw Protobuf messages using server-side decoding, without a client-side Schema Registry serializer. |
 
-## 3. Common Configuration
+## 4. Common Commands (`just`)
 
-These configurations are used across scenarios. Refer back here for details instead of repeating in each scenario.
+The root `justfile` provides a set of commands to manage the environment and interact with its services.
 
-- `automq.table.topic.convert.value.type`:
-  - `by_schema_id`: Use the schema ID embedded in the message (e.g., Confluent Avro wire format) to fetch the schema from Schema Registry and decode.
-  - `by_latest_schema`: For raw payloads (e.g., Protobuf without framing), fetch the latest registered schema for the subject and decode. Some scenarios also set `automq.table.topic.convert.value.by_latest_schema.message.full.name` to specify the message type.
+### Environment Lifecycle
 
-- `automq.table.topic.transform.value.type`:
-  - `flatten`: Map the fields inside the Kafka record's value into top-level table columns (the key is not used for column mapping).
-  - `flatten_debezium`: Specialized for Debezium envelopes; extracts the row state and adds an operation field for CDC semantics.
-
-Note on terminology: “flatten” in this playground always refers to flattening the fields inside the Kafka record's value into columns. We avoid using the word elsewhere to reduce ambiguity.
-
-## 4. Common Commands
-
-The root `justfile` provides several common commands for managing and interacting with the environment.
-
+- **Start environment**: `just up`
+- **Stop and clean up environment**: `just down`
 - **Check service status**: `just status`
 - **View service logs**: `just logs` or `just logs <service_name>`
-- **Execute a Trino SQL query**: `just trino-sql "SHOW TABLES FROM iceberg.default"`
+
+### Topic Management
+
+- **Create a Table Topic**: `just topic-create-table topic=<name> [convert_type] [transform_type]`
+  - *Example (Avro by schema id + flatten)*: `just topic-create-table topic=orders convert_type=by_schema_id transform_type=flatten`
 - **List all topics**: `just topic-list`
 - **Describe a topic**: `just topic-describe <topic_name>`
 
-justfile overview:
-- Purpose: Centralizes environment lifecycle (up/down/logs), generic Kafka topic ops, a quick Table Topic bootstrap, and data-query tools. Each scenario has its own `justfile` for data production and scenario-specific tasks.
-- Discoverability: Run `just` at the repo root to see all available commands and usage hints.
+### Querying Data
 
-Quick Table Topic bootstrap:
-- Create a simple Table Topic: `just topic-create-table topic=<name> [convert_type] [transform_type]`
-- Example (Avro by schema id + flatten): `just topic-create-table topic=orders convert_type=by_schema_id transform_type=flatten`
+- **Query with Trino**: `just trino-sql "SHOW TABLES FROM iceberg.default"`
+  - *Ideal for fast, ad-hoc queries and browsing metadata tables (e.g., `<table>$snapshots`).*
+- **Query with Spark SQL**: `just spark-sql "<SQL>"`
+  - *Useful for checking Spark semantics or compatibility.*
+- **Launch an interactive PySpark shell**: `just pyspark`
+  - *Comes pre-configured with Iceberg and S3A dependencies.*
 
-Tools (query engines):
-- `trino-sql <SQL>`: Executes SQL via Trino against the `iceberg.default` schema. Use for fast ad‑hoc queries and browsing metadata tables (e.g., `<table>$snapshots`).
-- `spark-sql <SQL>`: Executes SQL via Spark with Iceberg and S3A dependencies preconfigured (good for Spark semantics/compat checks).
-- `pyspark`: Starts an interactive PySpark shell with Iceberg and S3A packages set and ready to use.
+> **Tip**: Run `just` in the project root to see all available commands and their descriptions.
 
-## 5. Core Component Stack
+## 5. Component Stack
 
 This playground is composed of the following services, all running in Docker containers:
 

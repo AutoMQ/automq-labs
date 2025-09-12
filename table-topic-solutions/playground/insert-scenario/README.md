@@ -7,8 +7,8 @@ This scenario demonstrates how to stream Avro records into an Iceberg table with
 ## 2. Core Configuration
 
 This scenario relies on the following key Table Topic configurations to handle upserts:
-- `automq.table.topic.convert.value.type=by_schema_id` (see root README “Common Configuration”)
-- `automq.table.topic.transform.value.type=flatten` (see root README “Common Configuration”)
+- `automq.table.topic.convert.value.type=by_schema_id`
+- `automq.table.topic.transform.value.type=flatten`
 - `automq.table.topic.id.columns=[id]`: Specifies the primary key column (`id`) used to identify rows for updates.
 - `automq.table.topic.upsert.enable=true`: Enables the upsert behavior, where new data for an existing primary key replaces the old data.
 

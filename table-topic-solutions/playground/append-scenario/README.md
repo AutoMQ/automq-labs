@@ -6,8 +6,7 @@ This scenario demonstrates how to stream Avro records into an Iceberg table usin
 
 ## 2. Core Configuration
 
-This scenario relies on the following key Table Topic configurations (see root README “Common Configuration” for details):
-
+Key Table Topic configs:
 - `automq.table.topic.convert.value.type=by_schema_id`
 - `automq.table.topic.transform.value.type=flatten`
 
@@ -84,8 +83,8 @@ just -f append-scenario/justfile query
 
 ## 4. Expected Outcome
 
-1.  **Iceberg Table Creation**: An Iceberg table named `order` is automatically created in the `iceberg.default` database.
-2.  **Data Ingestion**: Data sent by the `send-auto` command is successfully written to the `order` table in an append-only fashion.
+1.  **Iceberg Table Creation**: An Iceberg table named `orders` is automatically created in the `iceberg.default` database.
+2.  **Data Ingestion**: Data sent by the `send-auto` command is successfully written to the `orders` table in an append-only fashion.
 3.  **Query Verification**: Queries against the Iceberg table in Trino show the newly appended rows after each production step.
 
 ## 5. Cleanup

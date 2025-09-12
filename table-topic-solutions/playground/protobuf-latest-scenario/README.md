@@ -7,11 +7,10 @@ This scenario demonstrates how to ingest raw **Protobuf** messages into an Icebe
 ## 2. Core Configuration
 
 This scenario relies on the following key Table Topic configurations for server-side Protobuf decoding:
-
 - `automq.table.topic.convert.value.type=by_latest_schema`: Instructs the server to decode the message payload by fetching the latest schema version associated with a given subject.
 - `automq.table.topic.convert.value.subject`: Specifies the subject name in Schema Registry to look up (e.g., `product-value`).
-- `automq.table.topic.convert.value.message.full.name`: Specifies the fully qualified name of the Protobuf message type to use for decoding (e.g., `examples.clients.proto.ProductData`).
-- `automq.table.topic.transform.value.type=flatten` (see root README “Common Configuration”)
+- `automq.table.topic.convert.value.message.full.name`: Specifies the fully qualified name of the Protobuf message type to use for decoding
+- `automq.table.topic.transform.value.type=flatten`: Map the fields inside the Kafka record's value into top-level table columns (the key is not used for column mapping).
 
 ## 3. Steps to Run
 
