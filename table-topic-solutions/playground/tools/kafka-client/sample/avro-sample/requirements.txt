@@ -1,0 +1,4 @@
+kafka-python==2.0.2
+avro-python3==1.10.2
+fastavro==1.9.4
+Faker

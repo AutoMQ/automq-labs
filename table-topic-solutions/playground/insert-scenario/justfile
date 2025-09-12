@@ -1,0 +1,33 @@
+set working-directory := ".."
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+
+default: help
+
+help:
+    @echo "Insert/Upsert Scenario (Avro by_schema_id + upsert)"
+    @echo "  create-topic topic=user-info"
+    @echo "  send-auto topic=user-info [count=10]"
+    @echo "  update-one topic=user-info id=u-1"
+    @echo "  query table=user-info"
+
+create-topic topic='user-info':
+    docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config automq.table.topic.commit.interval.ms=2000 \
+      --config automq.table.topic.convert.value.type=by_schema_id \
+      --config automq.table.topic.transform.value.type=flatten \
+      --config automq.table.topic.namespace=default \
+      --config automq.table.topic.id.columns='[id]' \
+      --config automq.table.topic.upsert.enable=true || true
+
+send-auto topic='user-info' count='10':
+    @echo "Producing {{count}} Avro messages (auto-register) to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash insert-scenario/scripts/produce-userinfo-auto.sh {{topic}} {{count}}
+
+update-one topic='user-info' id='u-1':
+    @echo "Producing update for id={{id}} to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash insert-scenario/scripts/update-one.sh {{topic}} {{id}}
+
+query table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}" ORDER BY id LIMIT 50'

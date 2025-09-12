@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package examples.clients.proto;
+
+option java_outer_classname = "User";
+
+message UserData {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+}

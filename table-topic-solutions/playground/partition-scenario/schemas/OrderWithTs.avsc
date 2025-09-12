@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "OrderWithTs",
+  "namespace": "demo.partition",
+  "fields": [
+    {"name": "id", "type": "string"},
+    {"name": "name", "type": "string"},
+    {"name": "ts", "type": {"type": "long", "logicalType": "timestamp-millis"}}
+  ]
+}

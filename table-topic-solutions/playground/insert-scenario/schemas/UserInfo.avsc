@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "UserInfo",
+  "namespace": "demo.upsert",
+  "fields": [
+    {"name": "id", "type": "string"},
+    {"name": "name", "type": "string"},
+    {"name": "email", "type": "string"}
+  ]
+}

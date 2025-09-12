@@ -1,0 +1,103 @@
+# AutoMQ TableTopic Playground
+
+# Configuration
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+BOOTSTRAP_SERVERS := "automq:9092"
+
+SPARK_PACKAGES := "org.apache.iceberg:iceberg-spark-runtime-3.4_2.12:1.5.2,org.apache.spark:spark-avro_2.12:3.4.0"
+S3A_PACKAGES := "org.apache.hadoop:hadoop-aws:3.3.4,software.amazon.awssdk:bundle:2.17.257"
+SPARK_CONF := "--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+              --conf spark.hadoop.fs.s3a.endpoint=http://minio:9000 \
+              --conf spark.hadoop.fs.s3a.access.key=admin \
+              --conf spark.hadoop.fs.s3a.secret.key=password \
+              --conf spark.hadoop.fs.s3a.path.style.access=true \
+              --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+              --conf spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem"
+
+default: help
+
+help:
+    @echo "AutoMQ TableTopic — REST"
+    @echo "========================"
+    @echo "Environment:"
+    @echo "  up                   - Start REST services"
+    @echo "  down                 - Stop and remove services"
+    @echo "  status               - Check service status"
+    @echo "  logs [service]       - View logs (all or specific)"
+    @echo ""
+    @echo "Topics:"
+    @echo "  topic-list               - List all Kafka topics"
+    @echo "  topic-describe <topic>   - Describe a topic"
+    @echo "  topic-create-table <topic> [convert_type] [transform_type]"
+    @echo "                           - Create a simple Table Topic"
+    @echo ""
+    @echo "Tools:"
+    @echo "  pyspark                  - Start PySpark shell"
+    @echo "  spark-sql <SQL>          - Execute SQL via Spark"
+    @echo "  trino-sql <SQL>          - Execute SQL via Trino"
+    @echo ""
+    @echo "(Produce/consume and schema registration are provided in scenario justfiles.)"
+
+# Environment
+up:
+    @echo "Starting REST services..."
+    docker compose -f docker-compose.yml up -d
+
+down:
+    @echo "Stopping services..."
+    docker compose -f docker-compose.yml down -v
+
+status:
+    @echo "Service status:"
+    docker compose -f docker-compose.yml ps
+
+logs service="":
+    #!/usr/bin/env bash
+    if [ "{{service}}" = "" ]; then
+      docker compose -f docker-compose.yml logs -f
+    else
+      docker compose -f docker-compose.yml logs -f {{service}}
+    fi
+
+# Topics
+topic-list:
+    @echo "Listing Kafka topics..."
+    docker compose -f docker-compose.yml exec automq \
+      /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+topic-describe topic:
+    @echo "Describing topic {{topic}}..."
+    docker compose -f docker-compose.yml exec automq \
+      /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic {{topic}}
+
+topic-create-table topic convert_type='by_schema_id' transform_type='flatten':
+    @echo "Creating table topic {{topic}} (convert={{convert_type}}, transform={{transform_type}})"
+    docker compose -f docker-compose.yml exec automq \
+      /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} \
+      --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config automq.table.topic.commit.interval.ms=2000 \
+      --config automq.table.topic.convert.value.type={{convert_type}} \
+      --config automq.table.topic.transform.value.type={{transform_type}} \
+      --config automq.table.topic.namespace=default || true
+    @echo "Table topic created."
+
+# Tools
+pyspark:
+    @echo "Starting PySpark shell..."
+    docker compose -f docker-compose.yml exec spark-iceberg pyspark \
+      --packages {{SPARK_PACKAGES}},{{S3A_PACKAGES}} \
+      {{SPARK_CONF}}
+
+spark-sql SQL:
+    @echo "Executing SQL: {{SQL}}"
+    docker compose -f docker-compose.yml exec spark-iceberg spark-sql \
+      --packages {{SPARK_PACKAGES}},{{S3A_PACKAGES}} \
+      {{SPARK_CONF}} \
+      -e '{{SQL}}'
+
+trino-sql SQL:
+    @echo "Executing SQL (Trino): {{SQL}}"
+    docker compose -f docker-compose.yml exec trino trino \
+      --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg --schema default

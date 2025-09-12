@@ -1,0 +1,26 @@
+set working-directory := ".."
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+
+default: help
+
+help:
+    @echo "Append Scenario (Avro by_schema_id + flatten)"
+    @echo "  create-topic topic=orders"
+    @echo "  send-auto topic=orders [count=10]"
+    @echo "  query table=orders"
+
+create-topic topic='orders':
+    docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config automq.table.topic.commit.interval.ms=2000 \
+      --config automq.table.topic.convert.value.type=by_schema_id \
+      --config automq.table.topic.transform.value.type=flatten \
+      --config automq.table.topic.namespace=default || true
+
+send-auto topic='orders' count='10':
+    @echo "Producing {{count}} Avro messages (auto-register) to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
+
+query table='orders':
+    @just trino-sql "SELECT * FROM iceberg.default.\"{{table}}\" LIMIT 20"
