@@ -89,7 +89,7 @@ create-avro-connector:
     @echo "Creating Avro connector..."
     @just -f cdc-scenario/justfile _wait-for-connect
     curl -X POST -H "Content-Type:application/json" \
-        localhost:8083/connectors/ -d @cdc-scenario/connect-config/mysql-inventory-connector-avro.json
+        localhost:8083/connectors/ -d @cdc-scenario/connect-config/mysql-sampledb-connector-avro.json
     @echo "\n Avro connector created"
 
 # List connectors
