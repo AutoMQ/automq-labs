@@ -36,12 +36,16 @@ help:
     @echo "  spark-sql <SQL>          - Execute SQL via Spark"
     @echo "  trino-sql <SQL>          - Execute SQL via Trino"
     @echo ""
+    @echo "Test All Scenarios:"
+    @echo "  test-all                 - Run all scenario tests"
+    @echo ""
     @echo "(Produce/consume and schema registration are provided in scenario justfiles.)"
 
 # Environment
 up:
     @echo "Starting REST services..."
     docker compose -f docker-compose.yml up -d
+    @just _wait-for-services
 
 down:
     @echo "Stopping services..."
@@ -77,7 +81,7 @@ topic-create-table topic convert_type='by_schema_id' transform_type='flatten':
       --create --topic {{topic}} \
       --partitions 16 \
       --config automq.table.topic.enable=true \
-      --config automq.table.topic.commit.interval.ms=2000 \
+      --config automq.table.topic.commit.interval.ms=1000 \
       --config automq.table.topic.convert.value.type={{convert_type}} \
       --config automq.table.topic.transform.value.type={{transform_type}} \
       --config automq.table.topic.namespace=default || true
@@ -101,3 +105,62 @@ trino-sql SQL:
     @echo 'Executing SQL (Trino): {{SQL}}'
     docker compose -f docker-compose.yml exec trino trino \
       --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg --schema default
+
+# =============================================================================
+# Helper Functions (shared across scenarios)
+# =============================================================================
+
+# Wait for Schema Registry to be ready
+_wait-for-schema-registry:
+    #!/usr/bin/env bash
+    set -e
+    echo "Waiting for Schema Registry..."
+    timeout=30; counter=0
+    while [ $counter -lt $timeout ]; do
+        if curl -s http://localhost:8081/subjects >/dev/null 2>&1; then
+            echo "Schema Registry ready"
+            exit 0
+        fi
+        sleep 2; counter=$((counter + 2))
+    done
+    echo "ERROR: Schema Registry not ready within $timeout seconds"
+    exit 1
+
+# Wait for AutoMQ to be ready
+_wait-for-automq:
+    #!/usr/bin/env bash
+    set -e
+    echo "Waiting for AutoMQ..."
+    timeout=60; counter=0
+    while [ $counter -lt $timeout ]; do
+        if docker compose -f docker-compose.yml exec -T automq \
+            /opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+            echo "AutoMQ ready"
+            exit 0
+        fi
+        sleep 2; counter=$((counter + 2))
+    done
+    echo "ERROR: AutoMQ not ready within $timeout seconds"
+    exit 1
+
+# Wait for basic services (AutoMQ + Schema Registry)
+_wait-for-services:
+    @just _wait-for-automq
+    @just _wait-for-schema-registry
+    @echo "Basic services ready"
+
+# Test all scenarios
+test-all:
+    #!/usr/bin/env bash
+    set -e
+    scenarios=("append-scenario" "insert-scenario" "partition-scenario" "protobuf-latest-scenario" "cdc-scenario")
+
+    echo "=== Running All Scenario Tests ==="
+    for scenario in "${scenarios[@]}"; do
+        echo "Testing $scenario..."
+        just -f "$scenario/justfile" test
+        echo "$scenario: PASSED"
+        echo ""
+    done
+
+    echo "=== All Tests Completed Successfully ==="

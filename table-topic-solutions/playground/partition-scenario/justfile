@@ -1,6 +1,6 @@
 set working-directory := ".."
 SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
-NEW_PARTITION_BY := "[month(ts), bucket(16, id)]"
+NEW_PARTITION_BY := "[month(ts), bucket(id, 16)]"
 
 default: help
 
@@ -17,16 +17,17 @@ help:
     @echo "  show-manifests [table]               default: order-with-ts"
     @echo "  add-iceberg-partition [topic]        evolve Iceberg partition spec"
     @echo "  query [table]                        default: order-with-ts"
+    @echo "  test                                 run full scenario test"
 
 create-topic topic='order-with-ts':
     docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
       --create --topic {{topic}} --partitions 16 \
       --config automq.table.topic.enable=true \
-      --config automq.table.topic.commit.interval.ms=2000 \
+      --config automq.table.topic.commit.interval.ms=1000 \
       --config automq.table.topic.convert.value.type=by_schema_id \
       --config automq.table.topic.transform.value.type=flatten \
       --config automq.table.topic.namespace=default \
-      --config automq.table.topic.partition.by='[month(ts)]' || true
+      --config automq.table.topic.partition.by='[month(ts), bucket(id, 16)]' || true
 
 send-auto topic='order-with-ts' count='10':
     @echo "Producing {{count}} Avro messages with ts to {{topic}}"
@@ -62,3 +63,40 @@ query table='order-with-ts':
 show-topic-config topic='order-with-ts':
     docker exec automq /opt/automq/kafka/bin/kafka-configs.sh --bootstrap-server localhost:9092 \
       --entity-type topics --entity-name {{topic}} --describe
+
+# Test scenario - runs the complete partition scenario workflow
+test:
+    @echo "Starting Partition Scenario Test..."
+    @just up
+    @echo "Step 1: Create Table Topic"
+    @just -f partition-scenario/justfile create-topic
+    @sleep 5
+
+    @echo "Step 2: Produce Initial Data"
+    @just -f partition-scenario/justfile send-auto
+    @sleep 10
+
+    @echo "Step 3: Inspect Current Partitioning & Table Info"
+    @just -f partition-scenario/justfile show-topic-config
+    @just -f partition-scenario/justfile show-partitions
+    @just -f partition-scenario/justfile show-ddl
+
+    @echo "Step 4: Evolve Partition Spec"
+    @just -f partition-scenario/justfile add-iceberg-partition
+    @sleep 8
+
+    @echo "Step 5: Produce More Data"
+    @just -f partition-scenario/justfile send-auto
+    @sleep 15
+
+    @echo "Step 6: Inspect After Change"
+    @just -f partition-scenario/justfile show-topic-config
+    @just -f partition-scenario/justfile show-partitions
+    @just -f partition-scenario/justfile show-ddl
+    @sleep 10
+
+    @echo "Step 7: Query Data"
+    @just -f partition-scenario/justfile query
+
+    @echo "Partition Scenario Test Completed Successfully"
+    @just down

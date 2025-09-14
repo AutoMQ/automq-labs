@@ -20,6 +20,7 @@ help:
     @echo "  status                       Check service status"
     @echo "  health                       Check service health"
     @echo "  logs [service]               View logs"
+    @echo "  test                         Run full scenario test"
     @echo "Connectors"
     @echo "  create-avro-connector        Create Debezium MySQL Avro connector"
     @echo "  list-connectors              List connectors"
@@ -57,7 +58,7 @@ up:
     @echo "Starting services..."
     docker compose -f docker-compose.yml -f cdc-scenario/docker-compose.yml up -d
     @echo "Waiting for services..."
-    just --justfile cdc-scenario/justfile _wait-for-services
+    @just -f cdc-scenario/justfile _wait-for-services
 
 # Stop services  
 down:
@@ -159,7 +160,7 @@ create-table-topic topic=DEFAULT_TOPIC:
         --create --topic {{ topic }} \
         --partitions 16 \
         --config automq.table.topic.enable=true \
-        --config automq.table.topic.commit.interval.ms=2000 \
+        --config automq.table.topic.commit.interval.ms=1000 \
         --config automq.table.topic.convert.value.type=by_schema_id \
         --config automq.table.topic.transform.value.type=flatten_debezium \
         --config automq.table.topic.namespace=default \
@@ -308,10 +309,43 @@ _check-schema-registry:
         echo "Schema Registry: Not accessible"; \
     fi
 
-# Check Kafka Connect health  
+# Check Kafka Connect health
 _check-connect:
     @if curl -s --max-time 5 localhost:8083/connectors >/dev/null 2>&1; then \
         echo "Kafka Connect: Running"; \
     else \
         echo "Kafka Connect: Not accessible"; \
     fi
+
+# Test scenario - runs the complete CDC scenario workflow
+test:
+    @echo "Starting CDC Scenario Test..."
+
+    @just -f cdc-scenario/justfile up
+    @echo "Step 1: Create Table Topic"
+    @just -f cdc-scenario/justfile create-table-topic
+    @sleep 8
+
+    @echo "Step 2: Deploy Debezium Connector"
+    @just -f cdc-scenario/justfile create-avro-connector
+    @sleep 15
+
+    @echo "Step 3: Perform Database Operations"
+    @just -f cdc-scenario/justfile insert-random
+    @sleep 5
+    @just -f cdc-scenario/justfile update-random
+    @sleep 5
+    @just -f cdc-scenario/justfile delete-random
+    @sleep 15
+
+    @echo "Step 4: View Table Info"
+    @just -f cdc-scenario/justfile show-table-ddl
+    @just -f cdc-scenario/justfile show-table-snapshots
+    @just -f cdc-scenario/justfile show-table-history
+    @just 10
+
+    @echo "Step 5: Query Iceberg Data"
+    @just -f cdc-scenario/justfile query-table
+
+    @echo "CDC Scenario Test Completed Successfully"
+    @just down

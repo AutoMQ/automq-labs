@@ -14,12 +14,13 @@ help:
     @echo "  show-files table=user-info"
     @echo "  show-manifests table=user-info"
     @echo "  query table=user-info"
+    @echo "  test                                    (run full scenario test)"
 
 create-topic topic='user-info':
     docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
       --create --topic {{topic}} --partitions 16 \
       --config automq.table.topic.enable=true \
-      --config automq.table.topic.commit.interval.ms=2000 \
+      --config automq.table.topic.commit.interval.ms=1000 \
       --config automq.table.topic.convert.value.type=by_schema_id \
       --config automq.table.topic.transform.value.type=flatten \
       --config automq.table.topic.namespace=default \
@@ -51,3 +52,32 @@ show-files table='user-info':
 
 show-manifests table='user-info':
     @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$manifests" LIMIT 50'
+
+# Test scenario - runs the complete insert/upsert scenario workflow
+test:
+    @echo "Starting Insert/Upsert Scenario Test..."
+
+    @just up
+    @echo "Step 1: Create Table Topic"
+    @just -f insert-scenario/justfile create-topic
+    @sleep 5
+
+    @echo "Step 2: Produce Initial Data"
+    @just -f insert-scenario/justfile send-auto
+    @sleep 10
+
+    @echo "Step 3: Update an Existing Record (Upsert)"
+    @just -f insert-scenario/justfile update-one
+    @sleep 15
+
+    @echo "Step 4: View Table Info"
+    @just -f insert-scenario/justfile show-ddl
+    @just -f insert-scenario/justfile show-snapshots
+    @just -f insert-scenario/justfile show-history
+    @sleep 10
+
+    @echo "Step 5: Query Final Data (verify upsert)"
+    @just -f insert-scenario/justfile query
+
+    @echo "Insert/Upsert Scenario Test Completed Successfully"
+    @just down

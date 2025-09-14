@@ -63,9 +63,22 @@ def gen_primitive(t: str, i: int) -> Json:
 
 
 def gen_from_type(t: Any, i: int, named: Dict[str, Any]) -> Json:
-    # Union type
+    # Union type - handle specially for JSON encoding
     if isinstance(t, list):
-        t = choose_union_type(t)
+        # For unions, we need to choose a type and format appropriately for Avro JSON
+        chosen_type = choose_union_type(t)
+        value = gen_from_type(chosen_type, i, named)
+
+        # If union contains null and we're generating a non-null value,
+        # we need to wrap it in the Avro JSON union format
+        if "null" in t and chosen_type != "null":
+            # For simple types, Avro JSON union format is: {"type_name": value}
+            if chosen_type in ("boolean", "int", "long", "float", "double", "bytes", "string"):
+                return {chosen_type: value}
+            else:
+                return {chosen_type: value}
+        else:
+            return value
 
     # Named reference
     if isinstance(t, str):
