@@ -157,7 +157,7 @@ test-all:
 
     echo "=== Running All Scenario Tests ==="
     for scenario in "${scenarios[@]}"; do
-        echo "Testing $scenario..."
+        echo "========================Testing $scenario..========================"
         just -f "$scenario/justfile" test
         echo "$scenario: PASSED"
         echo ""

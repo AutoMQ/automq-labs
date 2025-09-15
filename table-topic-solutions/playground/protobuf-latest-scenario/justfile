@@ -76,7 +76,7 @@ show-manifests table='product':
 
 # Test scenario - runs the complete protobuf scenario workflow
 test:
-    @echo "Starting Protobuf Latest Scenario Test..."
+    @echo "🚀 Starting Protobuf Latest Scenario Test..."
 
     @just up
     @echo "Step 1: Register Protobuf Schemas"
@@ -92,16 +92,15 @@ test:
     @echo "Step 3: Produce Raw Protobuf Data"
     @just -f protobuf-latest-scenario/justfile send-product-raw
     @just -f protobuf-latest-scenario/justfile send-user-raw
-    @sleep 15
+    @sleep 20
 
     @echo "Step 4: View Table DDL"
     @just -f protobuf-latest-scenario/justfile show-ddl product
     @just -f protobuf-latest-scenario/justfile show-ddl user
-    @sleep 10
 
     @echo "Step 5: Query Iceberg Data"
     @just -f protobuf-latest-scenario/justfile query-product
     @just -f protobuf-latest-scenario/justfile query-user
 
-    @echo "Protobuf Latest Scenario Test Completed Successfully"
+    @echo "✅ Protobuf Latest Scenario Test Completed Successfully"
     @just down

@@ -61,7 +61,7 @@ show-manifests table='user-info':
 
 # Test scenario - runs the complete insert/upsert scenario workflow
 test:
-    @echo "Starting Insert/Upsert Scenario Test..."
+    @echo "🚀 Starting Insert/Upsert Scenario Test..."
 
     @just up
     @echo "Step 1: Create Table Topic"
@@ -74,16 +74,15 @@ test:
 
     @echo "Step 3: Update an Existing Record (Upsert)"
     @just -f insert-scenario/justfile update-one
-    @sleep 15
+    @sleep 20
 
     @echo "Step 4: View Table Info"
     @just -f insert-scenario/justfile show-ddl
     @just -f insert-scenario/justfile show-snapshots
     @just -f insert-scenario/justfile show-history
-    @sleep 10
 
     @echo "Step 5: Query Final Data (verify upsert)"
     @just -f insert-scenario/justfile query
 
-    @echo "Insert/Upsert Scenario Test Completed Successfully"
+    @echo "✅ Insert/Upsert Scenario Test Completed Successfully"
     @just down

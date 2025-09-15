@@ -319,7 +319,7 @@ _check-connect:
 
 # Test scenario - runs the complete CDC scenario workflow
 test:
-    @echo "Starting CDC Scenario Test..."
+    @echo "🚀 Starting CDC Scenario Test..."
 
     @just -f cdc-scenario/justfile up
     @echo "Step 1: Create Table Topic"
@@ -336,16 +336,15 @@ test:
     @just -f cdc-scenario/justfile update-random
     @sleep 5
     @just -f cdc-scenario/justfile delete-random
-    @sleep 15
+    @sleep 20
 
     @echo "Step 4: View Table Info"
     @just -f cdc-scenario/justfile show-table-ddl
     @just -f cdc-scenario/justfile show-table-snapshots
     @just -f cdc-scenario/justfile show-table-history
-    @just 10
 
     @echo "Step 5: Query Iceberg Data"
     @just -f cdc-scenario/justfile query-table
 
-    @echo "CDC Scenario Test Completed Successfully"
+    @echo "✅ CDC Scenario Test Completed Successfully"
     @just down
