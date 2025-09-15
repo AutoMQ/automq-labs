@@ -74,6 +74,7 @@ wheels/
 env/
 venv/
 ENV/
+**/*_pb2.py
 
 # Node.js
 node_modules/
