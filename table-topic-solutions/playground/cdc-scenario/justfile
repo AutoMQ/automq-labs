@@ -347,4 +347,4 @@ test:
     @just -f cdc-scenario/justfile query-table
 
     @echo "✅ CDC Scenario Test Completed Successfully"
-    @just down
+    @just -f cdc-scenario/justfile down
