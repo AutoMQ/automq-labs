@@ -35,6 +35,12 @@ update-one topic='user-info' id='u-1':
     @echo "Producing update for id={{id}} to {{topic}}"
     SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash insert-scenario/scripts/update-one.sh {{topic}} {{id}}
 
+add-id-column topic='user-info' id-columns='[id, name]':
+    @echo "Altering topic to add id column..."
+    docker exec automq /opt/automq/kafka/bin/kafka-configs.sh --bootstrap-server localhost:9092 \
+      --entity-type topics --entity-name {{topic}} \
+      --alter --add-config automq.table.topic.id.columns='{{id-columns}}'
+
 query table='user-info':
     @just trino-sql 'SELECT * FROM iceberg.default."{{table}}" ORDER BY id LIMIT 50'
 

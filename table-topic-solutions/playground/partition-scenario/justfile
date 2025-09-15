@@ -27,7 +27,7 @@ create-topic topic='order-with-ts':
       --config automq.table.topic.convert.value.type=by_schema_id \
       --config automq.table.topic.transform.value.type=flatten \
       --config automq.table.topic.namespace=default \
-      --config automq.table.topic.partition.by='[month(ts), bucket(id, 16)]' || true
+      --config automq.table.topic.partition.by='[month(ts)]' || true
 
 send-auto topic='order-with-ts' count='10':
     @echo "Producing {{count}} Avro messages with ts to {{topic}}"
