@@ -85,18 +85,21 @@ test:
 
     @echo "Step 2: Create Table Topics"
     @just -f protobuf-latest-scenario/justfile create-product-topic
-    @sleep 5
     @just -f protobuf-latest-scenario/justfile create-user-topic
-    @sleep 5
 
     @echo "Step 3: Produce Raw Protobuf Data"
     @just -f protobuf-latest-scenario/justfile send-product-raw
+    @just -f protobuf-latest-scenario/justfile send-product-raw
+    @just -f protobuf-latest-scenario/justfile send-product-raw
     @just -f protobuf-latest-scenario/justfile send-user-raw
-    @sleep 20
+    @just -f protobuf-latest-scenario/justfile send-user-raw
+    @just -f protobuf-latest-scenario/justfile send-user-raw
+    @sleep 25
 
     @echo "Step 4: View Table DDL"
     @just -f protobuf-latest-scenario/justfile show-ddl product
     @just -f protobuf-latest-scenario/justfile show-ddl user
+    @sleep 5
 
     @echo "Step 5: Query Iceberg Data"
     @just -f protobuf-latest-scenario/justfile query-product
