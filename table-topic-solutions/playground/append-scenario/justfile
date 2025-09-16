@@ -1,0 +1,86 @@
+set working-directory := ".."
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+
+default: help
+
+help:
+    @echo "Append Scenario (Avro by_schema_id + flatten)"
+    @echo "  create-topic topic=orders"
+    @echo "  send-auto topic=orders [count=10]"
+    @echo "  send-auto-v2 topic=orders [count=10]   (evolved schema: add/optional/widen)"
+    @echo "  show-ddl table=orders"
+    @echo "  show-snapshots table=orders"
+    @echo "  show-history table=orders"
+    @echo "  show-files table=orders"
+    @echo "  show-manifests table=orders"
+    @echo "  query table=orders"
+    @echo "  test                                    (run full scenario test)"
+
+create-topic topic='orders':
+    docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config automq.table.topic.commit.interval.ms=1000 \
+      --config automq.table.topic.convert.value.type=by_schema_id \
+      --config automq.table.topic.transform.value.type=flatten \
+      --config automq.table.topic.namespace=default || true
+
+send-auto topic='orders' count='10':
+    @echo "Producing {{count}} Avro messages (auto-register) to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
+
+send-auto-v2 topic='orders' count='10':
+    @echo "Producing {{count}} Avro messages (OrderV2 aggregated evolution) to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV2.avsc \
+      bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
+
+query table='orders':
+    @just trino-sql "SELECT * FROM iceberg.default.\"{{table}}\" LIMIT 20"
+
+show-ddl table='orders':
+    @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{table}}"'
+
+show-snapshots table='orders':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$snapshots" ORDER BY committed_at DESC LIMIT 20'
+
+show-history table='orders':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$history" ORDER BY made_current_at DESC LIMIT 20'
+
+show-files table='orders':
+    @just trino-sql 'SELECT content, file_format, record_count, file_size_in_bytes, file_path FROM iceberg.default."{{table}}$files" LIMIT 50'
+
+show-manifests table='orders':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$manifests" LIMIT 50'
+
+# Test scenario - runs the complete append scenario workflow
+test:
+    @echo "🚀 Starting Append Scenario Test..."
+
+    @just up
+    @echo "Step 1: Create Table Topic"
+    @just -f append-scenario/justfile create-topic
+    @sleep 5
+
+    @echo "Step 2: Produce Initial Data (Schema v1)"
+    @just -f append-scenario/justfile send-auto
+    @sleep 10
+
+    @echo "Step 3: View Table Info"
+    @just -f append-scenario/justfile show-ddl
+    @just -f append-scenario/justfile show-snapshots
+    @just -f append-scenario/justfile show-history
+
+    @echo "Step 4: Produce Data with Evolved Schema (Schema v2)"
+    @just -f append-scenario/justfile send-auto-v2
+    @sleep 20
+
+    @echo "Step 5: View Table Info After Evolution"
+    @just -f append-scenario/justfile show-ddl
+    @just -f append-scenario/justfile show-snapshots
+    @just -f append-scenario/justfile show-history
+
+    @echo "Step 6: Query Final Data"
+    @just -f append-scenario/justfile query
+
+    @echo "✅ Append Scenario Test Completed Successfully"
+    @just down

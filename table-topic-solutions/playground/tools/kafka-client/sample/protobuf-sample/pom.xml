@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.confluent</groupId>
+    <artifactId>protobuf-sample-registry-tool</artifactId>
+    <version>1.0</version>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>confluent</id>
+            <url>https://packages.confluent.io/maven/</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <properties>
+        <schemaRegistryUrl>http://schema-registry:8081</schemaRegistryUrl>
+        <confluent.version>8.0.0</confluent.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>io.confluent</groupId>
+                <artifactId>kafka-schema-registry-maven-plugin</artifactId>
+                <version>${confluent.version}</version>
+                <configuration>
+                    <schemaRegistryUrls>
+                        <param>${schemaRegistryUrl}</param>
+                    </schemaRegistryUrls>
+                    <schemaTypes>
+                        <product-value>PROTOBUF</product-value>
+                        <user-value>PROTOBUF</user-value>
+                    </schemaTypes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>validate</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>validate</goal>
+                        </goals>
+                        <configuration>
+                            <subjects>
+                                <user-value>schema/user.proto</user-value>
+                                <product-value>schema/product.proto</product-value>
+                            </subjects>
+                            <schemaTypes>
+                                <user-value>PROTOBUF</user-value>
+                                <product-value>PROTOBUF</product-value>
+                            </schemaTypes>
+                            <references>
+                                <product-value>
+                                    <reference>
+                                        <name>user.proto</name>
+                                        <subject>user-value</subject>
+                                        <version>-1</version>
+                                    </reference>
+                                </product-value>
+                            </references>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>register</id>
+                        <goals>
+                            <goal>register</goal>
+                        </goals>
+                        <configuration>
+                            <subjects>
+                                <user-value>schema/user.proto</user-value>
+                                <product-value>schema/product.proto</product-value>
+                            </subjects>
+                            <references>
+                                <product-value>
+                                    <reference>
+                                        <name>user.proto</name>
+                                        <subject>user-value</subject>
+                                        <version>-1</version>
+                                    </reference>
+                                </product-value>
+                            </references>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

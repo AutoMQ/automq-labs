@@ -1,0 +1,88 @@
+set working-directory := ".."
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+
+default: help
+
+help:
+    @echo "Insert/Upsert Scenario (Avro by_schema_id + upsert)"
+    @echo "  create-topic topic=user-info"
+    @echo "  send-auto topic=user-info [count=10]"
+    @echo "  update-one topic=user-info id=u-1"
+    @echo "  show-ddl table=user-info"
+    @echo "  show-snapshots table=user-info"
+    @echo "  show-history table=user-info"
+    @echo "  show-files table=user-info"
+    @echo "  show-manifests table=user-info"
+    @echo "  query table=user-info"
+    @echo "  test                                    (run full scenario test)"
+
+create-topic topic='user-info':
+    docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config automq.table.topic.commit.interval.ms=1000 \
+      --config automq.table.topic.convert.value.type=by_schema_id \
+      --config automq.table.topic.transform.value.type=flatten \
+      --config automq.table.topic.namespace=default \
+      --config automq.table.topic.id.columns='[id]' \
+      --config automq.table.topic.upsert.enable=true || true
+
+send-auto topic='user-info' count='10':
+    @echo "Producing {{count}} Avro messages (auto-register) to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash insert-scenario/scripts/produce-userinfo-auto.sh {{topic}} {{count}}
+
+update-one topic='user-info' id='u-1':
+    @echo "Producing update for id={{id}} to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash insert-scenario/scripts/update-one.sh {{topic}} {{id}}
+
+add-id-column topic='user-info' id-columns='[id, name]':
+    @echo "Altering topic to add id column..."
+    docker exec automq /opt/automq/kafka/bin/kafka-configs.sh --bootstrap-server localhost:9092 \
+      --entity-type topics --entity-name {{topic}} \
+      --alter --add-config automq.table.topic.id.columns='{{id-columns}}'
+
+query table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}" ORDER BY id LIMIT 50'
+
+show-ddl table='user-info':
+    @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{table}}"'
+
+show-snapshots table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$snapshots" ORDER BY committed_at DESC LIMIT 20'
+
+show-history table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$history" ORDER BY made_current_at DESC LIMIT 20'
+
+show-files table='user-info':
+    @just trino-sql 'SELECT content, file_format, record_count, file_size_in_bytes, file_path FROM iceberg.default."{{table}}$files" LIMIT 50'
+
+show-manifests table='user-info':
+    @just trino-sql 'SELECT * FROM iceberg.default."{{table}}$manifests" LIMIT 50'
+
+# Test scenario - runs the complete insert/upsert scenario workflow
+test:
+    @echo "🚀 Starting Insert/Upsert Scenario Test..."
+
+    @just up
+    @echo "Step 1: Create Table Topic"
+    @just -f insert-scenario/justfile create-topic
+    @sleep 5
+
+    @echo "Step 2: Produce Initial Data"
+    @just -f insert-scenario/justfile send-auto
+    @sleep 10
+
+    @echo "Step 3: Update an Existing Record (Upsert)"
+    @just -f insert-scenario/justfile update-one
+    @sleep 20
+
+    @echo "Step 4: View Table Info"
+    @just -f insert-scenario/justfile show-ddl
+    @just -f insert-scenario/justfile show-snapshots
+    @just -f insert-scenario/justfile show-history
+
+    @echo "Step 5: Query Final Data (verify upsert)"
+    @just -f insert-scenario/justfile query
+
+    @echo "✅ Insert/Upsert Scenario Test Completed Successfully"
+    @just down
