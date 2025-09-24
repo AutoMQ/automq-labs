@@ -63,11 +63,6 @@ module "eks_addons" {
   resource_suffix = var.resource_suffix
 
   # Default addon configurations - can be overridden via variables
-  enable_coredns                = false
-  enable_kube_proxy             = false
-  enable_pod_identity_agent     = false
-  enable_vpc_cni                = false
-
   enable_autoscaler             = true
   enable_alb_ingress_controller = true
   enable_ebs_csi_driver         = true
