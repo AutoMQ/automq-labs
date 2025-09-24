@@ -14,14 +14,6 @@ output "eks_cluster_security_group" {
   value = module.eks.cluster_primary_security_group_id
 }
 
-output "aws_eks_node_group_role_name" {
-  value = aws_iam_role.nodes.name
-}
-
-output "aws_eks_node_group_role_arn" {
-  value = aws_iam_role.nodes.arn
-}
-
 output "eks_cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }

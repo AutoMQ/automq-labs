@@ -3,7 +3,7 @@ data "aws_caller_identity" "current" {}
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 21.0.0"
+  version = "21.2.0"
 
   name               = local.cluster_name
   kubernetes_version = "1.32"
@@ -13,41 +13,34 @@ module "eks" {
 
   vpc_id     = var.vpc_id
   subnet_ids = var.subnet_ids
-}
 
-resource "aws_eks_node_group" "system-nodes" {
-  cluster_name    = local.cluster_name
-  node_group_name = local.system_node_group_name
-  node_role_arn   = aws_iam_role.nodes.arn
+  enable_irsa = true
 
-  subnet_ids = [local.private_subnet_ids[0]]
+  eks_managed_node_groups = {
+    system_nodes = {
+      instance_types = ["t3.medium", "c5.large", "t3.small"]
+      desired_size   = 4
+      max_size       = 6
+      min_size       = 3
+      capacity_type  = "SPOT"
 
-  ami_type       = "AL2_x86_64"
-  capacity_type  = "SPOT"
-  instance_types = ["t3.medium", "c5.large", "t3.small"]
+      labels = {
+        # Node group identification
+        "node.kubernetes.io/node-group"    = "system-nodes"
+        "node.kubernetes.io/capacity-type" = "spot"
 
-  scaling_config {
-    desired_size = 4
-    max_size     = 5
-    min_size     = 3
+        # Infrastructure labels
+        "infrastructure.eks.amazonaws.com/managed-by" = "terraform"
+      }
+    }
   }
 
-  update_config {
-    max_unavailable = 1
+  addons = {
+    coredns                = { most_recent = true }
+    eks-pod-identity-agent = { before_compute = true }
+    kube-proxy             = { before_compute = true }
+    vpc-cni                = { before_compute = true }
   }
-
-  labels = {
-    node_type                      = "spot"
-    "node.kubernetes.io/lifecycle" = "normal"
-  }
-
-  depends_on = [
-    module.eks,
-    var.resource_depends_on,
-    aws_iam_role_policy_attachment.nodes-AmazonEKSWorkerNodePolicy,
-    aws_iam_role_policy_attachment.nodes-AmazonEKS_CNI_Policy,
-    aws_iam_role_policy_attachment.nodes-AmazonEC2ContainerRegistryReadOnly,
-  ]
 }
 
 resource "null_resource" "kube_config" {
@@ -72,7 +65,6 @@ module "eks_addons" {
   # Default addon configurations - can be overridden via variables
   enable_autoscaler             = true
   enable_alb_ingress_controller = true
-  enable_vpc_cni                = true
   enable_ebs_csi_driver         = true
 
   providers = {
@@ -82,6 +74,6 @@ module "eks_addons" {
   }
 
   depends_on = [
-    module.eks, aws_eks_node_group.system-nodes
+    module.eks
   ]
 }

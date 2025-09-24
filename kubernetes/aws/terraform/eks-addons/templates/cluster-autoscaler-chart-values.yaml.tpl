@@ -1,8 +1,5 @@
 awsRegion: ${region}
 
-nodeSelector:
-  node.kubernetes.io/lifecycle: normal
-
 rbac:
   create: true
   serviceAccount:

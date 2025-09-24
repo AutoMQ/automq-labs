@@ -30,14 +30,32 @@ variable "enable_alb_ingress_controller" {
   default     = true
 }
 
-variable "enable_vpc_cni" {
-  description = "Enable the AWS VPC CNI addon"
-  type        = bool
-  default     = true
-}
-
 variable "enable_ebs_csi_driver" {
   description = "Enable the AWS EBS CSI addon"
   type        = bool
   default     = true
+}
+
+variable "enable_vpc_cni" {
+  description = "Enable the AWS VPC CNI addon"
+  type        = bool
+  default     = false
+}
+
+variable "enable_coredns" {
+  description = "Enable the CoreDNS addon"
+  type        = bool
+  default     = false
+}
+
+variable "enable_kube_proxy" {
+  description = "Enable the kube-proxy addon"
+  type        = bool
+  default     = false
+}
+
+variable "enable_pod_identity_agent" {
+  description = "Enable the EKS Pod Identity Agent addon"
+  type        = bool
+  default     = false
 }
