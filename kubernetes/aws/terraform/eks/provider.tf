@@ -39,7 +39,7 @@ provider "aws" {
 }
 
 # Data sources for cluster authentication
-data "aws_eks_cluster_auth" "cluster" {
+ephemeral "aws_eks_cluster_auth" "cluster" {
   name       = module.eks.cluster_name
   depends_on = [module.eks]
 }
@@ -47,14 +47,14 @@ data "aws_eks_cluster_auth" "cluster" {
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
+  token                  = ephemeral.aws_eks_cluster_auth.cluster.token
 }
 
 provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    token                  = data.aws_eks_cluster_auth.cluster.token
+    token                  = ephemeral.aws_eks_cluster_auth.cluster.token
   }
 }
 

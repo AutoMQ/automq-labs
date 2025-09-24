@@ -36,6 +36,24 @@ variable "enable_vpc_cni" {
   default     = true
 }
 
+variable "enable_coredns" {
+  description = "Enable the CoreDNS addon"
+  type        = bool
+  default     = true
+}
+
+variable "enable_kube_proxy" {
+  description = "Enable the kube-proxy addon"
+  type        = bool
+  default     = true
+}
+
+variable "enable_pod_identity_agent" {
+  description = "Enable the EKS Pod Identity Agent addon"
+  type        = bool
+  default     = true
+}
+
 variable "enable_ebs_csi_driver" {
   description = "Enable the AWS EBS CSI addon"
   type        = bool
