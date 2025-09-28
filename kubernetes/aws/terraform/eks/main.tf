@@ -15,13 +15,6 @@ module "eks" {
   subnet_ids = var.subnet_ids
 
   enable_irsa = true
-
-  addons = {
-    coredns                = { most_recent = true }
-    eks-pod-identity-agent = { before_compute = true }
-    kube-proxy             = { before_compute = true }
-    vpc-cni                = { before_compute = true }
-  }
 }
 
 # EKS Managed Node Group - System Nodes
@@ -56,7 +49,6 @@ resource "aws_eks_node_group" "system_nodes" {
     aws_iam_role_policy_attachment.node_group_AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.node_group_AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.node_group_AmazonEC2ContainerRegistryReadOnly,
-    module.eks
   ]
 }
 
@@ -112,6 +104,10 @@ module "eks_addons" {
   resource_suffix = var.resource_suffix
 
   # Default addon configurations - can be overridden via variables
+  enable_vpc_cni                = true
+  enable_coredns                = true
+  enable_kube_proxy             = true
+  enable_pod_identity_agent     = false
   enable_autoscaler             = true
   enable_alb_ingress_controller = true
   enable_ebs_csi_driver         = true
