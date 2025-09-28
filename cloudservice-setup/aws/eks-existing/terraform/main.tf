@@ -14,7 +14,7 @@ locals {
 # This module sets up the AutoMQ console and required infrastructure
 module "automq-byoc" {
   source  = "AutoMQ/automq-byoc-environment/aws"
-  version = "0.3.1"
+  version = "0.3.4"
 
   cloud_provider_region = var.region
   automq_byoc_env_id    = var.resource_suffix
