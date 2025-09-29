@@ -1,6 +1,6 @@
 services:
   automq:
-    image: local/automq:1.6.7
+    image: automqinc/automq:1.6.0-rc1
     container_name: automq
     hostname: automq
     stop_grace_period: 1m
