@@ -3,7 +3,7 @@ locals {
   resource_suffix = "${random_string.suffix.result}-${var.resource_suffix}"
 
   # Cluster name
-  cluster_name = "eks-${local.resource_suffix}"
+  cluster_name = var.cluster_name != "" ? var.cluster_name : "eks-${local.resource_suffix}"
 
   # IAM roles
   node_group_role_name = "node-role-${local.resource_suffix}"
