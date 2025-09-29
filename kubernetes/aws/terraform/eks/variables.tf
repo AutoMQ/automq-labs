@@ -22,3 +22,9 @@ variable "resource_suffix" {
   description = "Suffix for resource names"
   type        = string
 }
+
+variable "cluster_name" {
+  description = "EKS Cluster name (overrides default naming)"
+  type        = string
+  default     = ""
+}
