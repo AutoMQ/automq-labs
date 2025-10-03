@@ -1,0 +1,34 @@
+# EKS Cluster Configuration
+cluster_name              = "eks-i3x61-automqlab"
+existing_node_role_name   = "eks-i3x61-automqlab-node-group-role"
+aws_region               = "us-east-1"
+environment              = "dev"
+
+# Subnet Configuration (only us-east-1a for new node group)
+subnet_ids = [
+  "subnet-0f6158efbaf349892"  # Recommend us-east-1a only, use your own vpc id.
+]
+
+# Node Group Configuration
+resource_suffix    = "observability"
+capacity_type     = "ON_DEMAND"
+instance_types    = ["c5.xlarge", "c5a.xlarge", "c5n.xlarge", "m5.xlarge", "m5a.xlarge"]
+desired_size      = 1
+max_size          = 3
+min_size          = 1
+ami_type          = "AL2023_x86_64_STANDARD"
+disk_size         = 50
+
+# Optional configurations
+enable_dedicated_nodes = false
+enable_remote_access   = false
+
+# Additional labels and tags
+additional_labels = {
+  "team" = "platform"
+}
+
+additional_tags = {
+  "Project" = "AutoMQ"
+  "Team"    = "Platform"
+}
