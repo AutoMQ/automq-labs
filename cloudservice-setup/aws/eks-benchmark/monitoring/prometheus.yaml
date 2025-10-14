@@ -24,7 +24,7 @@ grafana:
     
   # Node selector for Grafana
   nodeSelector:
-    workload-type: loadtest
+    workload-type: benchmark
 
 
 prometheus:
@@ -75,11 +75,6 @@ server:
   ##       name: mysecret
   ##       key: username
   env: []
-
-  # List of flags to override default parameters, e.g:
-  # - --enable-feature=agent
-  # - --storage.agent.retention.max-time=30m
-  # - --config.file=/etc/config/prometheus.yml
   defaultFlagsOverride:
     - --enable-feature=exemplar-storage,remote-write-receiver,otlp-write-receiver
     - --config.file=/etc/config/prometheus.yml
@@ -87,14 +82,6 @@ server:
   extraFlags:
     - web.enable-lifecycle
     - storage.tsdb.wal-compression
-    ## web.enable-admin-api flag controls access to the administrative HTTP API which includes functionality such as
-    ## deleting time series. This is disabled by default.
-    # - web.enable-admin-api
-    ##
-    ## storage.tsdb.no-lockfile flag controls BD locking
-    # - storage.tsdb.no-lockfile
-    ##
-    ## storage.tsdb.wal-compression flag enables compression of the write-ahead log (WAL)
 
 
   ## Path to a configuration file on prometheus server container FS
@@ -218,7 +205,7 @@ server:
   ## Ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/
   ##
   nodeSelector:
-    workload-type: loadtest
+    workload-type: benchmark
 
   ## Pod affinity
   ##
@@ -293,7 +280,7 @@ server:
 
     ## Prometheus server data Persistent Volume size
     ##
-    size: 120Gi
+    size: 30Gi
 
     ## Prometheus server data Persistent Volume Storage Class
     ## If defined, storageClassName: <storageClass>
@@ -411,27 +398,6 @@ server:
     pvcDeleteOnStsDelete: false
     pvcDeleteOnStsScale: false
 
-  ## Prometheus server readiness and liveness probe initial delay and timeout
-  ## Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-  ##
-  tcpSocketProbeEnabled: false
-  probeScheme: HTTP
-  readinessProbeInitialDelay: 30
-  readinessProbePeriodSeconds: 5
-  readinessProbeTimeout: 4
-  readinessProbeFailureThreshold: 3
-  readinessProbeSuccessThreshold: 1
-  livenessProbeInitialDelay: 30
-  livenessProbePeriodSeconds: 15
-  livenessProbeTimeout: 10
-  livenessProbeFailureThreshold: 3
-  livenessProbeSuccessThreshold: 1
-  startupProbe:
-    enabled: false
-    periodSeconds: 5
-    failureThreshold: 30
-    timeoutSeconds: 10
-
   ## Prometheus server resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
   ##
@@ -468,21 +434,6 @@ server:
     # updateMode: "Auto"
     # containerPolicies:
     # - containerName: 'prometheus-server'
-
-  # Custom DNS configuration to be added to prometheus server pods
-  dnsConfig: {}
-    # nameservers:
-    #   - 1.2.3.4
-    # searches:
-    #   - ns1.svc.cluster-domain.example
-    #   - my.dns.search.suffix
-    # options:
-    #   - name: ndots
-  #     value: "2"
-  #   - name: edns0
-
-  ## Security context to be added to server pods
-  ##
   securityContext:
     runAsUser: 65534
     runAsNonRoot: true
@@ -624,18 +575,6 @@ forceNamespace: "prometheus"
 
 # Extra manifests to deploy as an array
 extraManifests: []
-  # - |
-  #   apiVersion: v1
-  #   kind: ConfigMap
-  #   metadata:
-  #   labels:
-  #     name: prometheus-extra
-  #   data:
-#     extra-data: "value"
-
-# Configuration of subcharts defined in Chart.yaml
-
-##
 prometheus-node-exporter:
   ## If false, node-exporter will not be installed
   ##

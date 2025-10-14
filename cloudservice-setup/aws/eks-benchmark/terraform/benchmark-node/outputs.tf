@@ -1,41 +1,41 @@
 # Node group outputs
 output "node_group_name" {
   description = "Name of the created node group"
-  value       = aws_eks_node_group.loadtest_nodes.node_group_name
+  value       = aws_eks_node_group.benchmark_nodes.node_group_name
 }
 
 output "node_group_arn" {
   description = "ARN of the created node group"
-  value       = aws_eks_node_group.loadtest_nodes.arn
+  value       = aws_eks_node_group.benchmark_nodes.arn
 }
 
 output "node_group_status" {
   description = "Status of the node group"
-  value       = aws_eks_node_group.loadtest_nodes.status
+  value       = aws_eks_node_group.benchmark_nodes.status
 }
 
 output "node_group_capacity_type" {
   description = "Capacity type of the node group"
-  value       = aws_eks_node_group.loadtest_nodes.capacity_type
+  value       = aws_eks_node_group.benchmark_nodes.capacity_type
 }
 
 output "node_group_instance_types" {
   description = "Instance types used by the node group"
-  value       = aws_eks_node_group.loadtest_nodes.instance_types
+  value       = aws_eks_node_group.benchmark_nodes.instance_types
 }
 
 output "node_group_scaling_config" {
   description = "Scaling configuration of the node group"
   value = {
-    desired_size = aws_eks_node_group.loadtest_nodes.scaling_config[0].desired_size
-    max_size     = aws_eks_node_group.loadtest_nodes.scaling_config[0].max_size
-    min_size     = aws_eks_node_group.loadtest_nodes.scaling_config[0].min_size
+    desired_size = aws_eks_node_group.benchmark_nodes.scaling_config[0].desired_size
+    max_size     = aws_eks_node_group.benchmark_nodes.scaling_config[0].max_size
+    min_size     = aws_eks_node_group.benchmark_nodes.scaling_config[0].min_size
   }
 }
 
 output "node_group_labels" {
   description = "Labels applied to the node group"
-  value       = aws_eks_node_group.loadtest_nodes.labels
+  value       = aws_eks_node_group.benchmark_nodes.labels
 }
 
 # Cluster information
@@ -58,8 +58,8 @@ output "cluster_version" {
 output "node_selector_labels" {
   description = "Labels to use for node selection in pod specs"
   value = {
-    "node.kubernetes.io/node-group" = aws_eks_node_group.loadtest_nodes.node_group_name
-    "workload-type"                 = "loadtest"
+    "node.kubernetes.io/node-group" = aws_eks_node_group.benchmark_nodes.node_group_name
+    "workload-type"                 = "benchmark"
     "environment"                   = var.environment
   }
 }
@@ -70,7 +70,7 @@ output "tolerations" {
     {
       key      = "workload-type"
       operator = "Equal"
-      value    = "loadtest"
+      value    = "benchmark"
       effect   = "NoSchedule"
     }
   ] : []

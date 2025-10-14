@@ -1,0 +1,17 @@
+apiVersion: v2
+name: automq-benchmark
+description: A Helm chart for AutoMQ benchmark testing
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - automq
+  - kafka
+  - benchmark
+  - performance
+home: https://github.com/AutoMQ/automq-labs
+sources:
+  - https://github.com/AutoMQ/automq-labs
+maintainers:
+  - name: AutoMQ Team
+    email: support@automq.com

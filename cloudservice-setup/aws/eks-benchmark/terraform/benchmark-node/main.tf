@@ -13,9 +13,9 @@ data "aws_iam_role" "existing_node_role" {
 }
 
 # Create the new node group for load testing
-resource "aws_eks_node_group" "loadtest_nodes" {
+resource "aws_eks_node_group" "benchmark_nodes" {
   cluster_name    = data.aws_eks_cluster.existing.name
-  node_group_name = "loadtest-${var.resource_suffix}"
+  node_group_name = "benchmark-${var.resource_suffix}"
   node_role_arn   = data.aws_iam_role.existing_node_role.arn
   subnet_ids      = var.subnet_ids
 
@@ -40,10 +40,10 @@ resource "aws_eks_node_group" "loadtest_nodes" {
   # Labels for the node group
   labels = merge(
     {
-      "node.kubernetes.io/node-group"                    = "loadtest-${var.resource_suffix}"
+      "node.kubernetes.io/node-group"                    = "benchmark-${var.resource_suffix}"
       "infrastructure.eks.amazonaws.com/managed-by"      = "terraform"
       "node.kubernetes.io/capacity-type"                 = lower(var.capacity_type)
-      "workload-type"                                     = "loadtest"
+      "workload-type"                                     = "benchmark"
       "environment"                                       = var.environment
     },
     var.additional_labels
@@ -54,7 +54,7 @@ resource "aws_eks_node_group" "loadtest_nodes" {
     for_each = var.enable_dedicated_nodes ? [1] : []
     content {
       key    = "workload-type"
-      value  = "loadtest"
+      value  = "benchmark"
       effect = "NO_SCHEDULE"
     }
   }
@@ -71,10 +71,10 @@ resource "aws_eks_node_group" "loadtest_nodes" {
   # Tags
   tags = merge(
     {
-      Name        = "loadtest-${var.resource_suffix}"
+      Name        = "benchmark-${var.resource_suffix}"
       Environment = var.environment
       ManagedBy   = "terraform"
-      Purpose     = "loadtest"
+      Purpose     = "benchmark"
     },
     var.additional_tags
   )

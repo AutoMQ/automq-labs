@@ -1,12 +1,12 @@
 # EKS Cluster Configuration
-cluster_name              = "eks-x28a1-automqlab-beihai"
-existing_node_role_name   = "node-group-role-acdt2-automqlab-beihai"
+cluster_name              = "cluster-name"
+existing_node_role_name   = "node-group-role"
 aws_region               = "us-east-1"
 environment              = "dev"
 
 # Subnet Configuration (only us-east-1a for new node group)
 subnet_ids = [
-  "subnet-0b923324ca0881e7a"  # Recommend us-east-1a only, use your own vpc id.
+  "subnet-id"  # Recommend us-east-1a only, use your own vpc id.
 ]
 
 # Node Group Configuration

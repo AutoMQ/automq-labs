@@ -1,4 +1,4 @@
-# Required variables - must be specified in terraform.tfvars
+# Required variables - must be specified in terraform.tfvars.example
 variable "cluster_name" {
   description = "Name of the existing EKS cluster"
   type        = string
