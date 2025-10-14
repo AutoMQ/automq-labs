@@ -1,0 +1,42 @@
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: automqinc/automq
+  tag: latest
+  pullPolicy: IfNotPresent
+  # imagePullSecrets:
+  #   - name: myregistrykey
+
+automqBin: "/opt/kafka/kafka/bin/automq-perf-test.sh"
+
+podAnnotations: {}
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: "2Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+env:
+  username: "user1"
+  password: "MrCrSQTVoB"
+  kafkaHeapOpts: "-Xmx1g -Xms1g"
+  securityProtocol: "SASL_PLAINTEXT"
+  saslMechanism: "PLAIN"
+  bootstrapServer: "automq-release-kafka.automq.svc.cluster.local:9092"
+  producerConfigs: "batch.size=0"
+  consumerConfigs: "fetch.max.wait.ms=1000"
+  topics: "10"
+  partitionsPerTopic: "128"
+  producersPerTopic: "1"
+  groupsPerTopic: "1"
+  consumersPerGroup: "1"
+  recordSize: "52224"
+  sendRate: "160"
+  warmupDuration: "3"
+  testDuration: "3"

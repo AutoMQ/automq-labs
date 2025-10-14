@@ -5,7 +5,7 @@ podSecurityPolicy:
   enabled: false
 
 grafana:
-  adminPassword: "Auto&mq1314"
+  adminPassword: "AutoMQ@Grafana"
   persistence:
     enabled: false
   

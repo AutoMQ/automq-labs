@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: automq-loadtest
+  labels:
+    app: automq-loadtest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: automq-loadtest
+  template:
+    metadata:
+      labels:
+        app: automq-loadtest
+    spec:
+      containers:
+        - name: automq-loadtest
+          image: automqinc/automq:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: USERNAME
+              value: "user1"
+            - name: PASSWORD
+              value: "MrCrSQTVoB"
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xmx1g -Xms1g"
+            - name: SECURITY_PROTOCOL
+              value: "SASL_PLAINTEXT"
+            - name: SASL_MECHANISM
+              value: "PLAIN"
+            - name: BOOTSTRAP_SERVER
+              value: "automq-release-kafka.automq.svc.cluster.local:9092"
+            - name: PRODUCER_CONFIGS
+              value: "batch.size=0"
+            - name: CONSUMER_CONFIGS
+              value: "fetch.max.wait.ms=1000"
+            - name: TOPICS
+              value: "10"
+            - name: PARTITIONS_PER_TOPIC
+              value: "128"
+            - name: PRODUCERS_PER_TOPIC
+              value: "1"
+            - name: GROUPS_PER_TOPIC
+              value: "1"
+            - name: CONSUMERS_PER_GROUP
+              value: "1"
+            - name: RECORD_SIZE
+              value: "52224"
+            - name: SEND_RATE
+              value: "160"
+            - name: WARMUP_DURATION
+              value: "3"
+            - name: TEST_DURATION
+              value: "3"
+          command: ["/bin/sh", "-lc"]
+          args:
+            - |
+              set -eu
+              SASL_CONFIG="/tmp/client-sasl.properties"
+              cat > "$SASL_CONFIG" <<EOL
+              security.protocol=${SECURITY_PROTOCOL}
+              sasl.mechanism=${SASL_MECHANISM}
+              sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="${USERNAME}" password="${PASSWORD}";
+              EOL
+              AUTOMQ_BIN="/opt/kafka/kafka/bin/automq-perf-test.sh"
+              exec "$AUTOMQ_BIN" \
+                --bootstrap-server "$BOOTSTRAP_SERVER" \
+                --producer-configs "$PRODUCER_CONFIGS" \
+                # --common-config-file "$SASL_CONFIG" \
+                --consumer-configs "$CONSUMER_CONFIGS" \
+                --topics "$TOPICS" \
+                --partitions-per-topic "$PARTITIONS_PER_TOPIC" \
+                --producers-per-topic "$PRODUCERS_PER_TOPIC" \
+                --groups-per-topic "$GROUPS_PER_TOPIC" \
+                --consumers-per-group "$CONSUMERS_PER_GROUP" \
+                --record-size "$RECORD_SIZE" \
+                --send-rate "$SEND_RATE" \
+                --warmup-duration "$WARMUP_DURATION" \
+                --test-duration "$TEST_DURATION" \
+                --reset
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
