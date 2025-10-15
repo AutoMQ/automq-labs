@@ -94,7 +94,6 @@ spec:
               COMMON_CONFIG_ARG=""
               {{- end }}
               
-              # 执行性能测试
               exec "$AUTOMQ_BIN" \
                 --bootstrap-server "$BOOTSTRAP_SERVER" \
                 --producer-configs "$PRODUCER_CONFIGS" \
