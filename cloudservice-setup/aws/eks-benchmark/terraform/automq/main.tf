@@ -42,7 +42,7 @@ provider "automq" {
 
 data "automq_deploy_profile" "test" {
   environment_id = var.automq_environment_id
-  name           = "default"
+  name           = "eks"
 }
 
 data "automq_data_bucket_profiles" "test" {
@@ -65,6 +65,9 @@ resource "automq_kafka_instance" "example" {
         subnets = [data.aws_subnets.aws_subnets_example.ids[0]]
       }
     ]
+    kubernetes_node_groups = [{
+      id = "automq-node-group"
+    }]
     bucket_profiles = [
       {
         id = data.automq_data_bucket_profiles.test.data_buckets[0].id
