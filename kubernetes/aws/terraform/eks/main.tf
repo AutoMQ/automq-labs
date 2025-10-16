@@ -54,7 +54,7 @@ resource "aws_eks_node_group" "system_nodes" {
 
 # IAM Role for EKS Node Group
 resource "aws_iam_role" "node_group_role" {
-  name = "${local.cluster_name}-node-group-role"
+  name = "${local.resource_suffix}-node-group-role"
 
   assume_role_policy = jsonencode({
     Statement = [{
