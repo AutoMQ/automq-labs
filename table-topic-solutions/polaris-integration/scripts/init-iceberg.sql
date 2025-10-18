@@ -1,0 +1,2 @@
+-- Create and inspect an Iceberg table via Polaris REST catalog headers set in AutoMQ
+-- This file is a placeholder for users to add Spark SQL statements as needed
