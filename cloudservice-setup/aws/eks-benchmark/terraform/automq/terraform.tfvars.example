@@ -1,0 +1,15 @@
+# Fill in your environment-specific values here
+# DO NOT COMMIT real secrets to VCS. Keep this file local.
+
+# AWS networking
+vpc_id = "vpc-id"
+region = "us-east-1"
+az     = "us-east-1a"
+
+# AutoMQ BYOC endpoint and credentials
+automq_byoc_endpoint       = "http://example.com"
+automq_byoc_access_key_id  = "access-key"
+automq_byoc_secret_key     = "secretkey"
+
+# AutoMQ environment id
+automq_environment_id = "automqlab-id"
