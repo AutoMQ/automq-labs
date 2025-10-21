@@ -1,6 +1,10 @@
-# AutoMQ EKS Benchmark & Observability
+# AutoMQ Quick Setup & Benchmark
 
-This project extends the existing AutoMQ EKS demo by adding comprehensive observability and performance benchmarking capabilities. It enables you to deploy monitoring infrastructure and conduct performance testing on existing AutoMQ clusters running on Amazon EKS, with real-time visualization through observability dashboards.
+Deploying a complete AutoMQ cluster on AWS traditionally involves multiple, complex steps, from setting up the control and data planes to manually configuring a separate observability environment and benchmarking tools.
+
+This project eliminates that complexity. It is designed to provide a seamless, one-click solution using Terraform to automatically provision an entire AutoMQ ecosystem on AWS.
+
+The primary goal is to empower users to effortlessly spin up a fully operational, observable, and testable AutoMQ cluster, drastically reducing setup time and manual configuration.
 
 ## Overview
 
@@ -14,21 +18,7 @@ The project provides:
 
 ## Architecture
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   EKS Cluster   │    │  Benchmark Nodes │    │ Observability   │
-│                 │    │                  │    │                 │
-│ ┌─────────────┐ │    │ ┌──────────────┐ │    │ ┌─────────────┐ │
-│ │   AutoMQ    │ │    │ │ Benchmark    │ │    │ │ Prometheus  │ │
-│ │   Console   │ │    │ │ Workloads    │ │    │ │             │ │
-│ └─────────────┘ │    │ └──────┬───────┘ │    │ └─────────────┘ │
-│                 │    │        │         │    │                 │
-│ ┌─────────────┐ │    │        │         │    │ ┌─────────────┐ │
-│ │   AutoMQ    │ │◄────────────┘         │    │ │   Grafana   │ │
-│ │   Cluster   │ │    │                  │    │ │ Dashboards  │ │
-│ └─────────────┘ │    │                  │    │ └─────────────┘ │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
+![architecture](./architecture.png)
 
 ## Prerequisites
 
@@ -92,6 +82,39 @@ This step creates dedicated EKS node groups optimized for running benchmark work
    # Edit terraform.tfvars with your cluster details
    ```
 
+   **Required Configuration Parameters**:
+   
+   You can override the following variables by creating a `terraform.tfvars` file or by using the `-var` command-line argument:
+
+   - **`cluster_name`**
+     - **Description**: The name of your existing EKS cluster where benchmark nodes will be deployed.
+     - **Type**: `string`
+     - **Required**: Yes
+     - **How to find**: Use `kubectl config current-context` or check AWS EKS console
+
+   - **`existing_node_role_name`**
+     - **Description**: The IAM role name used by existing EKS node groups in your cluster.
+     - **Type**: `string`
+     - **Required**: Yes
+     - **How to find**: Check your existing node group's IAM role in AWS EKS console
+
+   - **`aws_region`**
+     - **Description**: The AWS region where your EKS cluster is located and resources will be deployed.
+     - **Required**: Yes
+     - **Type**: `string`
+     - **Default**: `"us-east-1"`
+
+   - **`environment`**
+     - **Description**: Environment tag used for resource identification and organization.
+     - **Required**: Yes
+     - **Type**: `string`
+     - **Default**: `"dev"`
+
+   - **`subnet_ids`**
+     - **Description**: List of subnet IDs where benchmark nodes will be deployed. Recommend using only one subnet in us-east-1a for optimal performance.
+     - **Type**: `list(string)`
+     - **Required**: Yes
+
 2. **Deploy benchmark nodes**:
    ```bash
    terraform init
@@ -99,13 +122,9 @@ This step creates dedicated EKS node groups optimized for running benchmark work
    terraform apply
    ```
 
-### Step 2: Deploy AutoMQ Instance (Optional)
+### Step 2: Deploy AutoMQ Instance
 
-This optional step allows you to deploy additional AutoMQ instances if needed for your testing scenario. It uses the AutoMQ BYOC provider to create and configure AutoMQ clusters with integrated monitoring capabilities, including Prometheus remote write endpoints for metrics collection.
-
-**Expected Result**: A new AutoMQ instance will be deployed and configured with monitoring integration, ready to handle Kafka workloads and export metrics to your observability stack.
-
-If you need to deploy additional AutoMQ instances:
+Access the AutoMQ control plane obtained in the previous step to create access credentials aksk. In the current version, you also need to create an eks profile for further access to the cluster, which needs to be filled into the terraform variables. Future releases of AutoMQ will allow profile creation through terraform.
 
 1. **Configure AutoMQ deployment**:
    ```bash
@@ -113,6 +132,50 @@ If you need to deploy additional AutoMQ instances:
    cp terraform.tfvars.example terraform.tfvars
    # Edit terraform.tfvars with your AutoMQ BYOC credentials
    ```
+
+   **Required Configuration Parameters**:
+   
+   You can override the following variables by creating a `terraform.tfvars` file or by using the `-var` command-line argument:
+
+   - **`vpc_id`**
+     - **Description**: The VPC ID where your EKS cluster is deployed and AutoMQ resources will be created.
+     - **Type**: `string`
+     - **Required**: Yes
+     - **How to find**: Check AWS VPC console or use `aws ec2 describe-vpcs` command
+
+   - **`region`**
+     - **Description**: The AWS region where AutoMQ resources will be deployed.
+     - **Type**: `string`
+     - **Default**: `"us-east-1"`
+
+   - **`az`**
+     - **Description**: The availability zone where AutoMQ resources will be deployed.
+     - **Type**: `string`
+     - **Default**: `"us-east-1a"`
+
+   - **`automq_byoc_endpoint`**
+     - **Description**: The AutoMQ BYOC (Bring Your Own Cloud) endpoint URL for API access.
+     - **Type**: `string`
+     - **Required**: Yes
+     - **How to find**: Obtain from AutoMQ Console after setting up your BYOC environment
+
+   - **`automq_byoc_access_key_id`**
+     - **Description**: Access key ID for AutoMQ BYOC authentication.
+     - **Type**: `string`
+     - **Required**: Yes
+     - **How to find**: Generate from AutoMQ Console credentials section
+
+   - **`automq_byoc_secret_key`**
+     - **Description**: Secret access key for AutoMQ BYOC authentication.
+     - **Type**: `string`
+     - **Required**: Yes
+     - **How to find**: Generate from AutoMQ Console credentials section (keep secure)
+
+   - **`automq_environment_id`**
+     - **Description**: The AutoMQ environment identifier for resource organization.
+     - **Type**: `string`
+     - **Required**: Yes
+     - **How to find**: Available in AutoMQ Console environment settings
 
 2. **Deploy AutoMQ instance**:
    ```bash
@@ -143,20 +206,25 @@ This step deploys a comprehensive monitoring solution including Prometheus and G
    ```
 
 2. **Access Grafana Dashboard**:
+
+   You can access the Grafana dashboard in this way, and contact the AutoMQ team to obtain the [configuration file](https://www.automq.com/docs/automq/observability/dashboard-configuration) for the observability dashboard.
+
    ```bash
-   # Get Grafana LoadBalancer URL
    kubectl get svc -n prometheus prometheus-grafana
    
    # Default credentials:
-   # Username: admin
-   # Password: AutoMQ@Grafana
+
    ```
 
 ### Step 4: Run Benchmark Tests
 
 This step executes performance tests against your AutoMQ cluster using configurable workloads. The benchmark simulates real-world Kafka usage patterns with customizable parameters for throughput, message size, topic configuration, and test duration. The tests generate comprehensive metrics that are automatically collected by your monitoring stack.
 
+For specific configurations of helm values, you can refer to the [README](./helm-chart/automq-benchmark/README.md) in the automq-benchmark folder for further details.
+
 **Expected Result**: Benchmark jobs will run and generate load against the AutoMQ cluster. Performance metrics including throughput, latency, and resource utilization will be collected and visible in Grafana dashboards. You should see data flowing through the system and performance characteristics of your AutoMQ deployment.
+
+
 
 1. **Configure benchmark parameters**:
    ```bash

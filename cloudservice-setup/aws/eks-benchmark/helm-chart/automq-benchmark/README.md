@@ -10,24 +10,24 @@ This Helm chart deploys an AutoMQ benchmark job on a Kubernetes cluster.
 
 ## Installing the Chart
 
-To install the chart with the release name `my-benchmark`:
+To install the chart with the release name `automq-benchmark`:
 
 ```bash
-helm install my-benchmark ./automq-benchmark
+helm install automq-benchmark ./automq-benchmark
 ```
 
 To install with custom values:
 
 ```bash
-helm install my-benchmark ./automq-benchmark -f custom-values.yaml
+helm install automq-benchmark ./automq-benchmark -f custom-values.yaml
 ```
 
 ## Uninstalling the Chart
 
-To uninstall/delete the `my-benchmark` deployment:
+To uninstall/delete the `automq-benchmark` deployment:
 
 ```bash
-helm uninstall my-benchmark
+helm uninstall automq-benchmark
 ```
 
 ## Configuration
@@ -87,8 +87,6 @@ resources:
 
 automq:
   bootstrapServer: "my-automq-cluster:9092"
-  username: "my-user"
-  password: "my-password"
 ```
 
 ## Monitoring
