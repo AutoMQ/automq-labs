@@ -256,7 +256,7 @@ For specific configurations of helm values, you can refer to the [README](./helm
    - Navigate to AutoMQ performance dashboards
    - Observe real-time metrics during the test execution
 
-> **Note**: For comprehensive dashboard configurations and additional monitoring templates, you can contact the AutoMQ team to obtain pre-configured Grafana dashboards that will help you visualize detailed performance metrics and system health indicators.
+After completing the above steps, you can see the corresponding metrics on the Grafana dashboard. Adjust the stress test parameters according to the corresponding specifications to further understand the specifications and performance related to AutoMQ.
 
 
 
