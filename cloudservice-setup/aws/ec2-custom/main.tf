@@ -23,7 +23,7 @@ data "aws_subnet" "public" {
 }
 
 module "automq_byoc_data_bucket" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
+  source = "terraform-aws-modules/s3-bucket/aws"
 
   bucket        = local.data_bucket_name
   force_destroy = true
@@ -41,7 +41,7 @@ module "automq_byoc_data_bucket" {
 }
 
 module "automq_byoc_ops_bucket_name" {
-  source  = "terraform-aws-modules/s3-bucket/aws"
+  source = "terraform-aws-modules/s3-bucket/aws"
 
   bucket        = local.ops_bucket_name
   force_destroy = true
