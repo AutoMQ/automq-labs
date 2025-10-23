@@ -77,6 +77,18 @@ resource "aws_iam_policy" "automq_console_policy" {
       {
         Effect = "Allow"
         Action = [
+          "iam:CreateServiceLinkedRole"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "iam:AWSServiceName" = "autoscaling.amazonaws.com"
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "autoscaling:CreateAutoScalingGroup",
           "autoscaling:DescribeAutoScalingGroups",
           "ec2:CreateKeyPair",
@@ -152,7 +164,6 @@ resource "aws_iam_policy" "automq_console_policy" {
           "s3:PutLifecycleConfiguration"
         ]
         Resource = [
-          "arn:aws:s3:::${local.data_bucket_name}",
           "arn:aws:s3:::${local.ops_bucket_name}"
         ]
       }
