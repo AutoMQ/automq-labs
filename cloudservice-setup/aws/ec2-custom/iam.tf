@@ -21,11 +21,8 @@ resource "aws_iam_policy" "automq_console_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "EC2InstanceProfileManagement"
-        Effect = "Allow"
-        Action = [
-          "iam:PassRole"
-        ]
+        Effect   = "Allow"
+        Action   = "iam:PassRole"
         Resource = "*"
         Condition = {
           StringLike = {
@@ -34,99 +31,43 @@ resource "aws_iam_policy" "automq_console_policy" {
         }
       },
       {
-        Effect   = "Allow"
-        Action   = ["ec2:DescribeVolumes", "ec2:DescribeSecurityGroups"]
-        Resource = "*"
-      },
-      {
         Effect = "Allow"
         Action = [
-          "cloudwatch:PutMetricData",
-          "ec2:DescribeSubnets",
-          "ec2:DescribeVpcs",
-          "ec2:DescribeTags",
-          "ec2:DescribeAvailabilityZones",
-          "route53:CreateHostedZone",
-          "route53:GetHostedZone",
-          "route53:ChangeResourceRecordSets",
-          "route53:ListHostedZonesByName",
-          "route53:ListResourceRecordSets",
-          "route53:DeleteHostedZone"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["eks:DescribeCluster", "eks:ListNodegroups", "eks:DescribeNodegroup"]
-        Resource = "*"
-      },
-      {
-        Sid    = "ConsoleEC2Management"
-        Effect = "Allow"
-        Action = [
-          "ec2:DescribeRouteTables",
-          "ssm:GetParameters",
-          "pricing:GetProducts",
-          "cloudwatch:PutMetricData",
-          "ec2:DescribeImages",
-          "ec2:CreateLaunchTemplate",
-          "ec2:CreateLaunchTemplateVersion",
-          "ec2:ModifyLaunchTemplate",
-          "ec2:RebootInstances",
-          "ec2:RunInstances",
-          "ec2:StopInstances",
-          "ec2:TerminateInstances",
-          "ec2:CreateKeyPair",
-          "ec2:CreateTags",
-          "ec2:AttachVolume",
-          "ec2:DetachVolume",
-          "ec2:DescribeInstances",
-          "ec2:DescribeLaunchTemplates",
-          "ec2:DescribeLaunchTemplateVersions",
-          "ec2:DescribeVolumes",
-          "ec2:DescribeSubnets",
-          "ec2:DescribeKeyPairs",
-          "ec2:DescribeVpcs",
-          "ec2:DescribeTags",
-          "ec2:DeleteKeyPair",
-          "ec2:CreateVolume",
-          "ec2:DeleteVolume",
-          "ec2:DeleteLaunchTemplate",
-          "ec2:DescribeInstanceTypeOfferings",
-          "ec2:DescribeSecurityGroups",
-          "ec2:CreateSecurityGroup",
-          "ec2:AuthorizeSecurityGroupIngress",
-          "ec2:AuthorizeSecurityGroupEgress",
-          "ec2:DeleteSecurityGroup",
-          "ec2:DescribeVpcEndpoints",
-          "ec2:DescribeAvailabilityZones",
-          "autoscaling:CreateAutoScalingGroup",
-          "autoscaling:DescribeAutoScalingGroups",
-          "autoscaling:UpdateAutoScalingGroup",
-          "autoscaling:DeleteAutoScalingGroup",
           "autoscaling:AttachInstances",
+          "autoscaling:DeleteAutoScalingGroup",
           "autoscaling:DetachInstances",
           "autoscaling:ResumeProcesses",
           "autoscaling:SuspendProcesses",
-          "route53:CreateHostedZone",
-          "route53:GetHostedZone",
-          "route53:ChangeResourceRecordSets",
-          "route53:ListHostedZonesByName",
-          "route53:ListResourceRecordSets",
-          "route53:DeleteHostedZone",
-          "elasticloadbalancing:DescribeTargetGroups",
-          "elasticloadbalancing:DescribeTags",
-          "elasticloadbalancing:DeleteTargetGroup",
-          "elasticloadbalancing:DeleteLoadBalancer"
+          "autoscaling:UpdateAutoScalingGroup",
+          "ec2:AttachVolume",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:DeleteKeyPair",
+          "ec2:DeleteSecurityGroup",
+          "ec2:DeleteVolume",
+          "ec2:DetachVolume",
+          "ec2:RebootInstances",
+          "ec2:StopInstances",
+          "ec2:TerminateInstances",
+          "fsx:DeleteFileSystem",
+          "fsx:DeleteStorageVirtualMachine",
+          "fsx:DeleteVolume",
+          "fsx:UpdateFileSystem",
+          "fsx:UpdateVolume"
         ]
         Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:ResourceTag/automqVendor" = "automq"
+          }
+        }
       },
       {
         Effect = "Allow"
         Action = [
-          "s3:GetLifecycleConfiguration",
-          "s3:PutLifecycleConfiguration",
-          "s3:ListBucket"
+          "s3:DeleteObject",
+          "s3:GetObject",
+          "s3:PutObject"
         ]
         Resource = [
           "arn:aws:s3:::${local.data_bucket_name}",
@@ -136,34 +77,84 @@ resource "aws_iam_policy" "automq_console_policy" {
       {
         Effect = "Allow"
         Action = [
-          "s3:PutObject",
-          "s3:GetObject",
+          "autoscaling:CreateAutoScalingGroup",
+          "autoscaling:DescribeAutoScalingGroups",
+          "ec2:CreateKeyPair",
+          "ec2:CreateLaunchTemplate",
+          "ec2:CreateLaunchTemplateVersion",
+          "ec2:CreateSecurityGroup",
+          "ec2:CreateTags",
+          "ec2:CreateVolume",
+          "ec2:DeleteLaunchTemplate",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeImages",
+          "ec2:DescribeInstanceAttribute",
+          "ec2:DescribeInstanceTypeOfferings",
+          "ec2:DescribeInstances",
+          "ec2:DescribeKeyPairs",
+          "ec2:DescribeLaunchTemplateVersions",
+          "ec2:DescribeLaunchTemplates",
+          "ec2:DescribeRouteTables",
+          "ec2:DescribeSecurityGroupRules",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeTags",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeVpcEndpoints",
+          "ec2:DescribeVpcs",
+          "ec2:ModifyLaunchTemplate",
+          "ec2:RunInstances",
+          "eks:DescribeCluster",
+          "eks:DescribeNodegroup",
+          "eks:ListClusters",
+          "eks:ListNodegroups",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "fsx:CreateFileSystem",
+          "fsx:CreateStorageVirtualMachine",
+          "fsx:CreateVolume",
+          "fsx:DescribeFileSystems",
+          "fsx:DescribeStorageVirtualMachines",
+          "fsx:DescribeVolumes",
+          "fsx:TagResource",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:GetRole",
+          "iam:GetUser",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListAttachedUserPolicies",
+          "pricing:DescribeServices",
+          "pricing:GetAttributeValues",
+          "pricing:GetProducts",
+          "route53:ChangeResourceRecordSets",
+          "route53:GetHostedZone",
+          "route53:ListHostedZones",
+          "route53:ListHostedZonesByName",
+          "route53:ListHostedZonesByVpc",
+          "route53:ListResourceRecordSets",
           "s3:AbortMultipartUpload",
-          "s3:PutObjectTagging",
-          "s3:DeleteObject"
+          "s3:CreateBucket",
+          "s3:DeleteObject",
+          "s3:ListAllMyBuckets",
+          "s3:ListBucket",
+          "s3:ListBucketMultipartUploads",
+          "ssm:GetParameters"
         ]
-        Resource = [
-          "arn:aws:s3:::${local.data_bucket_name}/*",
-          "arn:aws:s3:::${local.ops_bucket_name}/*"
-        ]
+        Resource = "*"
       },
       {
         Effect = "Allow"
         Action = [
-          "fsx:CreateFileSystem",
-          "fsx:DeleteFileSystem",
-          "fsx:CreateStorageVirtualMachine",
-          "fsx:TagResource",
-          "fsx:DescribeStorageVirtualMachines",
-          "fsx:UpdateVolume",
-          "fsx:DescribeFileSystems",
-          "fsx:DeleteStorageVirtualMachine",
-          "fsx:UpdateFileSystem",
-          "fsx:CreateVolume",
-          "fsx:DescribeVolumes",
-          "fsx:DeleteVolume"
+          "s3:GetBucketPolicy",
+          "s3:GetLifecycleConfiguration",
+          "s3:ListBucket",
+          "s3:PutBucketPolicy",
+          "s3:PutBucketTagging",
+          "s3:PutLifecycleConfiguration"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:s3:::${local.data_bucket_name}",
+          "arn:aws:s3:::${local.ops_bucket_name}"
+        ]
       }
     ]
   })
@@ -178,4 +169,3 @@ resource "aws_iam_instance_profile" "automq_byoc_instance_profile" {
   name = "automq-byoc-instance-profile-${local.name_suffix}"
   role = aws_iam_role.automq_byoc_role.name
 }
-
