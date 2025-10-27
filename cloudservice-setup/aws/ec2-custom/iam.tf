@@ -67,17 +67,18 @@ resource "aws_iam_policy" "automq_console_policy" {
         Action = [
           "s3:DeleteObject",
           "s3:GetObject",
-          "s3:PutObject"
+          "s3:PutObject",
+          "s3:PutObjectTagging"
         ]
         Resource = [
-          "arn:aws:s3:::${local.data_bucket_name}",
-          "arn:aws:s3:::${local.ops_bucket_name}"
+          "arn:aws:s3:::${local.data_bucket_name}/*",
+          "arn:aws:s3:::${local.ops_bucket_name}/*"
         ]
       },
       {
         Effect = "Allow"
         Action = [
-          "iam:CreateServiceLinkedRole"
+          "CreateServiceLinkedRole"
         ]
         Resource = "*"
         Condition = {
@@ -128,12 +129,6 @@ resource "aws_iam_policy" "automq_console_policy" {
           "fsx:DescribeStorageVirtualMachines",
           "fsx:DescribeVolumes",
           "fsx:TagResource",
-          "iam:GetPolicy",
-          "iam:GetPolicyVersion",
-          "iam:GetRole",
-          "iam:GetUser",
-          "iam:ListAttachedRolePolicies",
-          "iam:ListAttachedUserPolicies",
           "pricing:DescribeServices",
           "pricing:GetAttributeValues",
           "pricing:GetProducts",
@@ -156,11 +151,8 @@ resource "aws_iam_policy" "automq_console_policy" {
       {
         Effect = "Allow"
         Action = [
-          "s3:GetBucketPolicy",
           "s3:GetLifecycleConfiguration",
           "s3:ListBucket",
-          "s3:PutBucketPolicy",
-          "s3:PutBucketTagging",
           "s3:PutLifecycleConfiguration"
         ]
         Resource = [
