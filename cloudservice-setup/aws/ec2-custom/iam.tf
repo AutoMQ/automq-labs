@@ -78,7 +78,7 @@ resource "aws_iam_policy" "automq_console_policy" {
       {
         Effect = "Allow"
         Action = [
-          "CreateServiceLinkedRole"
+          "iam:CreateServiceLinkedRole"
         ]
         Resource = "*"
         Condition = {
