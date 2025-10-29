@@ -84,11 +84,19 @@ Upon successful deployment, Terraform will display the following outputs. You ca
 
 Terraform will initiate the corresponding EKS-related nodes and the AutoMQ control plane, and create an AutoMQ cluster within EKS. You can use console_endpoint and initial_username/initial_password to log in to the AutoMQ Console.
 
+To access the EKS cluster using this command, and the placeholders in the command can be replaced with the actual values obtained from the output above.
+
+```bash
+aws eks update-kubeconfig --region [your-region] --name [your-cluster-name]
+```
+
 To visit the observability stack, use the following command to obtain the public endpoint of Grafana.
 
 ```bash
 kubectl get service prometheus-grafana -n monitoring
 ```
+
+
 
 ### Step 2: Deploy AutoMQ Instance
 
