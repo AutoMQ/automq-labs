@@ -23,51 +23,6 @@ output "cluster_name" {
   value       = module.eks-env.cluster_name
 }
 
-output "cluster_endpoint" {
-  description = "Endpoint for EKS control plane"
-  value       = module.eks-env.cluster_endpoint
-}
-
-output "cluster_security_group_id" {
-  description = "Security group ids attached to the cluster control plane"
-  value       = module.eks-env.cluster_security_group_id
-}
-
-output "cluster_iam_role_name" {
-  description = "IAM role name associated with EKS cluster"
-  value       = module.eks-env.cluster_iam_role_name
-}
-
-output "cluster_iam_role_arn" {
-  description = "IAM role ARN associated with EKS cluster"
-  value       = module.eks-env.cluster_iam_role_arn
-}
-
-output "cluster_certificate_authority_data" {
-  description = "Base64 encoded certificate data required to communicate with the cluster"
-  value       = module.eks-env.cluster_certificate_authority_data
-}
-
-output "cluster_version" {
-  description = "The Kubernetes version for the EKS cluster"
-  value       = module.eks-env.cluster_version
-}
-
-output "node_groups" {
-  description = "EKS node groups"
-  value       = module.eks-env.node_groups
-}
-
-output "fargate_profiles" {
-  description = "EKS Fargate profiles"
-  value       = module.eks-env.fargate_profiles
-}
-
-output "oidc_provider_arn" {
-  description = "The ARN of the OIDC Provider if enabled"
-  value       = module.eks-env.oidc_provider_arn
-}
-
 # Benchmark Node Group Outputs
 output "benchmark_node_group_name" {
   description = "Name of the benchmark node group"
@@ -121,19 +76,4 @@ output "node_group_instance_profile_arn" {
   value       = module.eks-env.node_group_instance_profile_arn
 }
 
-# Prometheus Outputs
-output "prometheus_namespace" {
-  description = "Kubernetes namespace where Prometheus is deployed"
-  value       = var.enable_prometheus ? helm_release.prometheus[0].namespace : null
-}
-
-output "prometheus_release_name" {
-  description = "Helm release name for Prometheus"
-  value       = var.enable_prometheus ? helm_release.prometheus[0].name : null
-}
-
-output "prometheus_chart_version" {
-  description = "Version of the Prometheus Helm chart deployed"
-  value       = var.enable_prometheus ? helm_release.prometheus[0].version : null
-}
 

@@ -1,7 +1,7 @@
 
 resource "kubernetes_namespace_v1" "monitoring" {
   metadata {
-    name = "monitoring"
+    name = var.prometheus_namespace
 
     labels = {
       "app"        = "automq"
@@ -22,19 +22,22 @@ resource "helm_release" "prometheus" {
   repository = "https://prometheus-community.github.io/helm-charts"
   name       = "prometheus"
   namespace  = kubernetes_namespace_v1.monitoring.metadata[0].name
-  version    = "45.7.1"
+  version    = var.prometheus_chart_version
 
-  timeout = 600  # 不加会超时
+  timeout = 600 # 不加会超时
   wait    = true
 
   create_namespace = true
 
   values = [
-    templatefile("${path.module}/monitoring/prometheus.yaml")
+    templatefile("${path.module}/monitoring/prometheus.yaml", {
+      STORAGE_CLASS_NAME = var.prometheus_storage_class
+    })
   ]
 
   depends_on = [
     module.eks-env,
-    kubernetes_namespace_v1.monitoring
+    kubernetes_namespace_v1.monitoring,
+    aws_eks_node_group.benchmark_node_group
   ]
 }

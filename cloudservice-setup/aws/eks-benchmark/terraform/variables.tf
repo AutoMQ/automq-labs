@@ -8,7 +8,7 @@ variable "region" {
 variable "resource_suffix" {
   description = "Suffix for resource names"
   type        = string
-  default     = "automqlab-beihai-toge-test"
+  default     = "automqlab-bt"
 }
 
 variable "node_group" {
@@ -119,45 +119,8 @@ variable "prometheus_chart_version" {
   default     = "61.3.0"
 }
 
-variable "grafana_admin_password" {
-  description = "Admin password for Grafana"
-  type        = string
-  default     = "AutoMQ@Grafana"
-  sensitive   = true
-}
-
-variable "prometheus_storage_size" {
-  description = "Storage size for Prometheus persistent volume"
-  type        = string
-  default     = "30Gi"
-}
-
 variable "prometheus_storage_class" {
-  description = "Storage class for Prometheus persistent volume"
+  description = "StorageClass name used for Prometheus PVCs"
   type        = string
   default     = "gp2"
-}
-
-variable "prometheus_cpu_request" {
-  description = "CPU request for Prometheus server"
-  type        = string
-  default     = "500m"
-}
-
-variable "prometheus_memory_request" {
-  description = "Memory request for Prometheus server"
-  type        = string
-  default     = "2Gi"
-}
-
-variable "prometheus_retention" {
-  description = "Data retention period for Prometheus"
-  type        = string
-  default     = "30d"
-}
-
-variable "prometheus_retention_size" {
-  description = "Maximum size of data retention for Prometheus"
-  type        = string
-  default     = "100GB"
 }

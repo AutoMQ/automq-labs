@@ -20,6 +20,20 @@ output "node_group_name" {
   value       = aws_eks_node_group.automq-node-groups.node_group_name
 }
 
+output "node_role_arn" {
+  description = "EKS Node Role ARN"
+  value       = aws_eks_node_group.automq-node-groups.node_role_arn
+}
+
+output "eks_cluster_endpoint" {
+  value = module.eks.eks_cluster_endpoint
+}
+
+output "eks_cluster_ca_certificate" {
+  value = module.eks.eks_cluster_ca_certificate
+}
+
+
 output "node_group_instance_profile_arn" {
   description = "ARN of the EKS Node Group IAM Role"
   value       = module.cluster-iam.node_group_instance_profile_arn
