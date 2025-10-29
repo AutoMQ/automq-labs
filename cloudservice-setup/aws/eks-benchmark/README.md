@@ -10,11 +10,13 @@ The primary goal is to empower users to effortlessly spin up a fully operational
  
 This project follows a simple, three-step end-to-end flow to go from infrastructure to benchmarking with minimal manual work:
 
+The resources that need to be installed this time include EKS, along with three corresponding node groups, about 10 EC2 instance, and their AutoMQ Console nodes.
+
 1) Provision with Terraform: bring up the required components — `EKS`, `AutoMQ Console` (BYOC control plane), and the observability stack (Prometheus/Grafana). After this step, the Kubernetes cluster and monitoring environment are ready.
 
 2) Configure in AutoMQ Console and create the cluster: create the required `Profile` and credentials in the Console, then create or connect your `AutoMQ Cluster` (BYOC). Use these values in the subsequent Terraform/Helm configuration to enable connectivity.
 
-3) Run benchmarks via the provided Helm chart: go to `helm-chart/automq-benchmark`, set connection details and workload parameters (topics, partitions, message size, concurrency, etc.), deploy the benchmark Job, and observe throughput and latency in Grafana.
+3) Run benchmarks via the provided Helm chart: go to `automq-benchmark-chart`, set connection details and workload parameters (topics, partitions, message size, concurrency, etc.), deploy the benchmark Job, and observe throughput and latency in Grafana.
 
 
 
@@ -43,7 +45,7 @@ Before using this project, ensure you have:
 
 ### Step 1: Deploy Benchmark Infrastructure
 
-This step provisions and integrates everything via Terraform in `./eks-benchmark/terraform`:
+This step provisions and integrates everything via Terraform in `./terraform`:
 
 - EKS cluster (creating and configuring required `VPC`, subnets, `Security Group`, `IAM`, and related networking/permission resources)
 - AutoMQ BYOC Console (deployed in the same VPC public subnet, with access and security integrated to the EKS cluster)
@@ -56,6 +58,8 @@ All necessary cloud resources (including networking and object storage such as `
 Tip: To control resource naming and avoid conflicts, set `resource_suffix` in `terraform/variables.tf`.
 
 ```bash
+cd ./terraform
+terraform init
 terraform plan
 ```
 
@@ -67,6 +71,20 @@ terraform apply
 
 Enter yes at the prompt to confirm.
 
+Upon successful deployment, Terraform will display the following outputs. You can also retrieve them at any time using the `terraform output` command:
+
+| Name                            | Description                                           |
+| ------------------------------- | ------------------------------------------------------- |
+| `console_endpoint`              | The endpoint URL for the AutoMQ BYOC Console.                 |
+| `initial_username`              | The initial username for logging into the Console.                       |
+| `initial_password`              | The initial password for logging into the Console.                         |
+| `cluster_name`                  | The name of the created EKS cluster.                          |
+| `node_group_instance_profile_arn` | The IAM Instance Profile ARN used by the EKS node group.  |
+| `dns_zone_id`                   | The Route 53 DNS Zone ID created for the BYOC environment.       |
+
+This time, Terraform will initiate the corresponding EKS-related nodes and the AutoMQ control plane, and create an AutoMQ cluster within EKS.
+
+You can use console_endpoint and initial_username/initial_password to log in to the AutoMQ Console.
 
 ### Step 2: Deploy AutoMQ Instance
 
@@ -77,7 +95,9 @@ Enter yes at the prompt to confirm.
 3. Fill variables `automq/terraform.tfvars` and apply Terraform to create the AutoMQ cluster with observability integration. You may need to wait approximately 5 to 10 minutes for the cluster to be fully created.
 
 ```bash
+cd ./automq
 terraform init
+terraform plan
 terraform apply
 ```
 
