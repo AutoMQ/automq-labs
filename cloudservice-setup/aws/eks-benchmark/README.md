@@ -82,9 +82,13 @@ Upon successful deployment, Terraform will display the following outputs. You ca
 | `node_group_instance_profile_arn` | The IAM Instance Profile ARN used by the EKS node group.  |
 | `dns_zone_id`                   | The Route 53 DNS Zone ID created for the BYOC environment.       |
 
-This time, Terraform will initiate the corresponding EKS-related nodes and the AutoMQ control plane, and create an AutoMQ cluster within EKS.
+Terraform will initiate the corresponding EKS-related nodes and the AutoMQ control plane, and create an AutoMQ cluster within EKS. You can use console_endpoint and initial_username/initial_password to log in to the AutoMQ Console.
 
-You can use console_endpoint and initial_username/initial_password to log in to the AutoMQ Console.
+To visit the observability stack, use the following command to obtain the public endpoint of Grafana.
+
+```bash
+kubectl get service prometheus-grafana -n monitoring
+```
 
 ### Step 2: Deploy AutoMQ Instance
 
