@@ -2,7 +2,7 @@
 resource "aws_eks_node_group" "benchmark_node_group" {
   count           = var.enable_benchmark_nodes ? 1 : 0
   cluster_name    = module.eks-env.cluster_name
-  node_group_name = "benchmark-node-group-${var.resource_suffix}"
+  node_group_name = "benchmark-node-group-${local.resource_suffix}"
   node_role_arn   = module.eks-env.node_role_arn
 
   # Use the same subnet as the default node group (single AZ for cost optimization)
@@ -28,7 +28,7 @@ resource "aws_eks_node_group" "benchmark_node_group" {
 
   tags = merge(
     {
-      Name = "benchmark-node-group-${var.resource_suffix}"
+      Name = "benchmark-node-group-${local.resource_suffix}"
     }
   )
 

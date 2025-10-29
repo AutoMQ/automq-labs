@@ -11,6 +11,19 @@ variable "resource_suffix" {
   default     = "automqlab"
 }
 
+resource "random_string" "resource_suffix" {
+  length  = 4
+  upper   = false
+  lower   = true
+  numeric = true
+  special = false
+}
+
+locals {
+  # Append a dash and a 4-char random tail to the configured suffix
+  resource_suffix = "${var.resource_suffix}-${random_string.resource_suffix.result}"
+}
+
 variable "node_group" {
   description = "Configuration for EKS node group"
   type = object({
