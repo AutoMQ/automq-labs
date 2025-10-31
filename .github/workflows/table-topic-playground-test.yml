@@ -1,0 +1,50 @@
+name: Table Topic Playground Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'table-topic-solutions/playground/**'
+  pull_request:
+    paths:
+      - 'table-topic-solutions/playground/**'
+
+jobs:
+  test-playground:
+    name: 'Test Table Topic Playground'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Just
+      uses: extractions/setup-just@v2
+
+    - name: Set up JDK 17 
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        cache: 'maven'
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Cache Docker layers
+      uses: actions/cache@v4
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Run all scenario tests
+      working-directory: table-topic-solutions/playground
+      run: just test-all
+
+    - name: Cleanup
+      if: always()
+      working-directory: table-topic-solutions/playground
+      run: just down || true

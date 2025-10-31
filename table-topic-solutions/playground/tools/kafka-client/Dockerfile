@@ -1,12 +1,13 @@
-FROM confluentinc/cp-schema-registry:latest
+FROM confluentinc/cp-schema-registry:7.3.10
 
 USER root
 
 # Install Maven, C++ build tools, and grpcio-tools
-RUN yum update -y && yum install -y \
+RUN microdnf update -y && microdnf install -y \
     maven \
     gcc-c++ \
-    python3-pip
+    python3-devel \
+    && microdnf clean all
 
 RUN pip3 install --user grpcio-tools
 

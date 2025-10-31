@@ -57,7 +57,7 @@ To verify the mTLS setup, we will launch a client pod, generate client certifica
 1.  **Launch a Client Pod**:
     Create a simple pod with Kafka tools installed.
     ```bash
-    kubectl run kafka-client --image=automqinc/automq:1.6.0-rc0-bitnami -n automq --restart='Never' --command -- sleep infinity
+    kubectl run kafka-client --image=automqinc/automq:1.6.0-bitnami -n automq --restart='Never' --command -- sleep infinity
     ```
 
 2.  **Generate Client Certificates**:

@@ -10,7 +10,7 @@ extraEnvVars:
 image:
   registry: automqinc
   repository: automq
-  tag: 1.6.0-rc0-bitnami
+  tag: 1.6.0-bitnami
   pullPolicy: Always
 controller:
   replicaCount: 3
