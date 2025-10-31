@@ -39,10 +39,10 @@ resource "aws_iam_policy" "automq_console_policy" {
           "autoscaling:ResumeProcesses",
           "autoscaling:SuspendProcesses",
           "autoscaling:UpdateAutoScalingGroup",
+          # "ec2:DeleteKeyPair",
           "ec2:AttachVolume",
           "ec2:AuthorizeSecurityGroupEgress",
           "ec2:AuthorizeSecurityGroupIngress",
-          "ec2:DeleteKeyPair",
           "ec2:DeleteSecurityGroup",
           "ec2:DeleteVolume",
           "ec2:DetachVolume",
@@ -65,6 +65,9 @@ resource "aws_iam_policy" "automq_console_policy" {
       {
         Effect = "Allow"
         Action = [
+          "s3:AbortMultipartUpload",
+          "s3:ListBucketMultipartUploads",
+          "s3:ListBucket",
           "s3:DeleteObject",
           "s3:GetObject",
           "s3:PutObject",
@@ -92,7 +95,8 @@ resource "aws_iam_policy" "automq_console_policy" {
         Action = [
           "autoscaling:CreateAutoScalingGroup",
           "autoscaling:DescribeAutoScalingGroups",
-          "ec2:CreateKeyPair",
+          # "ec2:CreateKeyPair",
+          # "ec2:DescribeKeyPairs",
           "ec2:CreateLaunchTemplate",
           "ec2:CreateLaunchTemplateVersion",
           "ec2:CreateSecurityGroup",
@@ -104,7 +108,6 @@ resource "aws_iam_policy" "automq_console_policy" {
           "ec2:DescribeInstanceAttribute",
           "ec2:DescribeInstanceTypeOfferings",
           "ec2:DescribeInstances",
-          "ec2:DescribeKeyPairs",
           "ec2:DescribeLaunchTemplateVersions",
           "ec2:DescribeLaunchTemplates",
           "ec2:DescribeRouteTables",
@@ -117,10 +120,6 @@ resource "aws_iam_policy" "automq_console_policy" {
           "ec2:DescribeVpcs",
           "ec2:ModifyLaunchTemplate",
           "ec2:RunInstances",
-          "eks:DescribeCluster",
-          "eks:DescribeNodegroup",
-          "eks:ListClusters",
-          "eks:ListNodegroups",
           "elasticloadbalancing:DescribeTargetGroups",
           "fsx:CreateFileSystem",
           "fsx:CreateStorageVirtualMachine",
@@ -132,32 +131,22 @@ resource "aws_iam_policy" "automq_console_policy" {
           "pricing:DescribeServices",
           "pricing:GetAttributeValues",
           "pricing:GetProducts",
-          "route53:ChangeResourceRecordSets",
-          "route53:GetHostedZone",
-          "route53:ListHostedZones",
-          "route53:ListHostedZonesByName",
-          "route53:ListHostedZonesByVpc",
-          "route53:ListResourceRecordSets",
-          "s3:AbortMultipartUpload",
-          "s3:CreateBucket",
-          "s3:DeleteObject",
-          "s3:ListAllMyBuckets",
-          "s3:ListBucket",
-          "s3:ListBucketMultipartUploads",
-          "ssm:GetParameters"
+          "ssm:GetParameters",
+          # "eks:DescribeCluster",
+          # "eks:DescribeNodegroup",
+          # "eks:ListClusters",
+          # "eks:ListNodegroups"
         ]
         Resource = "*"
       },
       {
         Effect = "Allow"
         Action = [
-          "s3:GetLifecycleConfiguration",
-          "s3:ListBucket",
-          "s3:PutLifecycleConfiguration"
+          "route53:ChangeResourceRecordSets",
+          "route53:GetHostedZone",
+          "route53:ListResourceRecordSets"
         ]
-        Resource = [
-          "arn:aws:s3:::${local.ops_bucket_name}"
-        ]
+        Resource = "arn:aws:route53:::hostedzone/${local.route53_hosted_zone_id}"
       }
     ]
   })

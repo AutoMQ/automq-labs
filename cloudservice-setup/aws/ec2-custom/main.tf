@@ -144,7 +144,7 @@ resource "aws_instance" "automq_byoc_console" {
     automq_data_bucket                   = local.data_bucket_name,
     automq_ops_bucket                    = local.ops_bucket_name,
     instance_security_group_id           = aws_security_group.automq_byoc_console_sg.id,
-    instance_dns                         = aws_route53_zone.private_r53.zone_id,
+    instance_dns                         = local.route53_hosted_zone_id,
     instance_profile_arn                 = aws_iam_instance_profile.automq_byoc_instance_profile.arn,
     environment_id                       = local.env_id
   })
@@ -168,20 +168,4 @@ resource "aws_volume_attachment" "data_volume_attachment" {
   device_name = "/dev/sdh"
   volume_id   = aws_ebs_volume.data_volume.id
   instance_id = aws_instance.automq_byoc_console.id
-}
-
-resource "aws_route53_zone" "private_r53" {
-  name = "${local.name_suffix}.automq.private"
-
-  vpc {
-    vpc_id = var.vpc_id
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "automq-private-zone-${local.env_id}"
-  })
 }
