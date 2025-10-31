@@ -65,9 +65,20 @@ resource "aws_iam_policy" "automq_console_policy" {
       {
         Effect = "Allow"
         Action = [
-          "s3:AbortMultipartUpload",
-          "s3:ListBucketMultipartUploads",
           "s3:ListBucket",
+          "s3:ListBucketMultipartUploads",
+          "s3:GetLifecycleConfiguration",
+          "s3:PutLifecycleConfiguration"
+        ]
+        Resource = [
+          "arn:aws:s3:::${local.data_bucket_name}",
+          "arn:aws:s3:::${local.ops_bucket_name}"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:AbortMultipartUpload",
           "s3:DeleteObject",
           "s3:GetObject",
           "s3:PutObject",
