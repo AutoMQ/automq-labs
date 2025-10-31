@@ -34,6 +34,16 @@ output "benchmark_node_group_arn" {
   value       = var.enable_benchmark_nodes ? aws_eks_node_group.benchmark_node_group[0].arn : null
 }
 
+output "vpc_id" {
+  description = "VPC Id of the cluster"
+  value       = module.eks-env.vpc_id
+}
+
+output "automq_control_panel_env_id" {
+  description = "environment id of control panel"
+  value       = module.automq-byoc.automq_byoc_env_id
+}
+
 output "benchmark_node_group_status" {
   description = "Status of the benchmark node group"
   value       = var.enable_benchmark_nodes ? aws_eks_node_group.benchmark_node_group[0].status : null

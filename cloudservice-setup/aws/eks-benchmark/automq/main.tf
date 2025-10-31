@@ -86,6 +86,8 @@ resource "automq_kafka_instance" "automq_kafka_instance" {
       automq_integration.prometheus_remote_write_integration.id,
     ]
   }
+
+  depends_on = [automq_integration.prometheus_remote_write_integration]
 }
 
 
