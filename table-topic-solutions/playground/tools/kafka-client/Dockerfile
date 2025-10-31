@@ -6,8 +6,8 @@ USER root
 RUN microdnf update -y && microdnf install -y \
     maven \
     gcc-c++ \
-    python3-devel && \
-    microdnf clean all
+    python3-devel \
+    && microdnf clean all
 
 RUN pip3 install --user grpcio-tools
 
