@@ -113,10 +113,8 @@ To visit the observability stack, use the following command to obtain the public
 The username is admin, and the password can be obtained through the command below. If you wish to change it, you can
 configure it in the `./terraform/monitoring/prometheus.yaml` file.
 
-AutoMQ provides [grafana official dashboards](https://www.automq.com/docs/automq/observability/dashboard-configuration),
-and you can contact the AutoMQ team to obtain the dashboard JSON. Once users export metrics to Prometheus, they can
-import these Grafana dashboard templates, configure the Grafana data source to link to the respective Prometheus, and
-begin monitoring AutoMQ.
+AutoMQ provides [grafana official dashboards](https://www.automq.com/docs/automq/observability/dashboard-configuration). Once users export metrics to Prometheus, they can import these Grafana dashboard templates, configure the Grafana data source to link to the respective Prometheus, and begin monitoring AutoMQ. At this step, Terraform will help you create these dashboards in Grafana.
+
 
 ```bash
 # Get the public endpoint of Grafana. Please make sure to use the HTTP protocol for access.
