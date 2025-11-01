@@ -1,5 +1,5 @@
 rbac:
-  create: false
+  create: true
 
 podSecurityPolicy:
   enabled: false
@@ -22,8 +22,18 @@ grafana:
   nodeSelector:
     workload-type: benchmark
 
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: "monitoring"
+      
+
 prometheus:
   prometheusSpec:
+    serviceMonitorSelector:
+      matchLabels:
+        prometheus: automq
     enableRemoteWriteReceiver: true
 
 server:

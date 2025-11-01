@@ -17,6 +17,25 @@ resource "kubernetes_namespace_v1" "monitoring" {
   depends_on = [module.eks-env]
 }
 
+resource "kubernetes_config_map" "grafana_dashboard_config" {
+  metadata {
+    name      = "grafana_dashboard_config"
+    namespace = kubernetes_namespace_v1.monitoring.metadata[0].name
+    labels = {
+      grafana_dashboard = "1"
+      prometheus        = "automq"
+    }
+  }
+  data = {
+    "cluster.json" = file("${path.module}/monitoring/dashboard/cluster.json")
+    "broker.json"  = file("${path.module}/monitoring/dashboard/broker.json")
+    "topic.json"   = file("${path.module}/monitoring/dashboard/topic.json")
+    "group.json"   = file("${path.module}/monitoring/dashboard/group.json")
+  }
+  depends_on = [kubernetes_namespace_v1.monitoring]
+}
+
+
 resource "helm_release" "prometheus" {
   chart      = "kube-prometheus-stack"
   repository = "https://prometheus-community.github.io/helm-charts"
@@ -38,6 +57,7 @@ resource "helm_release" "prometheus" {
   depends_on = [
     module.eks-env,
     kubernetes_namespace_v1.monitoring,
-    aws_eks_node_group.benchmark_node_group
+    aws_eks_node_group.benchmark_node_group,
+    kubernetes_config_map.cluster_dashboard_config
   ]
 }
