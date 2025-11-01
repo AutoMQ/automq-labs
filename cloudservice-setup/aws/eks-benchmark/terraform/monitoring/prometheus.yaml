@@ -1,0 +1,124 @@
+rbac:
+  create: true
+
+podSecurityPolicy:
+  enabled: false
+
+grafana:
+  adminPassword: "AutoMQ@Grafana"
+  persistence:
+    enabled: false
+
+  service:
+    enabled: true
+    type: LoadBalancer
+    port: 80
+    targetPort: 3000
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+  nodeSelector:
+    workload-type: benchmark
+
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: "monitoring"
+      
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelector:
+      matchLabels:
+        prometheus: automq
+    enableRemoteWriteReceiver: true
+
+server:
+  name: prometheus-server
+
+  defaultFlagsOverride:
+    - --enable-feature=exemplar-storage,remote-write-receiver,otlp-write-receiver
+    - --config.file=/etc/config/prometheus.yml
+
+  extraFlags:
+    - web.enable-lifecycle
+    - storage.tsdb.wal-compression
+
+  configPath: /etc/config/prometheus.yml
+  storagePath: "/prometheus"
+
+  global:
+    scrape_interval: 1m
+    scrape_timeout: 10s
+    evaluation_interval: 1m
+
+  tsdb:
+    out_of_order_time_window: 60s
+
+  extraArgs:
+    web.enable-remote-write-receiver: ""
+
+  tolerations: []
+
+  nodeSelector:
+    workload-type: benchmark
+
+  persistentVolume:
+    enabled: true
+    accessModes:
+      - ReadWriteOnce
+    mountPath: /data
+    size: 30Gi
+    storageClass: "${STORAGE_CLASS_NAME}"
+
+  replicaCount: 1
+
+  statefulSet:
+    enabled: true
+    podManagementPolicy: OrderedReady
+    pvcDeleteOnStsDelete: false
+    pvcDeleteOnStsScale: false
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+
+  securityContext:
+    runAsUser: 65534
+    runAsNonRoot: true
+    runAsGroup: 65534
+    fsGroup: 65534
+
+  service:
+    enabled: true
+    servicePort: 9090
+    type: ClusterIP
+
+  terminationGracePeriodSeconds: 300
+  retention: "30d"
+  retentionSize: "100GB"
+
+serverFiles:
+  prometheus.yml:
+    scrape_configs:
+      - job_name: prometheus
+        static_configs:
+          - targets:
+              - localhost:9090
+
+prometheus-node-exporter:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+kube-state-metrics:
+  enabled: false
+
+prometheus-pushgateway:
+  enabled: false
+
