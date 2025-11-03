@@ -1,4 +1,4 @@
-FROM confluentinc/cp-schema-registry:7.3.10
+FROM confluentinc/cp-schema-registry:8.1.0
 
 USER root
 
@@ -6,6 +6,7 @@ USER root
 RUN microdnf update -y && microdnf install -y \
     maven \
     gcc-c++ \
+    java-17-openjdk-headless \
     python3-devel \
     && microdnf clean all
 
