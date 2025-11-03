@@ -17,9 +17,9 @@ resource "kubernetes_namespace_v1" "monitoring" {
   depends_on = [module.eks-env]
 }
 
-resource "kubernetes_config_map" "grafana_dashboard_config" {
+resource "kubernetes_config_map" "grafana-dashboard-config" {
   metadata {
-    name      = "grafana_dashboard_config"
+    name      = "grafana-dashboard-config"
     namespace = kubernetes_namespace_v1.monitoring.metadata[0].name
     labels = {
       grafana_dashboard = "1"
@@ -29,7 +29,7 @@ resource "kubernetes_config_map" "grafana_dashboard_config" {
   data = {
     "cluster.json" = file("${path.module}/monitoring/dashboard/cluster.json")
     "broker.json"  = file("${path.module}/monitoring/dashboard/broker.json")
-    "topic.json"   = file("${path.module}/monitoring/dashboard/topic.json")
+    "topics.json"  = file("${path.module}/monitoring/dashboard/topics.json")
     "group.json"   = file("${path.module}/monitoring/dashboard/group.json")
   }
   depends_on = [kubernetes_namespace_v1.monitoring]
@@ -58,6 +58,6 @@ resource "helm_release" "prometheus" {
     module.eks-env,
     kubernetes_namespace_v1.monitoring,
     aws_eks_node_group.benchmark_node_group,
-    kubernetes_config_map.cluster_dashboard_config
+    kubernetes_config_map.grafana-dashboard-config
   ]
 }
