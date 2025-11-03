@@ -10,6 +10,11 @@ output "vpc_id" {
   value       = module.network.vpc_id
 }
 
+output "azs" {
+  description = "List of Availability Zones"
+  value       = module.network.azs
+}
+
 output "cluster_name" {
   description = "EKS Cluster Name"
   value       = module.eks.eks_cluster_name

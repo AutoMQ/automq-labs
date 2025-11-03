@@ -23,6 +23,27 @@ output "cluster_name" {
   value       = module.eks-env.cluster_name
 }
 
+output "region" {
+  description = "AWS region where resources are deployed"
+  value       = var.region
+}
+
+output "vpc_id" {
+  description = "VPC ID used by the EKS environment"
+  value       = module.eks-env.vpc_id
+}
+
+output "default_az" {
+  description = "Selected availability zone (first private subnet AZ)"
+  value       = module.eks-env.azs[0]
+
+}
+
+output "automq_environment_id" {
+  description = "AutoMQ Environment ID used for BYOC"
+  value       = module.automq-byoc.automq_byoc_env_id
+}
+
 # Benchmark Node Group Outputs
 output "benchmark_node_group_name" {
   description = "Name of the benchmark node group"
@@ -34,10 +55,7 @@ output "benchmark_node_group_arn" {
   value       = var.enable_benchmark_nodes ? aws_eks_node_group.benchmark_node_group[0].arn : null
 }
 
-output "vpc_id" {
-  description = "VPC Id of the cluster"
-  value       = module.eks-env.vpc_id
-}
+
 
 output "automq_control_panel_env_id" {
   description = "environment id of control panel"

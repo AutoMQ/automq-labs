@@ -137,6 +137,8 @@ to create a Service Account and obtain the `Client ID` and `Client Secret` (used
 
 The following are the parameters you must fill in within the `terraform.tfvars` file, and the Notes document provides information on how to obtain them along with their explanations. The remaining parameters can be further configured according to the needs of the cluster.
 
+We have prepared a script for you, `modify-automq-tf-config.sh`, which automatically fills in the required variables. You can execute this script, and it will automatically populate the necessary parameter information for you.
+
 | Parameter                          | Description                            | Notes                                                                                                                                                   |
 |------------------------------------|----------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `automq_byoc_endpoint`             | AutoMQ BYOC Console API endpoint       | Get from output of step1                                                                                                                                |
@@ -150,16 +152,13 @@ The following are the parameters you must fill in within the `terraform.tfvars` 
 
 
 ```bash
+./modify-automq-tf-config.sh
 cd ./automq
 terraform init
 terraform plan
 terraform apply
 ```
 
-#### AutoMQ tfvars Parameters
-
-Use the following variables in `cloudservice-setup/aws/eks-benchmark/automq/terraform.tfvars` to connect Terraform to
-your AutoMQ Console and environment:
 
 ### Step 3: Run Benchmark Tests
 

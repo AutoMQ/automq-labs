@@ -17,7 +17,7 @@ automq_environment_id = "automqlab-id"
 # Prometheus Integration Configuration
 prometheus_integration_name      = "prometheus-remote-write"
 prometheus_integration_type      = "prometheusRemoteWrite"
-prometheus_remote_write_endpoint = "http://prometheus-prometheus-server.monitoring:9090/api/v1/write"
+prometheus_remote_write_endpoint = "http://prometheus-kube-prometheus-prometheus.monitoring:9090/api/v1/write"
 prometheus_auth_type             = "noauth"
 
 # AutoMQ Deploy Profile Configuration
