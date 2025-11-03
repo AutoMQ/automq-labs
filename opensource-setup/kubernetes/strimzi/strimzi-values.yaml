@@ -4,6 +4,6 @@ env:
 extraEnvs:
   - name: STRIMZI_KAFKA_IMAGES
     value: |
-      3.9.0=automqinc/automq:1.6.0-rc0-strimzi
+      3.9.0=automqinc/automq:1.6.0-strimzi
       3.9.1=quay.io/strimzi/kafka:0.47.0-kafka-3.9.1
       4.0.0=quay.io/strimzi/kafka:0.47.0-kafka-4.0.0
