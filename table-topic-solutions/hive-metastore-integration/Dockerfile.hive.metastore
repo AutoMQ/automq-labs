@@ -1,0 +1,29 @@
+FROM apache/hive:4.0.0-beta-1
+
+# Install wget and MySQL client
+USER root
+RUN apt-get update && apt-get install -y wget default-mysql-client
+
+# Download the MySQL JDBC driver compatible with Hive 4.0.0-beta-1
+RUN wget -O /opt/hive/lib/mysql-connector-java.jar \
+    https://repo1.maven.org/maven2/mysql/mysql-connector-java/8.0.30/mysql-connector-java-8.0.30.jar
+
+# Download Hadoop-related JAR files (Hadoop 3.3.1 and AWS support)
+RUN wget -P /opt/hive/lib/ \
+    https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.1/hadoop-aws-3.3.1.jar && \
+    wget -P /opt/hive/lib/ \
+    https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.901/aws-java-sdk-bundle-1.11.901.jar && \
+    wget -P /opt/hive/lib/ \
+    https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.1/hadoop-common-3.3.1.jar && \
+    wget -P /opt/hive/lib/ \
+    https://repo1.maven.org/maven2/org/apache/hadoop/thirdparty/hadoop-shaded-guava/1.1.0/hadoop-shaded-guava-1.1.0.jar
+
+# Ensure the JAR files have been downloaded
+RUN ls -lh /opt/hive/lib/
+
+# Copy the entrypoint script for Hive Metastore
+COPY docker-hive-metastore-entrypoint.sh /docker-hive-metastore-entrypoint.sh
+RUN chmod +x /docker-hive-metastore-entrypoint.sh
+
+# Set the entrypoint script to be executed when the container starts
+ENTRYPOINT ["/docker-hive-metastore-entrypoint.sh"]
