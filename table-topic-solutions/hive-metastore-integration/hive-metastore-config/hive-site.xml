@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <property>
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <value>com.mysql.jdbc.Driver</value>
+    </property>
+
+    <property>
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:mysql://mysql:3306/metastore?createDatabaseIfNotExist=true&amp;useSSL=false&amp;serverTimezone=UTC</value>
+    </property>
+
+    <property>
+        <name>javax.jdo.option.ConnectionUserName</name>
+        <value>hive</value>
+    </property>
+
+    <property>
+        <name>javax.jdo.option.ConnectionPassword</name>
+        <value>hive</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://storage:9000</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.access.key</name>
+        <value>admin</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.secret.key</name>
+        <value>password</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.impl</name>
+        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.connection.ssl.enabled</name>
+        <value>false</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.attempts.maximum</name>
+        <value>3</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.connection.timeout</name>
+        <value>5000</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.connection.establish.timeout</name>
+        <value>5000</value>
+    </property>
+
+    <property>
+        <name>fs.s3a.region</name>
+        <value>us-east-1</value>
+    </property>
+
+</configuration>

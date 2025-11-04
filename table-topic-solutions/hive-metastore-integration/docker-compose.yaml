@@ -1,0 +1,177 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0.30
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: metastore
+      MYSQL_USER: hive
+      MYSQL_PASSWORD: hive
+    networks:
+      - iceberg-hms-net
+    ports:
+      - "3306:3306"
+    volumes:
+      - /tmp/mysql_data:/var/lib/mysql
+      - ./mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 10
+      timeout: 5s
+
+  hive-metastore:
+    build:
+      context: .
+      dockerfile: Dockerfile.hive.metastore 
+    container_name: hive-metastore
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SERVICE_NAME: metastore
+      HIVE_METASTORE_PORT: 9083
+      HIVE_DB_HOSTNAME: mysql
+      HIVE_DB_NAME: metastore
+      HIVE_DB_USER: hive
+      HIVE_DB_PASSWORD: hive
+      HIVE_METASTORE_URI: thrift://0.0.0.0:9083
+    networks:
+      iceberg-hms-net:
+        aliases:
+          - hive-metastore
+    ports:
+      - "9083:9083"
+    volumes:
+      - ./hive-metastore-config:/opt/hive/conf 
+
+  trino:
+    image: trinodb/trino:472
+    container_name: trino
+    networks:
+      - iceberg-hms-net
+    ports:
+      - "8090:8080"
+    volumes:
+      - "./trino-catalog:/etc/trino/catalog" 
+
+  storage:
+    image: minio/minio
+    container_name: storage
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=storage
+      - MINIO_REGION_NAME=us-east-1
+      - MINIO_REGION=us-east-1
+    networks:
+      - iceberg-hms-net
+    ports:
+      - "9001:9001"
+      - "9000:9000"
+    volumes:
+      - /tmp/minio_data:/data 
+    command: ["server", "/data", "--console-address", ":9001"]
+
+  mc:
+    depends_on:
+      - storage
+    image: minio/mc
+    container_name: mc
+    networks:
+      iceberg-hms-net:
+        aliases:
+          - minio.storage
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - ./docker-mc-entrypoint.sh:/docker-mc-entrypoint.sh  
+    entrypoint: ["/bin/bash", "/docker-mc-entrypoint.sh"] 
+
+  automq:
+    container_name: "automq"
+    image: automqinc/automq:1.5.3-rc0
+    stop_grace_period: 1m
+    networks:
+      - iceberg-hms-net
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      - KAFKA_S3_ACCESS_KEY=admin
+      - KAFKA_S3_SECRET_KEY=password
+      - KAFKA_HEAP_OPTS=-Xms1g -Xmx4g -XX:MetaspaceSize=96m -XX:MaxDirectMemorySize=1G
+      - CLUSTER_ID=3D4fXN-yS1-vsQ8aJ_q4Mg
+    command:
+      - bash
+      - -c
+      - |
+        /opt/automq/kafka/bin/kafka-server-start.sh \
+        /opt/automq/kafka/config/kraft/server.properties \
+        --override cluster.id=$${CLUSTER_ID} \
+        --override node.id=0 \
+        --override controller.quorum.voters=0@automq:9093 \
+        --override controller.quorum.bootstrap.servers=automq:9093 \
+        --override listeners=PLAINTEXT://:9092,CONTROLLER://:9093 \
+        --override advertised.listeners=PLAINTEXT://automq:9092 \
+        --override s3.data.buckets='0@s3://automq-data?region=us-east-1&endpoint=http://storage:9000&pathStyle=true' \
+        --override s3.ops.buckets='1@s3://automq-ops?region=us-east-1&endpoint=http://storage:9000&pathStyle=true' \
+        --override s3.wal.path='0@s3://automq-data?region=us-east-1&endpoint=http://storage:9000&pathStyle=true' \
+        --override automq.table.topic.catalog.type=hive \
+        --override automq.table.topic.catalog.uri=thrift://hive-metastore:9083 \
+        --override automq.table.topic.catalog.warehouse=s3a://warehouse/wh/ \
+        --override automq.table.topic.namespace=default \
+        --override automq.table.topic.schema.registry.url=http://schema-registry:8081
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | grep -q 'automq'"]
+      interval: 20s
+      timeout: 20s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      - storage
+      - mc
+      - hive-metastore
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    container_name: schema-registry
+    networks:
+      - iceberg-hms-net
+    ports:
+      - "8081:8081"
+    restart: on-failure
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'automq:9092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    depends_on:
+      automq:
+        condition: service_healthy
+
+  go-producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.go
+    container_name: go-producer
+    depends_on:
+      - automq
+      - schema-registry
+    networks:
+      - iceberg-hms-net
+
+networks:
+  iceberg-hms-net:
+    name: iceberg-hms-net
+
+
+volumes:
+  mysql_data:
+    driver: local
+  minio_data:
+    driver: local

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>s3a://warehouse/</value>
+    </property>
+    <property>
+        <name>hive.metastore.authorization.storage.checks</name>
+        <value>false</value>
+    </property>
+
+    <property>
+        <name>hive.metastore.pre.event.listeners</name>
+        <name>org.apache.hadoop.hive.ql.security.authorization.AuthorizationPreEventListener</name>
+    </property>
+    <property>
+        <name>hive.security.metastore.authorization.manager</name>
+        <value>org.apache.hadoop.hive.ql.security.authorization.StorageBasedAuthorizationProvider</value>
+    </property>
+
+</configuration>
