@@ -18,6 +18,11 @@ output "dns_zone_id" {
   value       = module.automq-byoc.automq_byoc_vpc_route53_zone_id
 }
 
+output "data_bucket" {
+  description = "Data bucket name for the AutoMQ BYOC environment"
+  value       = "automq-data-${module.automq-byoc.automq_byoc_env_id}"
+}
+
 output "cluster_name" {
   description = "Name of the EKS cluster"
   value       = module.eks-env.cluster_name
@@ -54,7 +59,6 @@ output "benchmark_node_group_arn" {
   description = "ARN of the benchmark node group"
   value       = var.enable_benchmark_nodes ? aws_eks_node_group.benchmark_node_group[0].arn : null
 }
-
 
 
 output "automq_control_panel_env_id" {

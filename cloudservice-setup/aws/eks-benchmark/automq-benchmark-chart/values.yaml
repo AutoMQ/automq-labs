@@ -28,7 +28,7 @@ automq:
 # Benchmark configuration
 benchmark:
   # Kafka settings
-  kafkaHeapOpts: "-Xmx1g -Xms1g"
+  kafkaHeapOpts: "-Xmx3g -Xms3g"
   
   # Producer settings
   producerConfigs: "batch.size=0"

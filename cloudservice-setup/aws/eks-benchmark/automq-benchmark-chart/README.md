@@ -13,14 +13,16 @@ This Helm chart deploys an AutoMQ benchmark job on a Kubernetes cluster.
 To install the chart with the release name `automq-benchmark`:
 
 ```bash
-helm install automq-benchmark ./automq-benchmark
+helm install automq-benchmark ./automq-benchmark-chart
 ```
 
 To install with custom values:
 
 ```bash
-helm install automq-benchmark ./automq-benchmark -f custom-values.yaml
+helm install automq-benchmark ./automq-benchmark-chart -f custom-values.yaml
 ```
+
+**Note:** If you need to re-run the benchmark task, first uninstall the existing deployment using `helm uninstall automq-benchmark`, then reinstall the chart.
 
 ## Uninstalling the Chart
 
@@ -34,37 +36,37 @@ helm uninstall automq-benchmark
 
 The following table lists the configurable parameters of the AutoMQ benchmark chart and their default values.
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `job.name` | Name of the benchmark job | `automq-benchmark` |
-| `job.completions` | Number of successful completions | `1` |
-| `job.parallelism` | Number of parallel pods | `1` |
-| `job.backoffLimit` | Number of retries before marking job as failed | `3` |
-| `job.restartPolicy` | Restart policy for the job | `Never` |
-| `image.repository` | AutoMQ image repository | `automqinc/automq` |
-| `image.tag` | AutoMQ image tag | `latest` |
-| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
-| `automq.username` | AutoMQ username | `user1` |
-| `automq.password` | AutoMQ password | `MrCrSQTVoB` |
-| `automq.bootstrapServer` | AutoMQ bootstrap server | `automq-release-kafka.automq.svc.cluster.local:9092` |
-| `automq.securityProtocol` | Security protocol | `SASL_PLAINTEXT` |
-| `automq.saslMechanism` | SASL mechanism | `PLAIN` |
-| `benchmark.kafkaHeapOpts` | Kafka heap options | `-Xmx1g -Xms1g` |
-| `benchmark.producerConfigs` | Producer configurations | `batch.size=0` |
-| `benchmark.consumerConfigs` | Consumer configurations | `fetch.max.wait.ms=1000` |
-| `benchmark.topics` | Number of topics | `10` |
-| `benchmark.partitionsPerTopic` | Partitions per topic | `128` |
-| `benchmark.producersPerTopic` | Producers per topic | `1` |
-| `benchmark.groupsPerTopic` | Consumer groups per topic | `1` |
-| `benchmark.consumersPerGroup` | Consumers per group | `1` |
-| `benchmark.recordSize` | Record size in bytes | `52224` |
-| `benchmark.sendRate` | Send rate (messages/sec) | `160` |
-| `benchmark.warmupDuration` | Warmup duration in minutes | `3` |
-| `benchmark.testDuration` | Test duration in minutes | `3` |
-| `resources.requests.cpu` | CPU request | `500m` |
-| `resources.requests.memory` | Memory request | `2Gi` |
-| `resources.limits.cpu` | CPU limit | `2` |
-| `resources.limits.memory` | Memory limit | `4Gi` |
+| Parameter                      | Description                                    | Default                                              |
+|--------------------------------|------------------------------------------------|------------------------------------------------------|
+| `job.name`                     | Name of the benchmark job                      | `automq-benchmark`                                   |
+| `job.completions`              | Number of successful completions               | `1`                                                  |
+| `job.parallelism`              | Number of parallel pods                        | `1`                                                  |
+| `job.backoffLimit`             | Number of retries before marking job as failed | `3`                                                  |
+| `job.restartPolicy`            | Restart policy for the job                     | `Never`                                              |
+| `image.repository`             | AutoMQ image repository                        | `automqinc/automq`                                   |
+| `image.tag`                    | AutoMQ image tag                               | `latest`                                             |
+| `image.pullPolicy`             | Image pull policy                              | `IfNotPresent`                                       |
+| `automq.username`              | AutoMQ username                                | `user1`                                              |
+| `automq.password`              | AutoMQ password                                | `MrCrSQTVoB`                                         |
+| `automq.bootstrapServer`       | AutoMQ bootstrap server                        | `automq-release-kafka.automq.svc.cluster.local:9092` |
+| `automq.securityProtocol`      | Security protocol                              | `SASL_PLAINTEXT`                                     |
+| `automq.saslMechanism`         | SASL mechanism                                 | `PLAIN`                                              |
+| `benchmark.kafkaHeapOpts`      | Kafka heap options                             | `-Xmx1g -Xms1g`                                      |
+| `benchmark.producerConfigs`    | Producer configurations                        | `batch.size=0`                                       |
+| `benchmark.consumerConfigs`    | Consumer configurations                        | `fetch.max.wait.ms=1000`                             |
+| `benchmark.topics`             | Number of topics                               | `10`                                                 |
+| `benchmark.partitionsPerTopic` | Partitions per topic                           | `128`                                                |
+| `benchmark.producersPerTopic`  | Producers per topic                            | `1`                                                  |
+| `benchmark.groupsPerTopic`     | Consumer groups per topic                      | `1`                                                  |
+| `benchmark.consumersPerGroup`  | Consumers per group                            | `1`                                                  |
+| `benchmark.recordSize`         | Record size in bytes                           | `52224`                                              |
+| `benchmark.sendRate`           | Send rate (messages/sec)                       | `160`                                                |
+| `benchmark.warmupDuration`     | Warmup duration in minutes                     | `3`                                                  |
+| `benchmark.testDuration`       | Test duration in minutes                       | `3`                                                  |
+| `resources.requests.cpu`       | CPU request                                    | `500m`                                               |
+| `resources.requests.memory`    | Memory request                                 | `2Gi`                                                |
+| `resources.limits.cpu`         | CPU limit                                      | `2`                                                  |
+| `resources.limits.memory`      | Memory limit                                   | `4Gi`                                                |
 
 ## Example Custom Values
 
