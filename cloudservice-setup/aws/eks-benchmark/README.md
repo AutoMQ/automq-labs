@@ -106,14 +106,20 @@ To access the EKS cluster using this command, and the placeholders in the comman
 obtained from the output above.
 
 ```bash
-aws eks update-kubeconfig --region [your-region] --name [your-cluster-name]
+cd ./terraform
+REGION=$(terraform output -raw region)
+CLUSTER_NAME=$(terraform output -raw cluster_name)
+
+aws eks update-kubeconfig --region $REGION --name $CLUSTER_NAME
 ```
 
 To visit the observability stack, use the following command to obtain the public endpoint of Grafana.
 The username is admin, and the password can be obtained through the command below. If you wish to change it, you can
 configure it in the `./terraform/monitoring/prometheus.yaml` file.
 
-AutoMQ provides [grafana official dashboards](https://www.automq.com/docs/automq/observability/dashboard-configuration). Once users export metrics to Prometheus, they can import these Grafana dashboard templates, configure the Grafana data source to link to the respective Prometheus, and begin monitoring AutoMQ. At this step, Terraform will help you create these dashboards in Grafana.
+AutoMQ provides [grafana official dashboards](https://www.automq.com/docs/automq/observability/dashboard-configuration). In this example, Grafana dashboards come pre-installed with broker, topic, group, and cluster dashboards. 
+
+Terraform will help you create these dashboards in Grafana. If you need further guidance, please feel free to [contact the AutoMQ team](https://www.automq.com/contact).
 
 
 ```bash
@@ -126,32 +132,24 @@ kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-pa
 
 ### Step 2: Deploy AutoMQ Instance
 
-1.Follow [Create a Service Account](https://www.automq.com/docs/automq-cloud/manage-identities-and-access/service-accounts#create-a-service-account)
-to create a Service Account and obtain the `Client ID` and `Client Secret` (used as `automq_byoc_access_key_id` and`automq_byoc_secret_key`). It is recommended to use EnvironmentAdmin for convenient management of all resources.
+1. Follow [Create a Service Account](https://www.automq.com/docs/automq-cloud/manage-identities-and-access/service-accounts#create-a-service-account) to create a Service Account and obtain the `Client ID` and `Client Secret` (Remember to save these two pieces of information, as you will need to enter them in the subsequent installation script). 
 
-2. In the AutoMQ Console, create a Deploy Profile for the EKS environment (e.g., named `eks`). Kubernetes Cluster, DNS ZoneId, Bucket Name, and IAM Role ARN are all obtained from the output of the previous step.
-   Reference: [Create a Deploy Profile](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-12%3A-access-the-environment-console-and-create-deployment-configuration).
+For this service account, you need to select EnvironmentAdmin to easily create and manage resources.
 
-3. Fill variables `automq/terraform.tfvars` and apply Terraform to create the AutoMQ cluster with observability
-   integration. You may need to wait approximately 5 to 10 minutes for the cluster to be fully created.
+2. In the AutoMQ Console, create a Deploy Profile named `eks` for the EKS environment. Get the bucket name from the default profile. Kubernetes Cluster, DNS ZoneId and Node pool IAM Role ARN are all obtained from the output of the previous step.
 
-The following are the parameters you must fill in within the `terraform.tfvars` file, and the Notes document provides information on how to obtain them along with their explanations. The remaining parameters can be further configured according to the needs of the cluster.
+It's worth noting that the EKS node pool role that needs to be created last was already created in the first step; you can simply copy the node_group_instance_profile_arn output from the output.
 
-We have prepared a script for you, `modify-automq-tf-config.sh`, which automatically fills in the required variables. You can execute this script, and it will automatically populate the necessary parameter information for you.
+Reference: [Create a Deploy Profile](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-12%3A-access-the-environment-console-and-create-deployment-configuration).
 
-| Parameter                          | Description                            | Notes                                                                                                                                                   |
-|------------------------------------|----------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `automq_byoc_endpoint`             | AutoMQ BYOC Console API endpoint       | Get from output of step1                                                                                                                                |
-| `automq_byoc_access_key_id`        | BYOC API Access Key (Client ID)        | Obtained when creating the Service Account in the previous step.                                                                                        |
-| `automq_byoc_secret_key`           | BYOC API Secret Key (Client Secret)    |                                                                                                                                                         |
-| `automq_deploy_profile_name`       | Deploy Profile name created in Console | Obtained when creating the Deploy Profile in the previous step.                                                                                         |
-| `automq_environment_id`            | AutoMQ Environment ID                  | Get from output of step1                                                                                                                                |
-| `vpc_id`                           | VPC ID                                 | Get from output of step1                                                                                                                                |
-| `automq_environment_id`            | ENV ID                                 | Get from output of step1                                                                                                                                |
-| `prometheus_remote_write_endpoint` | prometheus inner endpoint              | Allow the AutoMQ control plane to access Prometheus using the Prometheus service name and namespace.<br/> Use `kubectl get svc -n monitoring` to check. |
+3. Fill variables `automq/terraform.tfvars` and apply Terraform to create the AutoMQ cluster with observability integration. You may need to wait approximately 5 to 10 minutes for the cluster to be fully created.
 
+We have prepared a script for you, `modify-automq-tf-config.sh`, which automatically fills in the required variables. The file is located in the root directory of this example. You can execute this script, and it will automatically populate the necessary parameter information for you.
+
+If you need further configuration, you can also refer to the comments and modify `automq/terraform.tfvars` directly.
 
 ```bash
+
 ./modify-automq-tf-config.sh
 cd ./automq
 terraform init
