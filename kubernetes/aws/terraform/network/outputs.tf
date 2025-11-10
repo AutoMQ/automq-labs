@@ -9,6 +9,11 @@ output "vpc_id" {
   depends_on  = [module.vpc]
 }
 
+output "azs" {
+  description = "Availability Zones"
+  value       = module.vpc.azs
+}
+
 output "public_subnets" {
   description = "Public Subnets"
   value       = module.vpc.public_subnets

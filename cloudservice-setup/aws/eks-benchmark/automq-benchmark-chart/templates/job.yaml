@@ -1,0 +1,113 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Values.job.name }}
+  labels:
+    {{- range $key, $value := .Values.labels }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  completions: {{ .Values.job.completions }}
+  parallelism: {{ .Values.job.parallelism }}
+  backoffLimit: {{ .Values.job.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- range $key, $value := .Values.labels }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+    spec:
+      restartPolicy: {{ .Values.job.restartPolicy }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Values.job.name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- if .Values.automq.username }}
+            - name: USERNAME
+              value: "{{ .Values.automq.username }}"
+            - name: PASSWORD
+              value: "{{ .Values.automq.password }}"
+            {{- end }}
+            - name: SECURITY_PROTOCOL
+              value: "{{ .Values.automq.securityProtocol }}"
+            - name: KAFKA_HEAP_OPTS
+              value: "{{ .Values.benchmark.kafkaHeapOpts }}"
+            - name: SASL_MECHANISM
+              value: "{{ .Values.automq.saslMechanism }}"
+            - name: BOOTSTRAP_SERVER
+              value: "{{ .Values.automq.bootstrapServer }}"
+            - name: PRODUCER_CONFIGS
+              value: "{{ .Values.benchmark.producerConfigs }}"
+            - name: CONSUMER_CONFIGS
+              value: "{{ .Values.benchmark.consumerConfigs }}"
+            - name: TOPICS
+              value: "{{ .Values.benchmark.topics }}"
+            - name: PARTITIONS_PER_TOPIC
+              value: "{{ .Values.benchmark.partitionsPerTopic }}"
+            - name: PRODUCERS_PER_TOPIC
+              value: "{{ .Values.benchmark.producersPerTopic }}"
+            - name: GROUPS_PER_TOPIC
+              value: "{{ .Values.benchmark.groupsPerTopic }}"
+            - name: CONSUMERS_PER_GROUP
+              value: "{{ .Values.benchmark.consumersPerGroup }}"
+            - name: RECORD_SIZE
+              value: "{{ .Values.benchmark.recordSize }}"
+            - name: SEND_RATE
+              value: "{{ .Values.benchmark.sendRate }}"
+            - name: WARMUP_DURATION
+              value: "{{ .Values.benchmark.warmupDuration }}"
+            - name: TEST_DURATION
+              value: "{{ .Values.benchmark.testDuration }}"
+          command: ["/bin/sh", "-lc"]
+          args:
+            - |
+              set -eu
+              
+              AUTOMQ_BIN="/opt/kafka/kafka/bin/automq-perf-test.sh"
+              
+              {{- if .Values.automq.username }}
+              SASL_CONFIG="/tmp/client-sasl.properties"
+              cat > "$SASL_CONFIG" <<EOL
+              security.protocol=${SECURITY_PROTOCOL}
+              sasl.mechanism=${SASL_MECHANISM}
+              sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="${USERNAME}" password="${PASSWORD}";
+              EOL
+              COMMON_CONFIG_ARG="--common-config-file $SASL_CONFIG"
+              {{- else }}
+              COMMON_CONFIG_ARG=""
+              {{- end }}
+              
+              exec "$AUTOMQ_BIN" \
+                --bootstrap-server "$BOOTSTRAP_SERVER" \
+                --producer-configs "$PRODUCER_CONFIGS" \
+                $COMMON_CONFIG_ARG \
+                --consumer-configs "$CONSUMER_CONFIGS" \
+                --topics "$TOPICS" \
+                --partitions-per-topic "$PARTITIONS_PER_TOPIC" \
+                --producers-per-topic "$PRODUCERS_PER_TOPIC" \
+                --groups-per-topic "$GROUPS_PER_TOPIC" \
+                --consumers-per-group "$CONSUMERS_PER_GROUP" \
+                --record-size "$RECORD_SIZE" \
+                --send-rate "$SEND_RATE" \
+                --warmup-duration "$WARMUP_DURATION" \
+                --test-duration "$TEST_DURATION" \
+                --reset
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

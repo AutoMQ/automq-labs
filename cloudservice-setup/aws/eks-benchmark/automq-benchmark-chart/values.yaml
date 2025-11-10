@@ -1,0 +1,77 @@
+# Default values for automq-benchmark.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Job configuration
+job:
+  name: automq-benchmark
+  completions: 1
+  parallelism: 1
+  backoffLimit: 3
+  restartPolicy: Never
+
+# Container configuration
+image:
+  repository: automqinc/automq
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# AutoMQ connection settings
+automq:
+  # Optional authentication - leave empty to disable SASL authentication
+  username: ""
+  password: ""
+  bootstrapServer: "automq-release-kafka.automq.svc.cluster.local:9092"
+  securityProtocol: "PLAINTEXT"  # Will be set to SASL_PLAINTEXT if username/password provided
+  saslMechanism: "PLAIN"
+
+# Benchmark configuration
+benchmark:
+  # Kafka settings
+  kafkaHeapOpts: "-Xmx3g -Xms3g"
+  
+  # Producer settings
+  producerConfigs: "batch.size=0"
+  
+  # Consumer settings
+  consumerConfigs: "fetch.max.wait.ms=1000"
+  
+  # Test topology
+  topics: 10
+  partitionsPerTopic: 128
+  producersPerTopic: 1
+  groupsPerTopic: 1
+  consumersPerGroup: 1
+  
+  # Message settings
+  recordSize: 52224
+  sendRate: 160
+  
+  # Test duration
+  warmupDuration: 3
+  testDuration: 3
+
+# Resource limits
+resources:
+  requests:
+    cpu: "500m"
+    memory: "2Gi"
+  limits:
+    cpu: "2"
+    memory: "4Gi"
+
+# Labels to be applied to all resources
+labels:
+  app: automq-benchmark
+
+# Additional annotations
+annotations: {}
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}

@@ -10,6 +10,11 @@ output "vpc_id" {
   value       = module.network.vpc_id
 }
 
+output "azs" {
+  description = "List of Availability Zones"
+  value       = module.network.azs
+}
+
 output "cluster_name" {
   description = "EKS Cluster Name"
   value       = module.eks.eks_cluster_name
@@ -19,6 +24,20 @@ output "node_group_name" {
   description = "EKS Node Group Name"
   value       = aws_eks_node_group.automq-node-groups.node_group_name
 }
+
+output "node_role_arn" {
+  description = "EKS Node Role ARN"
+  value       = aws_eks_node_group.automq-node-groups.node_role_arn
+}
+
+output "eks_cluster_endpoint" {
+  value = module.eks.eks_cluster_endpoint
+}
+
+output "eks_cluster_ca_certificate" {
+  value = module.eks.eks_cluster_ca_certificate
+}
+
 
 output "node_group_instance_profile_arn" {
   description = "ARN of the EKS Node Group IAM Role"

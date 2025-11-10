@@ -54,7 +54,7 @@ Before you begin, ensure you have the following:
 1.  **Create a `terraform.tfvars` file**
     Copy the example configuration and update it with your existing infrastructure details:
     ```bash
-    cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+    cp terraform/terraform.tfvars terraform/terraform.tfvars
     ```
     
     Edit the file with your specific values:
