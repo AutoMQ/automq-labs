@@ -6,6 +6,6 @@
     {"name": "order_id", "type": "long"},
     {"name": "product_name", "type": "string"},
     {"name": "order_description", "type": ["null", "string"], "default": null},
-    {"name": "f_v2", "type": ["null", "string"], "default": null}
+    {"name": "f_v3", "type": ["null", "string"], "default": null}
   ]
 }
