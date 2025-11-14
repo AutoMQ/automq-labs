@@ -35,18 +35,8 @@ send-auto-v2 topic='orders' count='10':
       bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
 
 send-auto-v3 topic='orders' count='10':
-    @echo "Producing {{count}} Avro messages (OrderV2 aggregated evolution) to {{topic}}"
+    @echo "Producing {{count}} Avro messages (OrderV3 aggregated evolution) to {{topic}}"
     SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV3.avsc \
-      bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
-
-send-auto-v4 topic='orders' count='10':
-    @echo "Producing {{count}} Avro messages (OrderV2 aggregated evolution) to {{topic}}"
-    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV4.avsc \
-      bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
-
-send-auto-v5 topic='orders' count='10':
-    @echo "Producing {{count}} Avro messages (OrderV2 aggregated evolution) to {{topic}}"
-    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV5.avsc \
       bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
 
 query table='orders':
