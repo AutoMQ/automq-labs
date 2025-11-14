@@ -25,19 +25,25 @@ create-topic topic='orders':
       --config automq.table.topic.transform.value.type=flatten \
       --config automq.table.topic.namespace=default || true
 
-send-auto topic='orders' count='10':
+send-auto topic='orders' count='2':
     @echo "Producing {{count}} Avro messages (auto-register) to {{topic}}"
     SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
 
-send-auto-v2 topic='orders' count='10':
+send-auto-v2 topic='orders' count='2':
     @echo "Producing {{count}} Avro messages (OrderV2 aggregated evolution) to {{topic}}"
     SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV2.avsc \
       bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
 
-send-auto-v3 topic='orders' count='10':
+send-auto-v3 topic='orders' count='2':
     @echo "Producing {{count}} Avro messages (OrderV3 aggregated evolution) to {{topic}}"
     SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV3.avsc \
       bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
+
+send-auto-v4 topic='orders' count='2':
+    @echo "Producing {{count}} Avro messages (OrderV4 aggregated evolution) to {{topic}}"
+    SCHEMA_REGISTRY_URL={{SCHEMA_REGISTRY_URL}} SCHEMA_FILE=append-scenario/schemas/OrderV4.avsc \
+      bash append-scenario/scripts/produce-avro-auto.sh {{topic}} {{count}}
+
 
 query table='orders':
     @just trino-sql "SELECT * FROM iceberg.default.\"{{table}}\" LIMIT 20"
