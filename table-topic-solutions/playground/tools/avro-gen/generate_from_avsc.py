@@ -72,11 +72,28 @@ def gen_from_type(t: Any, i: int, named: Dict[str, Any]) -> Json:
         # If union contains null and we're generating a non-null value,
         # we need to wrap it in the Avro JSON union format
         if "null" in t and chosen_type != "null":
-            # For simple types, Avro JSON union format is: {"type_name": value}
-            if chosen_type in ("boolean", "int", "long", "float", "double", "bytes", "string"):
-                return {chosen_type: value}
-            else:
-                return {chosen_type: value}
+            # Avro JSON union format is: {"type_name": value}
+            def union_label(union_item: Any) -> str:
+                # primitive name
+                if isinstance(union_item, str):
+                    return union_item
+                if isinstance(union_item, dict):
+                    # logical type on primitive should use base primitive name
+                    base = union_item.get("type")
+                    if base in ("boolean", "int", "long", "float", "double", "bytes", "string"):
+                        return base
+                    # record/enum/fixed should use their namespace-qualified name when available
+                    name = union_item.get("name")
+                    namespace = union_item.get("namespace")
+                    if name and namespace:
+                        return f"{namespace}.{name}"
+                    if name:
+                        return name
+                    return base or "unknown"
+                # fallback
+                return "unknown"
+
+            return {union_label(chosen_type): value}
         else:
             return value
 

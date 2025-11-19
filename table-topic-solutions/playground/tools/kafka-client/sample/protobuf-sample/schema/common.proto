@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package examples.clients.proto;
+
+option java_outer_classname = "Common";
+
+// Shared address message that can be referenced by User and Product
+message Address {
+    string street = 1;
+    string city = 2;
+    int32 postal_code = 3;
+    optional string country = 4;
+    optional string state = 5;
+}
+
+// Shared contact information
+message ContactInfo {
+    string email = 1;
+    optional string phone = 2;
+    optional string website = 3;
+}
+
+// Shared time range
+message TimeRange {
+    int64 start_timestamp = 1;
+    int64 end_timestamp = 2;
+}

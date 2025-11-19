@@ -2,10 +2,73 @@ syntax = "proto3";
 
 package examples.clients.proto;
 
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
 option java_outer_classname = "User";
 
+enum UserRole {
+    USER_ROLE_UNSPECIFIED = 0;
+    CUSTOMER = 1;
+    SELLER = 2;
+    ADMIN = 3;
+}
+
 message UserData {
-  string user_id = 1;
-  string name = 2;
-  string email = 3;
+    // Basic user information
+    string user_id = 1;                 // string
+    string username = 2;                // string
+    string email = 3;                   // string
+    double account_balance = 4;         // double
+    float credit_score = 5;             // float
+    bool is_verified = 6;               // bool
+    
+    // User metrics
+    int32 total_orders = 7;             // int32
+    sint32 loyalty_points = 8;          // sint32 (can be negative for deductions)
+    uint32 successful_transactions = 9; // uint32 (always positive)
+    int64 total_spent_cents = 10;       // int64
+    sint64 review_score_sum = 11;       // sint64
+    uint64 profile_views = 12;          // uint64 (always positive)
+    
+    // Fixed-size fields
+    fixed32 user_hash = 13;             // fixed32 (hash of user)
+    sfixed32 timezone_offset = 14;      // sfixed32 (timezone in minutes)
+    fixed64 phone_number = 15;          // fixed64
+    sfixed64 internal_user_id = 16;     // sfixed64
+    
+    // Binary and enum
+    bytes profile_picture = 17;         // bytes (image data)
+    UserRole role = 18;                 // enum
+    
+    // Nested message
+    Address address = 19;               // nested message
+    
+    // Repeated fields
+    repeated string interests = 20;     // repeated string
+    repeated int32 favorite_product_ids = 21;  // repeated int32
+    
+    // Timestamps
+    google.protobuf.Timestamp registered_at = 22;  // timestamp
+    google.protobuf.Timestamp last_login_at = 23;  // timestamp
+    
+    // Optional field
+    optional string referral_code = 24; // optional string
+    
+    // Oneof field
+    oneof contact_method {
+        string contact_email = 25;
+        int64 contact_phone = 26;
+    }
+    
+    // Repeated nested message
+    repeated Address shipping_addresses = 27;
+
+    // Map fields
+    map<string, string> preferences = 28;                // map<string, string>
+    map<string, ContactInfo> contacts_by_channel = 29;   // map<string, message>
+    map<string, int64> login_counts = 30;                // map<string, int64>
+
+    // Repeated shared message
+    repeated ContactInfo trusted_contacts = 31;
 }

@@ -5,6 +5,37 @@
   "fields": [
     {"name": "order_id", "type": "long"},
     {"name": "product_name", "type": "string"},
-    {"name": "order_description", "type": "string"}
+    {"name": "order_description", "type": "string"},
+    {"name": "customer_email", "type": "string"},
+    {"name": "price", "type": "double"},
+    {"name": "quantity", "type": "int"},
+    {"name": "is_paid", "type": "boolean"},
+    {"name": "discount_rate", "type": "float"},
+    {"name": "payment_method", "type": "bytes"},
+    {"name": "order_date", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-micros"}},
+    {
+      "name": "shipping_address",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "fields": [
+          {"name": "street", "type": "string"},
+          {"name": "city", "type": "string"},
+          {"name": "postal_code", "type": "string"}
+        ]
+      }
+    },
+    {
+      "name": "order_status",
+      "type": {
+        "type": "enum",
+        "name": "OrderStatus",
+        "symbols": ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"]
+      }
+    },
+    {"name": "product_tags", "type": {"type": "array", "items": "string"}, "default": []},
+    {"name": "custom_attributes", "type": {"type": "map", "values": "string"}, "default": {}},
+    {"name": "product_prices", "type": {"type": "map", "values": "double"}, "default": {}}
   ]
 }

@@ -31,8 +31,9 @@
                         <param>${schemaRegistryUrl}</param>
                     </schemaRegistryUrls>
                     <schemaTypes>
-                        <product-value>PROTOBUF</product-value>
+                        <common-value>PROTOBUF</common-value>
                         <user-value>PROTOBUF</user-value>
+                        <product-value>PROTOBUF</product-value>
                     </schemaTypes>
                 </configuration>
                 <executions>
@@ -44,15 +45,29 @@
                         </goals>
                         <configuration>
                             <subjects>
+                                <common-value>schema/common.proto</common-value>
                                 <user-value>schema/user.proto</user-value>
                                 <product-value>schema/product.proto</product-value>
                             </subjects>
                             <schemaTypes>
+                                <common-value>PROTOBUF</common-value>
                                 <user-value>PROTOBUF</user-value>
                                 <product-value>PROTOBUF</product-value>
                             </schemaTypes>
                             <references>
+                                <user-value>
+                                    <reference>
+                                        <name>common.proto</name>
+                                        <subject>common-value</subject>
+                                        <version>-1</version>
+                                    </reference>
+                                </user-value>
                                 <product-value>
+                                    <reference>
+                                        <name>common.proto</name>
+                                        <subject>common-value</subject>
+                                        <version>-1</version>
+                                    </reference>
                                     <reference>
                                         <name>user.proto</name>
                                         <subject>user-value</subject>
@@ -69,11 +84,24 @@
                         </goals>
                         <configuration>
                             <subjects>
+                                <common-value>schema/common.proto</common-value>
                                 <user-value>schema/user.proto</user-value>
                                 <product-value>schema/product.proto</product-value>
                             </subjects>
                             <references>
+                                <user-value>
+                                    <reference>
+                                        <name>common.proto</name>
+                                        <subject>common-value</subject>
+                                        <version>-1</version>
+                                    </reference>
+                                </user-value>
                                 <product-value>
+                                    <reference>
+                                        <name>common.proto</name>
+                                        <subject>common-value</subject>
+                                        <version>-1</version>
+                                    </reference>
                                     <reference>
                                         <name>user.proto</name>
                                         <subject>user-value</subject>
