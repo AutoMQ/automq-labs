@@ -97,13 +97,6 @@ ORDER BY order_id DESC
 LIMIT 10;
 ```
 
-**Understanding the Output:**
-
-| Data Version | Old Columns (e.g., `price`) | New Columns (e.g., `payment_status`) |
-| :--- | :--- | :--- |
-| **V2 Rows** | Value Present | **Value Present** |
-| **V1 Rows** | Value Present | **NULL** |
-
 Since V1 records were written before the new columns existed, Iceberg returns `NULL` for those fields, ensuring backward compatibility.
 
 ### Step 6: Explore and Document (Optional)
@@ -140,12 +133,12 @@ The Docker containers will stop. You can rerun `just up` the next time you want 
 | `string` | `string` | — |
 | `record` | `struct` | — |
 | `array` | `list` | — |
-| `list<struct{key, value}>` | `map` | **Non-string keys are supported** using Avro logicalType=map array record structure. |
+| `list<struct{key, value}>` | `map` | Non-string keys are supported using Avro logicalType=map array record structure. |
 | `fixed` | `fixed` | — |
 | `decimal` | `decimal` | — |
 | `uuid` | `uuid` | — |
 | `date` | `date` | — |
-| `time` | `time` | `time-millis` / `time-micros` logical types are mapped to Iceberg `TIME` (`LocalTime`). **Precision is unified to microseconds.** |
+| `time` | `time` | `time-millis` / `time-micros` logical types are mapped to Iceberg `TIME`. |
 | `timestamp` | `timestamp` | `timestamp-micros` / `timestamp-millis` (including `adjust-to-utc` logical types) are mapped to Iceberg `TIMESTAMP`. |
 
 > **Note**: Optional fields must be expressed as a union, like `["null", type]` or `[type, "null"]`. **Unions containing multiple non-null types are not supported.**

@@ -132,9 +132,9 @@ The Docker stack will stop. Rerun `just up` the next time you need the lab.
 | Protobuf Type | Iceberg Type | Notes |
 | :--- | :--- | :--- |
 | `int32`, `sint32`, `sfixed32` | `int` | Stored as signed integer |
-| `uint32`, `fixed32` | `int` | Iceberg does not natively support unsigned types; **large values may wrap/overflow.** |
+| `uint32`, `fixed32` | `int` | Iceberg does not natively support unsigned types;|
 | `int64`, `sint64`, `sfixed64` | `long` | Stored as signed long |
-| `uint64`, `fixed64` | `long` | Iceberg does not natively support unsigned types; **beware of overflow.** |
+| `uint64`, `fixed64` | `long` | Iceberg does not natively support unsigned types; |
 | `float` | `float` | — |
 | `double` | `double` | — |
 | `bool` | `bool` | — |
@@ -144,13 +144,13 @@ The Docker stack will stop. Rerun `just up` the next time you need the lab.
 | `repeated` | `list` |  |
 | `map` | `map` |  |
 | `message` | `struct` | Proto2 `group` fields are not supported. |
-| `google.protobuf.Timestamp` | `timestamp-micros` | Converted to microsecond timestamp (`timestamp(6)`). |
+| `google.protobuf.Timestamp` | `timestamp-micros` | - |
 
 
 **Limitations**
 
 * **Proto2 `group` fields** and **recursive** message definitions are **not supported**.
-* **Unsigned integers** (`uint32`, `fixed32`, `uint64`, `fixed64`) do not have a native Iceberg equivalent. They are stored using the corresponding **signed type** (`int` or `long`), which may lead to **overflow or data corruption** if the values exceed the signed type's maximum range.
+* **Unsigned integers** (`uint32`, `fixed32`, `uint64`, `fixed64`) are stored as signed types (`int` or `long`). Bit patterns are preserved, ensuring no data loss when interpreted as unsigned.
 
 ---
 
