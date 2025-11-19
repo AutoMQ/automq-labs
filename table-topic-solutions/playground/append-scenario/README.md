@@ -1,97 +1,118 @@
-# Scenario: Append-Only Ingestion (Avro by_schema_id)
+# Lab: Append-Only Ingestion with Avro & Schema Evolution
 
-## 1. Goal (Why You Are Here)
-Stream Avro events into an Iceberg table, then evolve the schema to prove that Table Topic automatically keeps the table in sync. By the end you will have: (a) a table created entirely from Avro messages, (b) proof that new nullable columns show up after evolution, and (c) sample queries that highlight how each Avro type maps to Iceberg.
+Welcome! This lab demonstrates how to stream Avro events into an Apache Iceberg table and watch as Table Topic automatically handles schema evolution. 
 
-## 2. Before You Start
-- Run `just up` once per session (already done) so Kafka, Schema Registry, Iceberg, and Trino are online.
-- All commands below run from the Playground root. They are prefixed with an explanation so you always know why you are typing them.
+By the end, you will have:
+- An Iceberg table created entirely from Avro messages.
+- Proof that the table schema evolves automatically when new fields are added.
+- Sample queries that highlight how Avro types map to Iceberg.
 
-## 3. Lab Walkthrough
-Each step follows the same rhythm: **Why** you should run it, the **Command**, what you **Expect**, and any special **Notes**.
+## Getting Started
 
-### Step 1 – Create the Table Topic
-- **Why**: Establish the `orders` topic with Table Topic settings so downstream steps have a sink.
-- **Command**:
-  ```bash
-  just -f append-scenario/justfile create-topic
-  ```
-- **Expect**: Kafka prints either “Created topic orders” or “Topic already exists”; both are fine. No Iceberg artifacts yet.
+First, ensure the lab environment is running. If you haven't already, run `just up` once from the playground root to bring Kafka, Schema Registry, and Trino online. All commands in this guide should be run from the playground root directory.
 
-### Step 2 – Produce V1 Data (baseline schema)
-- **Why**: Register `Order.avsc`, push baseline rows, and let Iceberg auto-create the table.
-- **Command**:
-  ```bash
-  just -f append-scenario/justfile send-auto
-  ```
-- **Expect**: `kafka-avro-console-producer` reports successful writes. Iceberg now contains `iceberg.default.orders` with only V1 columns.
+## Step-by-Step Guide
 
-### Step 3 – Inspect the Table After V1
-- **Why**: Confirm that every Avro type (primitive, logical, complex) became the expected Iceberg column.
-- **Commands**:
-  ```bash
-  just -f append-scenario/justfile show-ddl
-  just -f append-scenario/justfile show-files
-  ```
-- **Expect**: `SHOW CREATE TABLE` lists scalar columns plus nested `ROW`, `ARRAY`, and `MAP` types. `show-files` reveals at least one Iceberg data file. Use this helper query to tie fields to values:
-  ```sql
-  SELECT order_id,
-         order_status,
-         shipping_address.city AS ship_city,
-         product_tags,
-         custom_attributes['loyalty-tier'] AS loyalty_tier
-  FROM iceberg.default.orders
-  ORDER BY order_id
-  LIMIT 5;
-  ```
+### Step 1: Create the Table Topic
 
-### Step 4 – Produce V2 Data (schema evolution)
-- **Why**: Send events encoded with `OrderV2.avsc` to introduce nullable columns, new collections, and nested structs.
-- **Command**:
-  ```bash
-  just -f append-scenario/justfile send-auto-v2
-  ```
-- **Expect**: Console producer succeeds; Schema Registry now holds a new version for the `orders` value subject.
+Let's start by creating the `orders` topic with Table Topic settings. This will serve as the sink for our data.
 
-### Step 5 – Verify the Evolved Table
-- **Why**: Show that Iceberg picked up every new field automatically and that old records remain readable.
-- **Commands**:
-  ```bash
-  just -f append-scenario/justfile show-ddl
-  just -f append-scenario/justfile show-history
-  ```
-- **Expect**: DDL output now includes nullable columns such as `total_amount`, `tax_amount`, `billing_address`, and `payment_status`. History shows two commits (V1 load then V2 load). Use this comparison query:
-  ```sql
-  SELECT order_id,
-         price,
-         total_amount,
-         tax_amount,
-         billing_address.country AS billing_country,
-         payment_status
-  FROM iceberg.default.orders
-  ORDER BY order_id DESC
-  LIMIT 10;
-  ```
-  V1 rows return `NULL` for V2-only columns; V2 rows include real values.
+```bash
+just -f append-scenario/justfile create-topic
+```
 
-### Step 6 – Explore and Document
-- **Why**: Capture evidence of the evolution for demos or docs.
-- **Commands (optional)**:
-  ```bash
-  just -f append-scenario/justfile query
-  just -f append-scenario/justfile show-manifests
-  ```
-- **Expect**: `query` runs a default `SELECT * LIMIT 20`. `show-manifests` proves Iceberg tracks files added during both schema versions. If you need a textual diff, save the DDL before and after Step 4 and run `diff -u`.
+Kafka will print either “Created topic orders” or “Topic already exists,” both of which are fine. No Iceberg artifacts are created yet.
 
-### Step 7 – Cleanup (when finished)
-- **Why**: Free resources.
-- **Command**:
-  ```bash
-  just down
-  ```
-- **Expect**: Docker containers stop; rerun `just up` next time you need the lab.
+### Step 2: Produce V1 Data (Baseline Schema)
 
-## 4. Reference: Avro → Iceberg Mapping
+Now, we'll register the initial `Order.avsc` schema and push some baseline records. This action will trigger Iceberg to automatically create the table.
+
+```bash
+just -f append-scenario/justfile send-auto
+```
+
+The `kafka-avro-console-producer` will report successful writes. You can now find an `iceberg.default.orders` table containing only the V1 columns.
+
+### Step 3: Inspect the V1 Table
+
+Let's confirm that every Avro type (primitive, logical, and complex) was mapped to the correct Iceberg column type.
+
+```bash
+just -f append-scenario/justfile show-ddl
+just -f append-scenario/justfile show-files
+```
+
+The `SHOW CREATE TABLE` output will list scalar columns plus nested `ROW`, `ARRAY`, and `MAP` types. The `show-files` command will reveal at least one Iceberg data file.
+
+You can use this helper query to connect fields to values:
+```sql
+SELECT order_id,
+       order_status,
+       shipping_address.city AS ship_city,
+       product_tags,
+       custom_attributes['k1'] AS attr_sample
+FROM iceberg.default.orders
+ORDER BY order_id
+LIMIT 5;
+```
+
+### Step 4: Produce V2 Data (Schema Evolution)
+
+Next, we'll send events encoded with `OrderV2.avsc`. This new schema version introduces nullable columns, new collections, and nested structs, putting schema evolution to the test.
+
+```bash
+just -f append-scenario/justfile send-auto-v2
+```
+
+The console producer should succeed, and Schema Registry will now have a new version for the `orders-value` subject.
+
+### Step 5: Verify the Evolved Table
+
+This step shows that Iceberg automatically picked up every new field and that old records remain perfectly readable.
+
+```bash
+just -f append-scenario/justfile show-ddl
+just -f append-scenario/justfile show-history
+```
+
+The DDL output now includes nullable columns like `total_amount`, `tax_amount`, `billing_address`, and `payment_status`. The table history will show two commits (one for the V1 load, one for V2).
+
+This comparison query makes the evolution clear:
+```sql
+SELECT order_id,
+       price,
+       total_amount,
+       tax_amount,
+       billing_address.country AS billing_country,
+       payment_status
+FROM iceberg.default.orders
+ORDER BY order_id DESC
+LIMIT 10;
+```
+Notice that V1 rows return `NULL` for V2-only columns, while V2 rows contain real values.
+
+### Step 6: Explore and Document (Optional)
+
+If you want to capture evidence of the evolution for demos or documentation, these commands are helpful.
+
+```bash
+just -f append-scenario/justfile query
+just -f append-scenario/justfile show-manifests
+```
+
+`query` runs a default `SELECT * LIMIT 20`. `show-manifests` proves Iceberg is tracking data files from both schema versions. For a textual diff, you can save the DDL output before and after Step 4 and run `diff -u`.
+
+### Step 7: Cleanup
+
+When you're finished, run this command to free up system resources.
+
+```bash
+just down
+```
+
+The Docker containers will stop. You can rerun `just up` the next time you want to use the lab.
+
+## Avro to Iceberg Type Mapping
 
 | Avro type / logical type | Iceberg type | Notes |
 | --- | --- | --- |
@@ -111,9 +132,9 @@ Each step follows the same rhythm: **Why** you should run it, the **Command**, w
 | `time-micros` | `time(6)` | — |
 | `timestamp` | `timestamp` | Millis/micros supported |
 
-> Optional fields must be expressed as `["null", type]` or `[type, "null"]`.
+> **Note**: Optional fields must be expressed as a union, like `["null", type]` or `[type, "null"]`.
 
-## 5. Wrap-Up
-- You created an Iceberg table purely by sending Avro payloads—no manual DDL.
-- Schema evolution required only producing with a new Avro schema; Iceberg reflected the change automatically.
-- The verification queries demonstrate how primitive, logical, and complex Avro types appear in Trino, making it easy to explain the feature to others.
+## Key Takeaways
+- You created an Iceberg table purely by sending Avro payloads—no manual DDL required.
+- Schema evolution was handled automatically just by producing records with a new Avro schema.
+- The verification queries show how primitive, logical, and complex Avro types appear in Trino, making it easy to see the feature in action.

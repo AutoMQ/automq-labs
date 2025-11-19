@@ -21,64 +21,44 @@ enum ProductStatus {
 
 message ProductData {
     // Basic product information
-    string product_id = 1;              // string
-    string name = 2;                    // string
-    string description = 3;             // string
-    double price = 4;                   // double
-    float discount_rate = 5;            // float
-    bool is_available = 6;              // bool
-    
-    // Inventory and sales
-    int32 stock_quantity = 7;           // int32
-    sint32 reserved_quantity = 8;       // sint32 (can be negative for adjustments)
-    uint32 total_sold = 9;              // uint32 (always positive)
-    int64 view_count = 10;              // int64
-    sint64 rating_sum = 11;             // sint64 (can be negative in theory)
-    uint64 total_revenue_cents = 12;    // uint64 (always positive, in cents)
-    
-    // Fixed-size numeric fields
-    fixed32 sku_hash = 13;              // fixed32 (hash of SKU)
-    sfixed32 warehouse_zone = 14;       // sfixed32
-    fixed64 barcode = 15;               // fixed64 (product barcode)
-    sfixed64 internal_id = 16;          // sfixed64
-    
-    // Binary and enum
-    bytes product_image = 17;           // bytes (image data or thumbnail)
-    ProductStatus status = 18;          // enum
-    
-    // Nested message
-    ProductCategory category = 19;      // nested message
-    
-    // Repeated fields
-    repeated string tags = 20;          // repeated string
-    repeated int32 related_product_ids = 21;  // repeated int32
-    
-    // Timestamp
-    google.protobuf.Timestamp created_at = 22;  // timestamp
-    google.protobuf.Timestamp updated_at = 23;  // timestamp
-    
-    // Optional field
-    optional string manufacturer = 24;   // optional string
-    
-    // Oneof field
+    string product_id = 1;
+    string name = 2;
+    double price = 3;
+    float discount_rate = 4;
+    bool is_available = 5;
+
+    // Numeric coverage
+    int32 stock_quantity = 6;          // signed int
+    uint64 view_count = 7;             // unsigned example
+    fixed32 sku_hash = 8;              // fixed-size example
+
+    // Binary & enum
+    bytes product_image = 9;
+    ProductStatus status = 10;
+
+    // Nested + repeated
+    ProductCategory category = 11;
+    repeated string tags = 12;
+    repeated ProductCategory sub_categories = 13;
+
+    // Timestamp + optional
+    google.protobuf.Timestamp created_at = 14;
+    google.protobuf.Timestamp updated_at = 15;
+    optional string manufacturer = 16;
+
+    // Oneof example
     oneof seller_info {
-        string seller_name = 25;
-        int32 seller_id = 26;
+        string seller_name = 17;
+        int32 seller_id = 18;
     }
-    
-    // Repeated nested message
-    repeated ProductCategory sub_categories = 27;
-    
-    // Using shared message types - cross-file reference example
-    Address warehouse_address = 28;
-    ContactInfo supplier_contact = 29;
-    repeated Address shipping_origins = 30;
 
-    // Map fields
-    map<string, string> attributes = 31;               // map<string, string>
-    map<string, int64> price_history = 32;             // map<string, int64>
-    map<string, TimeRange> availability_windows = 33;  // map<string, message>
+    // Shared message usage
+    Address warehouse_address = 19;
+    ContactInfo supplier_contact = 20;
+    repeated Address shipping_origins = 21;
 
-    // Repeated shared message
-    repeated ContactInfo vendor_contacts = 34;
+    // Maps
+    map<string, string> attributes = 22;
+    map<string, int64> price_history = 23;
+    map<string, TimeRange> availability_windows = 24;
 }

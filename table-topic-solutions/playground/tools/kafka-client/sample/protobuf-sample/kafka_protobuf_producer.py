@@ -23,64 +23,41 @@ class ProtobufKafkaProducer:
         fake = Faker()
         product = ProductData()
         
-        # Basic product information
         product.product_id = fake.uuid4()
         product.name = fake.catch_phrase()
-        product.description = fake.sentence()
         product.price = round(random.uniform(10.0, 10000.0), 2)
         product.discount_rate = round(random.uniform(0.0, 0.5), 2)
         product.is_available = random.choice([True, False])
-        
-        # Inventory and sales
+
         product.stock_quantity = random.randint(0, 1000)
-        product.reserved_quantity = random.randint(-50, 100)
-        product.total_sold = random.randint(0, 10000)
-        product.view_count = random.randint(0, 100000)
-        product.rating_sum = random.randint(-100, 5000)
-        product.total_revenue_cents = random.randint(0, 10000000)
-        
-        # Fixed-size numeric fields
-        product.sku_hash = random.randint(0, 2**32-1)
-        product.warehouse_zone = random.randint(-1000, 1000)
-        product.barcode = random.randint(0, 2**64-1)
-        product.internal_id = random.randint(-2**63, 2**63-1)
-        
-        # Binary and enum
-        product.product_image = fake.binary(length=100)
+        product.view_count = random.randint(0, 1_000_000)
+        product.sku_hash = random.randint(0, 2**32 - 1)
+
+        product.product_image = fake.binary(length=64)
         product.status = random.choice([ProductStatus.ACTIVE, ProductStatus.INACTIVE, ProductStatus.OUT_OF_STOCK])
-        
-        # Nested message
+
         product.category.name = fake.word()
         product.category.level = random.randint(1, 5)
-        
-        # Repeated fields
-        product.tags.extend([fake.word() for _ in range(random.randint(1, 5))])
-        product.related_product_ids.extend([random.randint(1, 1000) for _ in range(random.randint(0, 3))])
-        
-        # Timestamps
-        now = Timestamp()
-        now.GetCurrentTime()
-        product.created_at.CopyFrom(now)
-        product.updated_at.CopyFrom(now)
-        
-        # Optional field
-        if random.choice([True, False]):
-            product.manufacturer = fake.company()
-        
-        # Oneof field
-        if random.choice([True, False]):
-            product.seller_name = fake.name()
-        else:
-            product.seller_id = random.randint(1, 10000)
-        
-        # Repeated nested message
-        for _ in range(random.randint(0, 3)):
+        product.tags.extend([fake.word() for _ in range(random.randint(1, 4))])
+        for _ in range(random.randint(0, 2)):
             sub_cat = ProductCategory()
             sub_cat.name = fake.word()
             sub_cat.level = random.randint(1, 3)
             product.sub_categories.append(sub_cat)
-        
-        # Using shared Address type - cross-file reference example
+
+        now = Timestamp()
+        now.GetCurrentTime()
+        product.created_at.CopyFrom(now)
+        product.updated_at.CopyFrom(now)
+
+        if random.choice([True, False]):
+            product.manufacturer = fake.company()
+
+        if random.choice([True, False]):
+            product.seller_name = fake.name()
+        else:
+            product.seller_id = random.randint(1, 10_000)
+
         product.warehouse_address.street = fake.street_address()
         product.warehouse_address.city = fake.city()
         product.warehouse_address.postal_code = random.randint(10000, 99999)
@@ -88,15 +65,13 @@ class ProtobufKafkaProducer:
             product.warehouse_address.country = fake.country()
         if random.choice([True, False]):
             product.warehouse_address.state = fake.state()
-        
-        # Using shared ContactInfo type
+
         product.supplier_contact.email = fake.company_email()
         if random.choice([True, False]):
             product.supplier_contact.phone = fake.phone_number()
         if random.choice([True, False]):
             product.supplier_contact.website = fake.url()
-        
-        # Repeated Address
+
         for _ in range(random.randint(0, 2)):
             addr = Address()
             addr.street = fake.street_address()
@@ -104,8 +79,7 @@ class ProtobufKafkaProducer:
             addr.postal_code = random.randint(10000, 99999)
             product.shipping_origins.append(addr)
 
-        # Map fields
-        product.attributes["color"] = fake.color_name()
+        product.attributes["color"] = fake.safe_color_name()
         product.attributes["material"] = random.choice(["cotton", "leather", "steel", "plastic"])
         product.attributes["region"] = fake.country_code()
 
@@ -113,25 +87,17 @@ class ProtobufKafkaProducer:
             product.price_history[f"2025-{month:02d}"] = random.randint(1000, 200000)
 
         base_ts = int(time.time())
-        for label in ["WEEKDAY", "WEEKEND"]:
-            window = product.availability_windows[label]
-            start = base_ts + random.randint(0, 5) * 86400
-            window.start_timestamp = start
-            window.end_timestamp = start + random.randint(1, 3) * 86400
-
         promo_window = TimeRange()
         promo_window.start_timestamp = base_ts
         promo_window.end_timestamp = base_ts + 2 * 86400
         product.availability_windows["PROMO"].CopyFrom(promo_window)
 
-        # Repeated shared message
-        for _ in range(random.randint(1, 3)):
-            contact = product.vendor_contacts.add()
-            contact.email = fake.company_email()
-            if random.choice([True, False]):
-                contact.phone = fake.phone_number()
-            if random.choice([True, False]):
-                contact.website = fake.url()
+        weekday = product.availability_windows["WEEKDAY"]
+        weekday.start_timestamp = base_ts + 86400
+        weekday.end_timestamp = weekday.start_timestamp + 3600
+        weekend = product.availability_windows["WEEKEND"]
+        weekend.start_timestamp = base_ts + 2 * 86400
+        weekend.end_timestamp = weekend.start_timestamp + 7200
 
         future = self.producer.send(topic, value=product)
         result = future.get(timeout=10)
@@ -142,58 +108,40 @@ class ProtobufKafkaProducer:
         fake = Faker()
         user = UserData()
         
-        # Basic user information
         user.user_id = fake.uuid4()
         user.username = fake.user_name()
         user.email = fake.email()
         user.account_balance = round(random.uniform(0.0, 10000.0), 2)
         user.credit_score = round(random.uniform(300.0, 850.0), 1)
         user.is_verified = random.choice([True, False])
-        
-        # User metrics
+
         user.total_orders = random.randint(0, 500)
         user.loyalty_points = random.randint(-100, 5000)
-        user.successful_transactions = random.randint(0, 1000)
-        user.total_spent_cents = random.randint(0, 1000000)
-        user.review_score_sum = random.randint(-50, 500)
-        user.profile_views = random.randint(0, 100000)
-        
-        # Fixed-size fields
-        user.user_hash = random.randint(0, 2**32-1)
-        user.timezone_offset = random.randint(-720, 720)
-        user.phone_number = random.randint(1000000000, 9999999999)
-        user.internal_user_id = random.randint(-2**63, 2**63-1)
-        
-        # Binary and enum
-        user.profile_picture = fake.binary(length=50)
+        user.profile_views = random.randint(0, 1_000_000)
+
+        user.profile_picture = fake.binary(length=40)
         user.role = random.choice([UserRole.CUSTOMER, UserRole.SELLER, UserRole.ADMIN])
-        
-        # Nested message
+
         user.address.street = fake.street_address()
         user.address.city = fake.city()
         user.address.postal_code = random.randint(10000, 99999)
-        
-        # Repeated fields
-        user.interests.extend([fake.word() for _ in range(random.randint(1, 5))])
-        user.favorite_product_ids.extend([random.randint(1, 1000) for _ in range(random.randint(0, 5))])
-        
-        # Timestamps
+
+        user.interests.extend([fake.word() for _ in range(random.randint(1, 4))])
+        user.favorite_product_ids.extend([random.randint(1, 1000) for _ in range(random.randint(0, 3))])
+
         now = Timestamp()
         now.GetCurrentTime()
-        user.registered_at.seconds = int(time.time()) - random.randint(0, 365*24*3600)
+        user.registered_at.seconds = int(time.time()) - random.randint(0, 365 * 24 * 3600)
         user.last_login_at.CopyFrom(now)
-        
-        # Optional field
+
         if random.choice([True, False]):
             user.referral_code = fake.bothify(text='????-####')
-        
-        # Oneof field
+
         if random.choice([True, False]):
             user.contact_email = fake.email()
         else:
             user.contact_phone = random.randint(1000000000, 9999999999)
-        
-        # Repeated nested message
+
         for _ in range(random.randint(0, 2)):
             addr = Address()
             addr.street = fake.street_address()
@@ -201,7 +149,6 @@ class ProtobufKafkaProducer:
             addr.postal_code = random.randint(10000, 99999)
             user.shipping_addresses.append(addr)
 
-        # Map fields
         user.preferences["theme"] = random.choice(["light", "dark"])
         user.preferences["language"] = fake.language_code()
 
@@ -217,7 +164,6 @@ class ProtobufKafkaProducer:
         sms_contact.phone = fake.phone_number()
         user.contacts_by_channel["SMS"].CopyFrom(sms_contact)
 
-        # Repeated shared message
         for _ in range(random.randint(0, 2)):
             trusted = user.trusted_contacts.add()
             trusted.email = fake.email()

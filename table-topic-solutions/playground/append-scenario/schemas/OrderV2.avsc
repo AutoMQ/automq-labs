@@ -5,12 +5,10 @@
   "fields": [
     {"name": "order_id", "type": "long"},
     {"name": "product_name", "type": "string"},
-    {"name": "order_description", "type": "string"},
     {"name": "customer_email", "type": "string"},
     {"name": "price", "type": "double"},
     {"name": "quantity", "type": "int"},
     {"name": "is_paid", "type": "boolean"},
-    {"name": "discount_rate", "type": "float"},
     {"name": "payment_method", "type": "bytes"},
     {"name": "order_date", "type": {"type": "long", "logicalType": "timestamp-millis"}},
     {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-micros"}},
@@ -37,17 +35,10 @@
     },
     {"name": "product_tags", "type": {"type": "array", "items": "string"}, "default": []},
     {"name": "custom_attributes", "type": {"type": "map", "values": "string"}, "default": {}},
-    {"name": "product_prices", "type": {"type": "map", "values": "double"}, "default": {}},
 
     {"name": "total_amount", "type": "double", "default": 0.0},
-    {"name": "is_gift", "type": "boolean", "default": false},
-    {"name": "loyalty_points_used", "type": "int", "default": 0},
-
     {"name": "tax_amount", "type": ["null", "double"], "default": null},
-    {"name": "shipping_fee", "type": ["null", "double"], "default": null},
     {"name": "notes", "type": ["null", "string"], "default": null},
-    {"name": "gift_message", "type": ["null", "string"], "default": null},
-    {"name": "coupon_code", "type": ["null", "string"], "default": null},
     {
       "name": "estimated_delivery_date",
       "type": [
