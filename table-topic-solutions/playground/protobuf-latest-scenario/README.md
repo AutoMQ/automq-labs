@@ -41,6 +41,15 @@ just -f protobuf-latest-scenario/justfile create-user-topic
 
 Kafka will acknowledge the topic creations (or note that they already exist). At this stage, no Iceberg tables have been created.
 
+#### Key Configuration Parameters
+
+When creating the topic, several configurations control the Table Topic behavior:
+
+*   `automq.table.topic.enable=true`: Activates the Table Topic feature for this specific topic.
+*   `automq.table.topic.convert.value.type=by_latest_schema`: Instructs the broker to fetch the *latest* registered schema from the Schema Registry for decoding, rather than relying on an embedded Schema ID.
+*   `automq.table.topic.convert.value.by_latest_schema.message.full.name=...`: Specifies the fully qualified Protobuf message name (e.g., `examples.clients.proto.ProductData`) to look up in the registry.
+*   `automq.table.topic.transform.value.type=flatten`: Flattens the message structure into top-level Iceberg columns.
+
 ### Step 4: Produce Raw Protobuf Messages
 
 Send raw (unframed) Protobuf messages to Kafka. This triggers the server to fetch the latest schema from the registry for decoding.

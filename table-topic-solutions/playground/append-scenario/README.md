@@ -23,6 +23,14 @@ just -f append-scenario/justfile create-topic
 
 The command output will confirm that the topic `orders` has been created (or already exists). No Iceberg artifacts are created at this stage.
 
+#### Key Configuration Parameters
+
+When creating the topic, several configurations control the Table Topic behavior:
+
+*   `automq.table.topic.enable=true`: Activates the Table Topic feature for this specific topic.
+*   `automq.table.topic.convert.value.type=by_schema_id`: Instructs the broker to use the Schema ID embedded in the message (standard Confluent wire format) to resolve the Avro schema.
+*   `automq.table.topic.transform.value.type=flatten`: Flattens the message structure into top-level Iceberg columns.
+
 ### Step 2: Produce V1 Data (Baseline Schema)
 
 Register the initial `Order.avsc` schema and produce baseline records. This operation triggers the automatic creation of the Iceberg table.
