@@ -1,6 +1,6 @@
 # Scenario: Dynamic Protobuf Ingestion with `by_latest_schema`
 
-This scenario demonstrates a powerful feature: ingesting raw Protobuf messages *without* embedded schema IDs. You'll see how Table Topic fetches the latest schema from Schema Registry on the fly, allowing Iceberg tables to evolve automatically whenever you update your `.proto` files.
+This scenario demonstrates dynamic Protobuf ingestion using the `by_latest_schema` strategy. It illustrates how Table Topic fetches the latest schema from the Schema Registry on demand, enabling automatic Iceberg table evolution upon `.proto` file updates.
 
 This "late binding" approach is ideal for environments where producers can't or shouldn't be aware of schema IDs.
 
@@ -12,7 +12,7 @@ Before we begin, make sure the environment is up by running `just up` from the p
 
 ### Step 1: Register the Protobuf Schemas
 
-First, let's publish our Protobuf schemas (`common.proto`, `user.proto`, and `product.proto`) to the Schema Registry. This allows Table Topic to look them up by subject name later.
+Publish the Protobuf schemas (`common.proto`, `user.proto`, and `product.proto`) to the Schema Registry. This enables Table Topic to resolve them by subject name.
 
 ```bash
 just -f protobuf-latest-scenario/justfile register
@@ -32,7 +32,7 @@ You'll see a list of subjects and a pretty-printed JSON representation of the sc
 
 ### Step 3: Create the Table Topics
 
-Now, let's wire the Kafka topics (`product`, `user`) to Iceberg tables. We'll configure them with `automq.table.topic.convert.value.type=by_latest_schema` to enable the dynamic schema fetching behavior.
+Configure the Kafka topics (`product`, `user`) as Iceberg tables. The setting `automq.table.topic.convert.value.type=by_latest_schema` enables dynamic schema fetching.
 
 ```bash
 just -f protobuf-latest-scenario/justfile create-product-topic
@@ -43,7 +43,7 @@ Kafka will acknowledge the topic creations (or note that they already exist). At
 
 ### Step 4: Produce Raw Protobuf Messages
 
-Here, we'll send unframed Protobuf bytes to Kafka. This forces the server to fetch the latest schema from the registry to decode the data.
+Send raw (unframed) Protobuf messages to Kafka. This triggers the server to fetch the latest schema from the registry for decoding.
 
 ```bash
 just -f protobuf-latest-scenario/justfile send-product-raw
@@ -54,7 +54,7 @@ The Python producer will log successful sends. After this, Iceberg will material
 
 ### Step 5: Inspect the Generated Tables
 
-Let's prove that every Protobuf construct (like `repeated`, `map`, `enum`, nested messages, and timestamps) was mapped to the correct Iceberg type.
+Verify that all Protobuf constructs (including `repeated`, `map`, `enum`, nested messages, and timestamps) are correctly mapped to the corresponding Iceberg types.
 
 ```bash
 just -f protobuf-latest-scenario/justfile show-ddl product
@@ -63,7 +63,14 @@ just -f protobuf-latest-scenario/justfile show-ddl user
 
 The `SHOW CREATE TABLE` output will reveal `array`, `map`, and `row` columns. You'll also see special `_choice` columns for `oneof` fields.
 
-Run these helper queries to see the data in action:
+To inspect the data, open a Trino SQL shell:
+
+```bash
+docker compose exec trino trino
+```
+
+Then run these helper queries:
+
 ```sql
 -- Product data
 SELECT product_id,
@@ -92,9 +99,9 @@ just -f protobuf-latest-scenario/justfile show-files product
 
 The output will list the Parquet files and their corresponding record counts for the `product` table. You can do the same for the `user` table if you'd like.
 
-### Step 7: Bonus - Schema Evolution Drill
+### Step 7: Optional: Schema Evolution Drill
 
-To see how `by_latest_schema` handles changes dynamically, you can perform a quick schema evolution drill:
+To observe dynamic handling of schema changes, perform the following schema evolution drill:
 
 1.  Edit `protobuf-latest-scenario/scripts/schema/product.proto` and add a new field (e.g., `optional string warranty_code = 35;`).
 2.  Re-register the schema: `just -f protobuf-latest-scenario/justfile register`.
