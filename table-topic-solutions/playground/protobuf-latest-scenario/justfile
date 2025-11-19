@@ -6,6 +6,7 @@ default: help
 help:
     @echo "Protobuf latest-schema Scenario (raw + by_latest_schema)"
     @echo "  register                                Register sample protobuf schemas (required)"
+    @echo "  show-schemas                            Show registered schemas in Schema Registry"
     @echo "  create-product-topic [topic]            default: product (messageFullName)"
     @echo "  create-user-topic [topic]               default: user    (messageFullName)"
     @echo "  send-product-raw [topic]                default: product"
@@ -22,6 +23,16 @@ help:
 register:
     @echo "Registering sample protobuf schemas (user/product) to Schema Registry..."
     docker compose -f docker-compose.yml exec -w /home/kafka-client/sample/protobuf-sample kafka-client mvn schema-registry:register@register
+
+
+show-schemas:
+    @echo "Listing registered schemas in Schema Registry..."
+    docker compose -f docker-compose.yml exec -T schema-registry curl -s localhost:8081/subjects | jq .
+    @echo "Showing latest schema for each subject..."
+    for s in $(docker compose -f docker-compose.yml exec -T schema-registry curl -s localhost:8081/subjects | jq -r '.[]'); do \
+      echo "=== $s ==="; \
+      docker compose -f docker-compose.yml exec -T schema-registry curl -s localhost:8081/subjects/$s/versions/latest | jq .; \
+    done
 
 
 create-product-topic topic='product' message_full_name='examples.clients.proto.ProductData':

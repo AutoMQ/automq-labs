@@ -1,114 +1,161 @@
-# Scenario: Protobuf Ingestion with Latest Schema
+# Scenario: Dynamic Protobuf Ingestion with `by_latest_schema`
 
-## 1. Scenario Objective
+This scenario demonstrates dynamic Protobuf ingestion using the `by_latest_schema` strategy. It illustrates how Table Topic fetches the latest schema from the Schema Registry on demand, enabling automatic Iceberg table evolution upon `.proto` file updates.
 
-This scenario demonstrates how to ingest raw **Protobuf** messages into an Iceberg table. Unlike Avro, these messages are not framed with a schema ID. Instead, the server decodes the raw Protobuf bytes by fetching the **latest registered schema** for a specific subject from the Schema Registry.
+This "late binding" approach is ideal for environments where producers can't or shouldn't be aware of schema IDs.
 
-## 2. Core Configuration
+## Getting Started
 
-This scenario relies on the following key Table Topic configurations for server-side Protobuf decoding:
-- `automq.table.topic.convert.value.type=by_latest_schema`: Instructs the server to decode the message payload by fetching the latest schema version associated with a given subject.
-- `automq.table.topic.convert.value.subject`: Specifies the subject name in Schema Registry to look up (e.g., `product-value`).
-- `automq.table.topic.convert.value.message.full.name`: Specifies the fully qualified name of the Protobuf message type to use for decoding
-- `automq.table.topic.transform.value.type=flatten`: Map the fields inside the Kafka record's value into top-level table columns (the key is not used for column mapping).
+Before we begin, make sure the environment is up by running `just up` from the playground root. All subsequent commands should also be run from there. Our scripts assume Schema Registry is available at `http://schema-registry:8081`.
 
-## 3. Steps to Run
+## Step-by-Step Guide
 
-Follow these steps to run the demonstration.
+### Step 1: Register the Protobuf Schemas
 
-### Step 1: Start Services
-
-This command starts the base services required for the scenario.
-
-```bash
-just up
-```
-
-### Step 2: Register Protobuf Schemas
-
-This command uses a Maven plugin to compile and register the `.proto` schema files (`user.proto`, `product.proto`) with the Schema Registry. This step is required so the server can fetch them later for decoding.
+Publish the Protobuf schemas (`common.proto`, `user.proto`, and `product.proto`) to the Schema Registry. This enables Table Topic to resolve them by subject name.
 
 ```bash
 just -f protobuf-latest-scenario/justfile register
 ```
 
-### Step 3: Create Table Topics
+Maven will report successful registration for `common-value`, `user-value`, and `product-value`. Schema Registry now tracks the cross-file references between them.
 
-These commands create two Table Topics, `product` and `user`, each configured to use the latest schema of a specific subject for decoding.
+### Step 2: Inspect Registered Subjects (Optional)
+
+You can verify that the subjects and versions are in the registry before producing data. This is also a great sanity check for demos.
 
 ```bash
-# Create the 'product' topic
-just -f protobuf-latest-scenario/justfile create-product-topic
+just -f protobuf-latest-scenario/justfile show-schemas
+```
 
-# Create the 'user' topic
+You'll see a list of subjects and a pretty-printed JSON representation of the schemas, confirming that `examples.clients.proto.ProductData` and `UserData` are available.
+
+### Step 3: Create the Table Topics
+
+Configure the Kafka topics (`product`, `user`) as Iceberg tables. The setting `automq.table.topic.convert.value.type=by_latest_schema` enables dynamic schema fetching.
+
+```bash
+just -f protobuf-latest-scenario/justfile create-product-topic
 just -f protobuf-latest-scenario/justfile create-user-topic
 ```
 
-### Step 4: Produce Raw Protobuf Data
+Kafka will acknowledge the topic creations (or note that they already exist). At this stage, no Iceberg tables have been created.
 
-These commands produce raw, unframed Protobuf messages to their respective topics.
+#### Key Configuration Parameters
+
+When creating the topic, several configurations control the Table Topic behavior:
+
+*   `automq.table.topic.enable=true`: Activates the Table Topic feature for this specific topic.
+*   `automq.table.topic.convert.value.type=by_latest_schema`: Instructs the broker to fetch the *latest* registered schema from the Schema Registry for decoding, rather than relying on an embedded Schema ID.
+*   `automq.table.topic.convert.value.by_latest_schema.message.full.name=...`: Specifies the fully qualified Protobuf message name (e.g., `examples.clients.proto.ProductData`) to look up in the registry.
+*   `automq.table.topic.transform.value.type=flatten`: Flattens the message structure into top-level Iceberg columns.
+
+### Step 4: Produce Raw Protobuf Messages
+
+Send raw (unframed) Protobuf messages to Kafka. This triggers the server to fetch the latest schema from the registry for decoding.
 
 ```bash
-# Produce a product record
 just -f protobuf-latest-scenario/justfile send-product-raw
-
-# Produce a user record
 just -f protobuf-latest-scenario/justfile send-user-raw
 ```
 
-### Step 5: View Table DDL
+The Python producer will log successful sends. After this, Iceberg will materialize the `iceberg.default.product` and `iceberg.default.user` tables, complete with dozens of columns each.
 
-Inspect the table definitions created for the topics.
+### Step 5: Inspect the Generated Tables
+
+Verify that all Protobuf constructs (including `repeated`, `map`, `enum`, nested messages, and timestamps) are correctly mapped to the corresponding Iceberg types.
 
 ```bash
-# DDL for the 'product' table
 just -f protobuf-latest-scenario/justfile show-ddl product
-
-# DDL for the 'user' table
 just -f protobuf-latest-scenario/justfile show-ddl user
 ```
 
-### Step 6: View Table Info
+The `SHOW CREATE TABLE` output will reveal `array`, `map`, and `row` columns. You'll also see special `_choice` columns for `oneof` fields.
 
-Inspect table metadata via Iceberg metadata tables.
+To inspect the data, open a Trino SQL shell:
 
 ```bash
-# For 'product'
-just -f protobuf-latest-scenario/justfile show-snapshots product
-just -f protobuf-latest-scenario/justfile show-history product
+docker compose exec trino trino
+```
+
+Then run these helper queries:
+
+```sql
+-- Product data
+SELECT product_id,
+       attributes['color'] AS color,
+       availability_windows['WEEKDAY'].start_timestamp AS weekday_start,
+       warehouse_address.city AS warehouse_city
+FROM iceberg.default.product
+LIMIT 5;
+
+-- User data
+SELECT user_id,
+       preferences['theme'] AS theme,
+       contacts_by_channel['EMAIL'].email AS email_contact,
+       trusted_contacts[1].email AS backup_contact
+FROM iceberg.default."user"
+LIMIT 5;
+```
+
+### Step 6: Explore Iceberg Metadata (Optional)
+
+To show your audience that the ingestion process really wrote data files to the table, run the following command.
+
+```bash
 just -f protobuf-latest-scenario/justfile show-files product
-just -f protobuf-latest-scenario/justfile show-manifests product
-
-# For 'user'
-just -f protobuf-latest-scenario/justfile show-snapshots user
-just -f protobuf-latest-scenario/justfile show-history user
-just -f protobuf-latest-scenario/justfile show-files user
-just -f protobuf-latest-scenario/justfile show-manifests user
 ```
 
-### Step 7: Query Iceberg Data
+The output will list the Parquet files and their corresponding record counts for the `product` table. You can do the same for the `user` table if you'd like.
 
-Query the newly created Iceberg tables via Trino to see the structured, decoded data.
+### Step 7: Optional: Schema Evolution Drill
 
-```bash
-# Query the 'product' table
-just -f protobuf-latest-scenario/justfile query-product
+To observe dynamic handling of schema changes, perform the following schema evolution drill:
 
-# Query the 'user' table
-just -f protobuf-latest-scenario/justfile query-user
-```
+1.  Edit `protobuf-latest-scenario/scripts/schema/product.proto` and add a new field (e.g., `optional string warranty_code = 35;`).
+2.  Re-register the schema: `just -f protobuf-latest-scenario/justfile register`.
+3.  Produce another message: `just -f protobuf-latest-scenario/justfile send-product-raw`.
+4.  Check the DDL again. You'll see the new nullable Iceberg column appear automatically!
 
-## 4. Expected Outcome
+### Step 8: Cleanup
 
-1.  **Schemas Registered**: The `product-value` and `user-value` subjects are successfully registered in Schema Registry.
-2.  **Iceberg Table Creation**: Two Iceberg tables, `product` and `user`, are created in the `iceberg.default` database.
-3.  **Server-Side Decoding**: The Table Topic service successfully decodes the raw Protobuf byte streams by fetching the latest schemas from Schema Registry and maps the Kafka record value fields into the corresponding tables.
-4.  **Query Verification**: Queries against the `product` and `user` tables in Trino return structured, readable data.
-
-## 5. Cleanup
-
-Run the following command to stop and remove all Docker containers started for this scenario.
+When you're done, free up the system resources.
 
 ```bash
 just down
 ```
+
+The Docker stack will stop. Rerun `just up` the next time you need the lab.
+
+## Protobuf to Iceberg Type Mapping
+
+| Protobuf Type | Iceberg Type | Notes |
+| :--- | :--- | :--- |
+| `int32`, `sint32`, `sfixed32` | `int` | Stored as signed integer |
+| `uint32`, `fixed32` | `int` | Iceberg does not natively support unsigned types; **large values may wrap/overflow.** |
+| `int64`, `sint64`, `sfixed64` | `long` | Stored as signed long |
+| `uint64`, `fixed64` | `long` | Iceberg does not natively support unsigned types; **beware of overflow.** |
+| `float` | `float` | — |
+| `double` | `double` | — |
+| `bool` | `bool` | — |
+| `string` | `string` | — |
+| `bytes` | `binary` | — |
+| `enum` | `string` | The symbol string value is stored. |
+| `repeated` | `list` |  |
+| `map` | `map` |  |
+| `message` | `struct` | Proto2 `group` fields are not supported. |
+| `google.protobuf.Timestamp` | `timestamp-micros` | Converted to microsecond timestamp (`timestamp(6)`). |
+
+
+**Limitations**
+
+* **Proto2 `group` fields** and **recursive** message definitions are **not supported**.
+* **Unsigned integers** (`uint32`, `fixed32`, `uint64`, `fixed64`) do not have a native Iceberg equivalent. They are stored using the corresponding **signed type** (`int` or `long`), which may lead to **overflow or data corruption** if the values exceed the signed type's maximum range.
+
+---
+
+## Key Takeaways
+
+* You ingested Protobuf data without embedding schema IDs—**Table Topic** fetched the schemas on demand.
+* **Iceberg tables** were created automatically, correctly reflecting every `repeated`, `map`, `enum`, and **nested field** from your `.proto` files.
+* Re-registering a new schema version **instantly and automatically** updates the table structure for future writes, **all without restarting any services**.

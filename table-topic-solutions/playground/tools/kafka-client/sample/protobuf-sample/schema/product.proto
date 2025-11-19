@@ -2,14 +2,109 @@ syntax = "proto3";
 
 package examples.clients.proto;
 
-import "user.proto";
+import "google/protobuf/timestamp.proto";
+import "common.proto";
 
 option java_outer_classname = "Product";
 
+message ProductCategory {
+    string name = 1;
+    int32 level = 2;
+}
+
+enum ProductStatus {
+    PRODUCT_STATUS_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    INACTIVE = 2;
+    OUT_OF_STOCK = 3;
+}
+
 message ProductData {
-  string product_id = 1;
-  string name = 2;
-  string description = 3;
-  double price = 4;
-  UserData seller = 5;
+    // Basic product information
+    string product_id = 1;
+    string name = 2;
+    double price = 3;
+    float discount_rate = 4;
+    bool is_available = 5;
+
+    // Numeric coverage
+    int32 stock_quantity = 6;          // signed int
+    uint64 view_count = 7;             // unsigned example
+    fixed32 sku_hash = 8;              // fixed-size example
+
+    // Binary & enum
+    bytes product_image = 9;
+    ProductStatus status = 10;
+
+    // Nested + repeated
+    ProductCategory category = 11;
+    repeated string tags = 12;
+    repeated ProductCategory sub_categories = 13;
+
+    // Timestamp + optional
+    google.protobuf.Timestamp created_at = 14;
+    google.protobuf.Timestamp updated_at = 15;
+    optional string manufacturer = 16;
+
+    // Oneof example
+    oneof seller_info {
+        string seller_name = 17;
+        int32 seller_id = 18;
+    }
+
+    // Shared message usage
+    Address warehouse_address = 19;
+    ContactInfo supplier_contact = 20;
+    repeated Address shipping_origins = 21;
+
+    // Maps
+    map<string, string> attributes = 22;
+    map<string, int64> price_history = 23;
+    map<string, TimeRange> availability_windows = 24;
+
+    // Complex nested types for advanced testing
+    map<string, DataValue> complex_attributes = 30;
+    repeated Item items = 31;
+    Metadata extra_metadata = 32;
+    bytes metadata_bytes = 33;
+    uint64 timestamp_uint64 = 34;
+}
+
+message DataValue {
+  oneof kind {
+    bool bool_value = 1;
+    int64 int_value = 2;
+    double float_value = 3;
+    string string_value = 4;
+    BooleanArray bool_array = 5;
+    IntegerArray int_array = 6;
+    FloatArray float_array = 7;
+    StringArray string_array = 8;
+  }
+}
+
+message BooleanArray {
+  repeated bool values = 1;
+}
+
+message IntegerArray {
+  repeated int64 values = 1;
+}
+
+message FloatArray {
+  repeated double values = 1;
+}
+
+message StringArray {
+  repeated string values = 1;
+}
+
+message Metadata {
+  int64 sequence_number = 1;
+  bool is_active = 2;
+}
+
+message Item {
+  string name = 1;
+  bytes data = 2;
 }

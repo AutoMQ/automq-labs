@@ -5,8 +5,78 @@
   "fields": [
     {"name": "order_id", "type": "long"},
     {"name": "product_name", "type": "string"},
-    {"name": "order_description", "type": ["null", "string"], "default": null},
-    {"name": "price", "type": "double", "default": 0.0},
-    {"name": "quantity", "type": "long", "default": 0}
+    {"name": "customer_email", "type": "string"},
+    {"name": "price", "type": "double"},
+    {"name": "quantity", "type": "int"},
+    {"name": "is_paid", "type": "boolean"},
+    {"name": "payment_method", "type": "bytes"},
+    {"name": "order_date", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "created_at", "type": {"type": "long", "logicalType": "timestamp-micros"}},
+    {
+      "name": "shipping_address",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "namespace": "demo.append",
+        "fields": [
+          {"name": "street", "type": "string"},
+          {"name": "city", "type": "string"},
+          {"name": "postal_code", "type": "string"}
+        ]
+      }
+    },
+    {
+      "name": "order_status",
+      "type": {
+        "type": "enum",
+        "name": "OrderStatus",
+        "symbols": ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"]
+      }
+    },
+    {"name": "product_tags", "type": {"type": "array", "items": "string"}, "default": []},
+    {"name": "custom_attributes", "type": {"type": "map", "values": "string"}, "default": {}},
+
+    {"name": "total_amount", "type": "double", "default": 0.0},
+    {"name": "tax_amount", "type": ["null", "double"], "default": null},
+    {"name": "notes", "type": ["null", "string"], "default": null},
+    {
+      "name": "estimated_delivery_date",
+      "type": [
+        "null",
+        {"type": "long", "logicalType": "timestamp-millis"}
+      ],
+      "default": null
+    },
+
+    {"name": "related_order_ids", "type": {"type": "array", "items": "long"}, "default": []},
+    {"name": "metadata", "type": {"type": "map", "values": "string"}, "default": {}},
+
+    {
+      "name": "billing_address",
+      "type": [
+        "null",
+        {
+          "type": "record",
+          "name": "BillingAddress",
+          "namespace": "demo.append",
+          "fields": [
+            {"name": "street", "type": "string"},
+            {"name": "city", "type": "string"},
+            {"name": "postal_code", "type": "string"},
+            {"name": "country", "type": "string"}
+          ]
+        }
+      ],
+      "default": null
+    },
+    {
+      "name": "payment_status",
+      "type": {
+        "type": "enum",
+        "name": "PaymentStatus",
+        "symbols": ["UNPAID", "PAID", "REFUNDED", "PARTIALLY_REFUNDED"]
+      },
+      "default": "UNPAID"
+    }
   ]
 }

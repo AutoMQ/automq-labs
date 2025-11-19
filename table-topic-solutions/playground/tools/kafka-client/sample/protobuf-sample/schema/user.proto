@@ -2,10 +2,60 @@ syntax = "proto3";
 
 package examples.clients.proto;
 
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
 option java_outer_classname = "User";
 
+enum UserRole {
+    USER_ROLE_UNSPECIFIED = 0;
+    CUSTOMER = 1;
+    SELLER = 2;
+    ADMIN = 3;
+}
+
 message UserData {
-  string user_id = 1;
-  string name = 2;
-  string email = 3;
+    // Basic user information
+    string user_id = 1;
+    string username = 2;
+    string email = 3;
+    double account_balance = 4;
+    float credit_score = 5;
+    bool is_verified = 6;
+
+    // Metrics
+    int32 total_orders = 7;
+    sint32 loyalty_points = 8;
+    uint64 profile_views = 9;
+
+    // Binary + enum
+    bytes profile_picture = 10;
+    UserRole role = 11;
+
+    // Nested + repeated
+    Address address = 12;
+    repeated string interests = 13;
+    repeated int32 favorite_product_ids = 14;
+
+    // Timestamps
+    google.protobuf.Timestamp registered_at = 15;
+    google.protobuf.Timestamp last_login_at = 16;
+
+    // Optional + oneof
+    optional string referral_code = 17;
+    oneof contact_method {
+        string contact_email = 18;
+        int64 contact_phone = 19;
+    }
+
+    // Shared repeated structures
+    repeated Address shipping_addresses = 20;
+
+    // Maps
+    map<string, string> preferences = 21;
+    map<string, ContactInfo> contacts_by_channel = 22;
+    map<string, int64> login_counts = 23;
+
+    // Repeated shared message
+    repeated ContactInfo trusted_contacts = 24;
 }
