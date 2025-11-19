@@ -6,7 +6,7 @@ import time
 from typing import Tuple
 from kafka import KafkaProducer
 from user_pb2 import UserData, UserRole
-from product_pb2 import ProductData, ProductCategory, ProductStatus
+from product_pb2 import ProductData, ProductCategory, ProductStatus, DataValue, Item, Metadata
 from common_pb2 import Address, ContactInfo, TimeRange
 from faker import Faker
 from google.protobuf.timestamp_pb2 import Timestamp
@@ -98,6 +98,39 @@ class ProtobufKafkaProducer:
         weekend = product.availability_windows["WEEKEND"]
         weekend.start_timestamp = base_ts + 2 * 86400
         weekend.end_timestamp = weekend.start_timestamp + 7200
+
+        # Populate new complex fields
+        # 1. complex_attributes (map<string, DataValue>)
+        # String value
+        slogan_val = DataValue()
+        slogan_val.string_value = fake.bs()
+        product.complex_attributes["marketing_slogan"].CopyFrom(slogan_val)
+
+        # Int value
+        score_val = DataValue()
+        score_val.int_value = random.randint(100, 999)
+        product.complex_attributes["internal_score"].CopyFrom(score_val)
+
+        # String Array
+        colors_val = DataValue()
+        colors_val.string_array.values.extend([fake.color_name() for _ in range(3)])
+        product.complex_attributes["available_colors"].CopyFrom(colors_val)
+
+        # 2. items (repeated Item)
+        for _ in range(random.randint(1, 3)):
+            item = product.items.add()
+            item.name = fake.file_name()
+            item.data = fake.binary(length=16)
+
+        # 3. extra_metadata (Metadata)
+        product.extra_metadata.sequence_number = random.randint(1, 100000)
+        product.extra_metadata.is_active = random.choice([True, False])
+
+        # 4. metadata_bytes
+        product.metadata_bytes = fake.binary(length=32)
+
+        # 5. timestamp_uint64
+        product.timestamp_uint64 = int(time.time() * 1000)
 
         future = self.producer.send(topic, value=product)
         result = future.get(timeout=10)

@@ -61,4 +61,50 @@ message ProductData {
     map<string, string> attributes = 22;
     map<string, int64> price_history = 23;
     map<string, TimeRange> availability_windows = 24;
+
+    // Complex nested types for advanced testing
+    map<string, DataValue> complex_attributes = 30;
+    repeated Item items = 31;
+    Metadata extra_metadata = 32;
+    bytes metadata_bytes = 33;
+    uint64 timestamp_uint64 = 34;
+}
+
+message DataValue {
+  oneof kind {
+    bool bool_value = 1;
+    int64 int_value = 2;
+    double float_value = 3;
+    string string_value = 4;
+    BooleanArray bool_array = 5;
+    IntegerArray int_array = 6;
+    FloatArray float_array = 7;
+    StringArray string_array = 8;
+  }
+}
+
+message BooleanArray {
+  repeated bool values = 1;
+}
+
+message IntegerArray {
+  repeated int64 values = 1;
+}
+
+message FloatArray {
+  repeated double values = 1;
+}
+
+message StringArray {
+  repeated string values = 1;
+}
+
+message Metadata {
+  int64 sequence_number = 1;
+  bool is_active = 2;
+}
+
+message Item {
+  string name = 1;
+  bytes data = 2;
 }
