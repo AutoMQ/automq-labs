@@ -1,4 +1,4 @@
-# Lab: Append-Only Ingestion with Avro & Schema Evolution
+# Scenario: Append-Only Ingestion with Avro & Schema Evolution
 
 Welcome! This lab demonstrates how to stream Avro events into an Apache Iceberg table and watch as Table Topic automatically handles schema evolution. 
 
@@ -114,27 +114,31 @@ The Docker containers will stop. You can rerun `just up` the next time you want 
 
 ## Avro to Iceberg Type Mapping
 
-| Avro type / logical type | Iceberg type | Notes |
-| --- | --- | --- |
+| Avro Type / Logical Type | Iceberg Type | Notes |
+| :--- | :--- | :--- |
 | `boolean` | `boolean` | — |
-| `int` | `integer` | Includes `date`, `time-millis` logicals |
-| `long` | `bigint` | Includes `timestamp-millis/micros` logicals |
-| `float` | `real` | — |
+| `int` | `int` | — |
+| `long` | `long` | — |
+| `float` | `float` | — |
 | `double` | `double` | — |
-| `bytes` | `varbinary` | Used for `decimal`, `fixed` |
-| `string` | `varchar` | `uuid` logical type maps to Iceberg `uuid` |
-| `record` | `row(...)` | Nested struct; recursion not supported |
-| `array` | `array(...)` | — |
-| `map` | `map(varchar, …)` | Keys are strings |
-| `fixed` | `varbinary` / `fixed` | Size preserved |
-| `decimal(p,s)` | `decimal(p,s)` | Requires logical annotation |
+| `bytes` | `binary` | — |
+| `string` | `string` | — |
+| `record` | `struct` | — |
+| `array` | `list` | — |
+| `list<struct{key, value}>` | `map` | **Non-string keys are supported** using Avro logicalType=map array record structure. |
+| `fixed` | `fixed` | — |
+| `decimal` | `decimal` | — |
+| `uuid` | `uuid` | — |
 | `date` | `date` | — |
-| `time-micros` | `time(6)` | — |
-| `timestamp` | `timestamp` | Millis/micros supported |
+| `time` | `time` | `time-millis` / `time-micros` logical types are mapped to Iceberg `TIME` (`LocalTime`). **Precision is unified to microseconds.** |
+| `timestamp` | `timestamp` | `timestamp-micros` / `timestamp-millis` (including `adjust-to-utc` logical types) are mapped to Iceberg `TIMESTAMP`. |
 
-> **Note**: Optional fields must be expressed as a union, like `["null", type]` or `[type, "null"]`.
+> **Note**: Optional fields must be expressed as a union, like `["null", type]` or `[type, "null"]`. **Unions containing multiple non-null types are not supported.**
+
+---
 
 ## Key Takeaways
-- You created an Iceberg table purely by sending Avro payloads—no manual DDL required.
-- Schema evolution was handled automatically just by producing records with a new Avro schema.
-- The verification queries show how primitive, logical, and complex Avro types appear in Trino, making it easy to see the feature in action.
+
+* You created an Iceberg table purely by sending Avro payloads—**no manual DDL required**.
+* **Schema evolution** was handled automatically just by producing records with a new Avro schema.
+* The verification queries show how primitive, logical, and complex Avro types appear in Trino, making it easy to see the feature in action.

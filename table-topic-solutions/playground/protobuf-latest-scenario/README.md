@@ -1,4 +1,4 @@
-# Lab: Dynamic Protobuf Ingestion with `by_latest_schema`
+# Scenario: Dynamic Protobuf Ingestion with `by_latest_schema`
 
 This scenario demonstrates a powerful feature: ingesting raw Protobuf messages *without* embedded schema IDs. You'll see how Table Topic fetches the latest schema from Schema Registry on the fly, allowing Iceberg tables to evolve automatically whenever you update your `.proto` files.
 
@@ -113,28 +113,33 @@ The Docker stack will stop. Rerun `just up` the next time you need the lab.
 
 ## Protobuf to Iceberg Type Mapping
 
-| Protobuf concept | Iceberg type | Notes |
-| --- | --- | --- |
-| `repeated T` | `array<T>` | Repeated messages become `array(row(...))` |
-| `map<K,V>` | `map(varchar, …)` | Keys are strings; message values become `row(...)` |
-| `int32`, `sint32`, `sfixed32` | `integer` | Stored as signed |
-| `uint32`, `fixed32` | `integer` | Iceberg stores as signed; large values may wrap |
-| `int64`, `sint64`, `sfixed64` | `bigint` | Stored as signed |
-| `uint64`, `fixed64` | `bigint` | Stored as signed; beware of overflow |
-| `bool` | `boolean` | — |
-| `float` | `real` | — |
+| Protobuf Type | Iceberg Type | Notes |
+| :--- | :--- | :--- |
+| `int32`, `sint32`, `sfixed32` | `int` | Stored as signed integer |
+| `uint32`, `fixed32` | `int` | Iceberg does not natively support unsigned types; **large values may wrap/overflow.** |
+| `int64`, `sint64`, `sfixed64` | `long` | Stored as signed long |
+| `uint64`, `fixed64` | `long` | Iceberg does not natively support unsigned types; **beware of overflow.** |
+| `float` | `float` | — |
 | `double` | `double` | — |
-| `string` | `varchar` | — |
-| `bytes` | `varbinary` | — |
-| `enum` | `varchar` | The symbol string is stored |
-| `message` | `row(...)` | Proto2 `group` fields are not supported |
-| `google.protobuf.Timestamp` | `timestamp(6)` | Converted to microseconds |
+| `bool` | `bool` | — |
+| `string` | `string` | — |
+| `bytes` | `binary` | — |
+| `enum` | `string` | The symbol string value is stored. |
+| `repeated` | `list` |  |
+| `map` | `map` |  |
+| `message` | `struct` | Proto2 `group` fields are not supported. |
+| `google.protobuf.Timestamp` | `timestamp-micros` | Converted to microsecond timestamp (`timestamp(6)`). |
 
-**Limitations**:
-- Proto2 `group` fields and recursive message definitions are not supported.
-- Unsigned integers do not have a native Iceberg equivalent and may overflow if their values exceed the range of the corresponding signed type.
+
+**Limitations**
+
+* **Proto2 `group` fields** and **recursive** message definitions are **not supported**.
+* **Unsigned integers** (`uint32`, `fixed32`, `uint64`, `fixed64`) do not have a native Iceberg equivalent. They are stored using the corresponding **signed type** (`int` or `long`), which may lead to **overflow or data corruption** if the values exceed the signed type's maximum range.
+
+---
 
 ## Key Takeaways
-- You ingested Protobuf data without embedding schema IDs—Table Topic fetched the schemas on demand.
-- Iceberg tables were created automatically, correctly reflecting every `repeated`, `map`, `enum`, and nested field from your `.proto` files.
-- Re-registering a new schema version instantly and automatically updates the table structure for future writes, all without restarting any services.
+
+* You ingested Protobuf data without embedding schema IDs—**Table Topic** fetched the schemas on demand.
+* **Iceberg tables** were created automatically, correctly reflecting every `repeated`, `map`, `enum`, and **nested field** from your `.proto` files.
+* Re-registering a new schema version **instantly and automatically** updates the table structure for future writes, **all without restarting any services**.
