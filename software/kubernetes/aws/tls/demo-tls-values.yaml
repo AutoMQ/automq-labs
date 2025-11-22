@@ -20,9 +20,9 @@ global:
     ssl.keystore.key=${your-pem-server-private-key}
     ssl.keystore.certificate.chain=${your-pem-server-certificate-chain}
   livenessProbe:
-    probePort: 9102
+    probePort: 9122
   readinessProbe:
-    probePort: 9102
+    probePort: 9122
 
 #  ----- node affinities -----
 #  nodeAffinities:
