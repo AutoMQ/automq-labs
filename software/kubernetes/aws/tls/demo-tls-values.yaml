@@ -1,0 +1,150 @@
+global:
+  cloudProvider:
+    name: aws
+    credentials: static://?accessKey=${accessKey}&secretKey=${secretKey}
+  config: |
+    s3.ops.buckets=1@s3://${ops-bucket}?region=${region}&endpoint=${endpoint}
+    s3.data.buckets=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
+    # EBS WAL
+    s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
+    # if you choose S3 WAL, replace the following with your bucket config.
+    # s3.wal.path=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
+    # TLS Settings
+    listener.name.client_mtls.ssl.client.auth=required
+    automq.dns.client_sasl_ssl.zone.id=Z01696121FWO9XAKR29PA
+    automq.dns.client_sasl_ssl.hostname.pattern=${PodIp}-${AvailabilityZone}-${InstanceId}
+    automq.dns.client_mtls.zone.id=Z01696121FWO9XAKR29PA
+    automq.dns.client_mtls.hostname.pattern=${PodIp}-${AvailabilityZone}-${InstanceId}
+    ssl.truststore.type=PEM
+    ssl.truststore.certificates=-----BEGIN CERTIFICATE-----\nMIIDBzCCAe+gAwIBAgIUFL3Ccuiuxkm85seRvcuJb0DFRhUwDQYJKoZIhvcNAQEL\nBQAwEzERMA8GA1UEAwwIS2Fma2EtQ0EwHhcNMjUxMDA5MTQ1MTQwWhcNMjYxMDA5\nMTQ1MTQwWjATMREwDwYDVQQDDAhLYWZrYS1DQTCCASIwDQYJKoZIhvcNAQEBBQAD\nggEPADCCAQoCggEBAKtWolB19vSa6ErZ+L/M7y/3KuJKyyfVKsn1vzmcPaEWFsF7\nOL0S9MpzYCCD2Q2d0fkT9g8/C9mTZRmBzJ5Gu/6cv7Y4PMihn+tfixCC3m4X5WGB\n+KdgNB/O5g+129W8p9LIlkvt9bnXLvRZEwTfmmHEW44jqVXQwldDP3nVXbDVHuOW\nAu2uA79lhx9tU0rw04PoKYtddvgiC+T3EOBPpLXMnSPlx1tbPqLruV98q4WXgptN\nIgtcDG2xlLBi/OnoM6jnmFly4CPQ/8RCkdzQhO3vf3JQ8dcrRN+lOlOGXqaYQ4hi\nEeNC22BSXhgyFW/chvR3JJqvjW1f2Qd7rrtrqIcCAwEAAaNTMFEwHQYDVR0OBBYE\nFF1JwZKZ1yGEg83HACQOBrTEcVAMMB8GA1UdIwQYMBaAFF1JwZKZ1yGEg83HACQO\nBrTEcVAMMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAJ71tAiM\nBVZjK4+S39HWSdU8nqNznYdG2aZesqapIVUQrw7kWLMmJm4+Vb0nY0/co6bzqiMD\nuENtocbueiVNyNXaDtasEZDkowKl2rUpV0AKldWTlXzaiPj81twKgi7p4oUmtzmG\nFZSANJUFsddklkiEEsDUinOTYfgxKDoUVGyKN/+rPPKily2ylNDE0QT1vEQBKj1X\n89D2r1RXv35MC1VawQst5MlekrpxIjWWSCKRF5ICFa0qoOFHPhs+lvYL0sJDIorI\nLpDYub8ntSkkH1i+eE8OpVtyZfOYlCKBQ07pAF2aBomPaC0AexZ6N2lPIqOQKEdS\njGy2ypFicaOBH+g\=\n-----END CERTIFICATE-----\n
+    ssl.keystore.type=PEM
+    ssl.keystore.key=-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC2EgDF+AhCFtQb\nb8PHBCMkLsmVHWh48Bs+4KQzffbehnB/g3/v2F8uudy2wgub1KE4MvqBeaGD8vxA\n8pGb2YD3kgIdT0IV/SdscBhFjjpXulxRwPKjbhRKGUyQTdU+2rEwM6Sremb9h0w3\nOALme4k8k83/ited7W+J2U1NqLZ8w2WfU0MLIwVHXQlGe7VH2Pp2Ni8e+bt/cP2L\n6iUHS0f3wm9J/AkON1606BdPrXJg6Iz1hO0ZJ37bHZ7+H2OO2nMjSJEo1hGKz/Zd\ngu3a8O6w/U9lJYzuAgiZxhnymuOHjoEQLjPwfJAqxvIhK2XNvq74DP3A0N7dhyYz\nJzEG00aFAgMBAAECggEADA2bOKqKd2pAo/QCm1yngT10sbcG7nICHRKXjuNw/KXH\nRvXFujMnh/XHdLTaD7ikQflup97NZb69WtpZb95sC9esuqkqKD+rBLd+BTAc0NJ2\nSqDnSeZKGGazhh5qS9Uuo5DY/v4lLnWuwr1l7xawt46BtcAItVHdj1wP9/W/kPjs\n1JKQufJvB9FPLLJoId5RGan3eDRpjHH6L65WjRTw27bsWzxkKSww3TgeJSw/rCdl\nnGDrEpr/sAewZ+hdPP4B3vGyrciUkpj+fPNH/xG0weJMQs0oaCTh7LtwYFXlg/ri\nVEWxNMWDRBPmUKq7USV6Aalpyaz+tmjPSpPk1ZdZQQKBgQDsna44PSnkLzB1/sT2\nYC0cYNWqZtLX4fE6+yv2qrwXANAJDD0dOUkavsUtDi5NBgAF2MTzac3izSNy4cRk\nMospCGgpttKGs+4oFoqQW4IHjfO1HDRMp2nK+qVsaVOt53nfv/h2z/5at0m3jqRr\n5jf+swhGDVcUpxn5nrs5/6L4QQKBgQDE/GO4Zdk/fLCDDaNLOSuzIPFsSTB3rFZf\n7G5VQr1x+r20DhgYJ+QrIB/u9swQT4fqVBSd2LVo4CHjAdTSA3esCYZhDeBLimbz\njqQWxNiYxbeXYMLDHgQsHqV83/7BMfj3xEg8/myS5AcAw0XXDdt/9egeH9UWdUuh\n6Kzs4AcdRQKBgE2EArVN5FFq3DdrtV75dw3a82SVtvEehgbKjkaK/H+UtpKgPc07\nHSXz5WizQpvdIVjJAQy1Vsu8ZKaYK9yfalOQ+37e8+1JOPZNHCvarqiG6pYknUWX\neuMSZes0PkO0l4qju2RBE5Togu/tfRQUIbgBMu6wJB0R+UJ7q95+TweBAoGATSjr\nysQiV+r4nS0PZJzNUEo8JwV4NbhM0SAki8Mrv+TOwCOxLm0ZxAa+W3VSs6TjgVdU\nCAxl6uG4hFooSedPzhShDY1I6W4aK5cZEU4j5Zu08VfWkmVEjx+mBQccnAJ+GldJ\nUJL8ZoFpeNQEnFtyOmpRdNNVPYnOiWpBqjuKrd0CgYA0rPN5r/swn7ph0BXI9cCR\n7s0zMQcQLhZoXOWM6QB0NpPjtGeAcGg1INILns+h0flNFpnTqoh+RkET2Pls4dP9\nXjeLyRj82fIukw0aGMxdjJMGT/2PwAuEQWV3Ne39Zj4PNW9gR0K7lo3qXoCiUUvg\nvjWexcd9J0UGL+Dcfg1J6g\=\=\n-----END PRIVATE KEY-----\n
+    ssl.keystore.certificate.chain=-----BEGIN CERTIFICATE-----\nMIIFSDCCBDCgAwIBAgIUZ8BbTOGeIkRDlbQiQANpBnuIqckwDQYJKoZIhvcNAQEL\nBQAwEzERMA8GA1UEAwwIS2Fma2EtQ0EwHhcNMjUxMDA5MTQ1MTQwWhcNMjYxMDA5\nMTQ1MTQwWjAXMRUwEwYDVQQDDAxrYWZrYS1zZXJ2ZXIwggEiMA0GCSqGSIb3DQEB\nAQUAA4IBDwAwggEKAoIBAQC2EgDF+AhCFtQbb8PHBCMkLsmVHWh48Bs+4KQzffbe\nhnB/g3/v2F8uudy2wgub1KE4MvqBeaGD8vxA8pGb2YD3kgIdT0IV/SdscBhFjjpX\nulxRwPKjbhRKGUyQTdU+2rEwM6Sremb9h0w3OALme4k8k83/ited7W+J2U1NqLZ8\nw2WfU0MLIwVHXQlGe7VH2Pp2Ni8e+bt/cP2L6iUHS0f3wm9J/AkON1606BdPrXJg\n6Iz1hO0ZJ37bHZ7+H2OO2nMjSJEo1hGKz/Zdgu3a8O6w/U9lJYzuAgiZxhnymuOH\njoEQLjPwfJAqxvIhK2XNvq74DP3A0N7dhyYzJzEG00aFAgMBAAGjggKOMIICijCC\nAkYGA1UdEQSCAj0wggI5gmNhdXRvbXEtcmVsZWFzZS1rYWZrYS1jb250cm9sbGVy\nLTAuYXV0b21xLXJlbGVhc2Uta2Fma2EtY29udHJvbGxlci1oZWFkbGVzcy5hdXRv\nbXEuc3ZjLmNsdXN0ZXIubG9jYWyCY2F1dG9tcS1yZWxlYXNlLWthZmthLWNvbnRy\nb2xsZXItMS5hdXRvbXEtcmVsZWFzZS1rYWZrYS1jb250cm9sbGVyLWhlYWRsZXNz\nLmF1dG9tcS5zdmMuY2x1c3Rlci5sb2NhbIJjYXV0b21xLXJlbGVhc2Uta2Fma2Et\nY29udHJvbGxlci0yLmF1dG9tcS1yZWxlYXNlLWthZmthLWNvbnRyb2xsZXItaGVh\nZGxlc3MuYXV0b21xLnN2Yy5jbHVzdGVyLmxvY2FsgkMqLmF1dG9tcS1yZWxlYXNl\nLWthZmthLWNvbnRyb2xsZXItaGVhZGxlc3MuYXV0b21xLnN2Yy5jbHVzdGVyLmxv\nY2Fsgj8qLmF1dG9tcS1yZWxlYXNlLWthZmthLWJyb2tlci1oZWFkbGVzcy5hdXRv\nbXEuc3ZjLmNsdXN0ZXIubG9jYWyCQWF1dG9tcS1yZWxlYXNlLWthZmthLWNvbnRy\nb2xsZXItaGVhZGxlc3MuYXV0b21xLnN2Yy5jbHVzdGVyLmxvY2Fsgi1hdXRvbXEt\ncmVsZWFzZS1rYWZrYS5hdXRvbXEuc3ZjLmNsdXN0ZXIubG9jYWyCECouYXV0b21x\nLnByaXZhdGUwHQYDVR0OBBYEFDOiGoTkGoT5FPIebrlUFTUoVpeiMB8GA1UdIwQY\nMBaAFF1JwZKZ1yGEg83HACQOBrTEcVAMMA0GCSqGSIb3DQEBCwUAA4IBAQBPMQl8\nZEl4YqmmQPMltxkZVeiU9mfe1K5yvK3GFHE/NLahyg9OTPkT5DPUmZ3tU60ocyfH\nHzoS92Chqwb+0um8sGCRbm2CRflEl3RjHp4tP/EXYN9PLu1rVcGqVMbLUyai//96\ncRptCYGTrSqYigxmgFR0jHetuvPqHbj1SA+MDOaQNUGPTvkxG2slKEZdMuK/KW2A\nwQajBacH1QynrGIwr2fa9KUtbc4uJXZU0YMTx91BGjvw6aW/N8SJ8pSXoA4OZhP1\n9gfuOr9u/mA3a3Gs8JFUeLHDn7ig03Q47kblJG4pxf3aTH22h6PZtO2/lgy+XQzo\nbe1BS7hdUYWc/UQR\n-----END CERTIFICATE-----\n
+  livenessProbe:
+    probePort: 9102
+  readinessProbe:
+    probePort: 9102
+
+#  ----- node affinities -----
+#  nodeAffinities:
+#    - key: "eks.amazonaws.com/nodegroup"
+#      values:
+#        - "${your-node-group-name}"
+#    - key: "node.kubernetes.io/instance-type"
+#      values:
+#        - "r6in.large"
+
+listeners:
+  controller:
+    - containerPort: 9103
+      name: CONTROLLER_SASL
+      protocol: SASL_PLAINTEXT
+  interbroker:
+    - containerPort: 9102
+      name: BROKER_SASL
+      protocol: SASL_PLAINTEXT
+  client:
+    - containerPort: 9122
+      protocol: SASL_SSL
+      name: CLIENT_MTLS
+    - containerPort: 9112
+      protocol: SASL_SSL
+      name: CLIENT_SASL_SSL
+
+controller:
+  create: true
+  replicas: 3
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
+  persistence:
+    metadata:
+      enabled: true
+      storageClass: "gp2"
+      size: "20Gi"
+    wal:
+      enabled: true
+      # gp2 is the default storage class in AWS EKS.
+      # If you're using a different storage class, please update it here.
+      # Similar to Apache Kafka, AutoMQ requires a small disk to store metadata.
+      storageClass: "gp2"
+      size: "20Gi"
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+      # replace the following with your bucket config.
+    - name: "KAFKA_S3_ACCESS_KEY"
+      value: "${accessKey}"
+    - name: "KAFKA_S3_SECRET_KEY"
+      value: "${secretKey}"
+broker:
+  create: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
+  persistence:
+    wal:
+      enabled: true
+      # gp2 is the default storage class in AWS EKS.
+      # If you're using a different storage class, please update it here.
+      # Similar to Apache Kafka, AutoMQ requires a small disk to store metadata.
+      storageClass: "gp2"
+      size: "20Gi"
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+      # replace the following with your bucket config.
+    - name: "KAFKA_S3_ACCESS_KEY"
+      value: "${accessKey}"
+    - name: "KAFKA_S3_SECRET_KEY"
+      value: "${secretKey}"
+
+# ---- ACL Configurations ----
+acl:
+  enabled: true
+  superUsers:
+    - _automq
+
+
+# ---- JAAS Configurations ----
+sasl:
+  controller:
+    password: ${password}
+    user: _automq
+  interbroker:
+    password: ${passowrd}
+    user: _automq
+
+# ---- TLS Configurations ----
+tls:
+  selfConfigure: true
+
+# ---- LoadBalancer ------
+externalAccess:
+  controller:
+    enabled: true
+    service:
+      loadBalancerAnnotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      extraPorts:
+        - name: "tcp-9122"
+          port: 9122
+          protocol: "TCP"
+          targetPort: 9122
