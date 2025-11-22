@@ -2,6 +2,7 @@ global:
   cloudProvider:
     name: aws
     credentials: static://?accessKey=${accessKey}&secretKey=${secretKey}
+  automqInstanceId: ${your-instance-id}
   config: |
     s3.ops.buckets=1@s3://${ops-bucket}?region=${region}&endpoint=${endpoint}
     s3.data.buckets=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
