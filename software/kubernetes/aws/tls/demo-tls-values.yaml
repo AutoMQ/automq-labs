@@ -11,10 +11,8 @@ global:
     # s3.wal.path=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
     # TLS Settings
     listener.name.client_mtls.ssl.client.auth=required
-    automq.dns.client_sasl_ssl.zone.id=Z01696121FWO9XAKR29PA
-    automq.dns.client_sasl_ssl.hostname.pattern=${PodIp}-${AvailabilityZone}-${InstanceId}
-    automq.dns.client_mtls.zone.id=Z01696121FWO9XAKR29PA
-    automq.dns.client_mtls.hostname.pattern=${PodIp}-${AvailabilityZone}-${InstanceId}
+    automq.dns.client_sasl_ssl.zone.id=${private-hosted-zone-id}
+    automq.dns.client_mtls.zone.id=${private-hosted-zone-id}
     ssl.truststore.type=PEM
     ssl.truststore.certificates=-----BEGIN CERTIFICATE-----\nMIIDBzCCAe+gAwIBAgIUFL3Ccuiuxkm85seRvcuJb0DFRhUwDQYJKoZIhvcNAQEL\nBQAwEzERMA8GA1UEAwwIS2Fma2EtQ0EwHhcNMjUxMDA5MTQ1MTQwWhcNMjYxMDA5\nMTQ1MTQwWjATMREwDwYDVQQDDAhLYWZrYS1DQTCCASIwDQYJKoZIhvcNAQEBBQAD\nggEPADCCAQoCggEBAKtWolB19vSa6ErZ+L/M7y/3KuJKyyfVKsn1vzmcPaEWFsF7\nOL0S9MpzYCCD2Q2d0fkT9g8/C9mTZRmBzJ5Gu/6cv7Y4PMihn+tfixCC3m4X5WGB\n+KdgNB/O5g+129W8p9LIlkvt9bnXLvRZEwTfmmHEW44jqVXQwldDP3nVXbDVHuOW\nAu2uA79lhx9tU0rw04PoKYtddvgiC+T3EOBPpLXMnSPlx1tbPqLruV98q4WXgptN\nIgtcDG2xlLBi/OnoM6jnmFly4CPQ/8RCkdzQhO3vf3JQ8dcrRN+lOlOGXqaYQ4hi\nEeNC22BSXhgyFW/chvR3JJqvjW1f2Qd7rrtrqIcCAwEAAaNTMFEwHQYDVR0OBBYE\nFF1JwZKZ1yGEg83HACQOBrTEcVAMMB8GA1UdIwQYMBaAFF1JwZKZ1yGEg83HACQO\nBrTEcVAMMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAJ71tAiM\nBVZjK4+S39HWSdU8nqNznYdG2aZesqapIVUQrw7kWLMmJm4+Vb0nY0/co6bzqiMD\nuENtocbueiVNyNXaDtasEZDkowKl2rUpV0AKldWTlXzaiPj81twKgi7p4oUmtzmG\nFZSANJUFsddklkiEEsDUinOTYfgxKDoUVGyKN/+rPPKily2ylNDE0QT1vEQBKj1X\n89D2r1RXv35MC1VawQst5MlekrpxIjWWSCKRF5ICFa0qoOFHPhs+lvYL0sJDIorI\nLpDYub8ntSkkH1i+eE8OpVtyZfOYlCKBQ07pAF2aBomPaC0AexZ6N2lPIqOQKEdS\njGy2ypFicaOBH+g\=\n-----END CERTIFICATE-----\n
     ssl.keystore.type=PEM
