@@ -47,7 +47,7 @@ Run the following command to install AutoMQ in a dedicated namespace:
 
 ```shell
 helm install automq-release oci://automq.azurecr.io/helm/automq-enterprise \
-  -f demo-values.yaml \
+  -f static/demo-static-values.yaml \
   --version 5.2.0 \
   --namespace automq \
   --create-namespace
