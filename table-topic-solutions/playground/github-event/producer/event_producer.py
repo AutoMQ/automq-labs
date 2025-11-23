@@ -66,8 +66,8 @@ class GithubEventMapper:
         return record
 
 def format_hour_key(dt):
-    """Format datetime to GH Archive filename format: YYYY-MM-DD-HH"""
-    return dt.strftime("%Y-%m-%d-%H")
+    """Format datetime to GH Archive filename format: YYYY-MM-DD-H (single digit hour)"""
+    return f"{dt.strftime('%Y-%m-%d')}-{dt.hour}"
 
 
 def get_initial_start_hour():
@@ -260,7 +260,7 @@ def run_continuous_producer():
         processed_in_cycle = 0
         while current_hour < target_hour:
             date_str = current_hour.strftime("%Y-%m-%d")
-            hour_str = current_hour.strftime("%H")
+            hour_str = str(current_hour.hour)  # Single digit hour (0-23)
             
             try:
                 count = process_hour(date_str, hour_str, producer, avro_serializer)
