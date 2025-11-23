@@ -2,7 +2,9 @@ import json
 import gzip
 import shutil
 import os
+import sys
 import time
+import logging
 import requests
 import dateutil.parser
 from datetime import datetime, timedelta, timezone
@@ -11,10 +13,27 @@ from confluent_kafka.schema_registry import SchemaRegistryClient
 from confluent_kafka.schema_registry.avro import AvroSerializer
 from confluent_kafka.serialization import SerializationContext, MessageField
 
+# Configure logging
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+# Create a stream handler with unbuffered output
+handler = logging.StreamHandler(sys.stdout)
+handler.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Configure root logger
+root_logger = logging.getLogger()
+root_logger.setLevel(getattr(logging, LOG_LEVEL, logging.INFO))
+root_logger.handlers = []  # Clear existing handlers
+root_logger.addHandler(handler)
+
+logger = logging.getLogger(__name__)
+
 # ================= Configuration =================
 KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'automq:9092')
 SCHEMA_REGISTRY_URL = os.getenv('SCHEMA_REGISTRY_URL', 'http://schema-registry:8081')
 TOPIC_NAME = os.getenv('TOPIC_NAME', 'github_events_iceberg')
+KAFKA_DEBUG = os.getenv('KAFKA_DEBUG', '')  # Set to 'all' or 'broker,topic,msg' for debug logs
 
 # Read Avro Schema
 schema_path = os.path.join(os.path.dirname(__file__), 'github_event.avsc')
@@ -69,14 +88,25 @@ def get_target_hour():
 
 def process_hour(date_str, hour, producer, avro_serializer):
     """Process data for a single hour"""
+    start_time = time.time()
+    delivery_success = 0
+    delivery_failed = 0
+    
     def delivery_report(err, msg):
-        if err: 
-            print(f"Delivery failed: {err}")
+        nonlocal delivery_success, delivery_failed
+        if err:
+            delivery_failed += 1
+            logger.error(f"❌ Delivery failed: {err}")
+        else:
+            delivery_success += 1
+            # Log detailed delivery info only at debug level
+            if logger.level == logging.DEBUG:
+                logger.debug(f"✅ Message delivered: topic={msg.topic()}, partition={msg.partition()}, offset={msg.offset()}")
 
     # Download & Process
     file_name = f"{date_str}-{hour}.json.gz"
     url = f"https://data.gharchive.org/{file_name}"
-    print(f"📥 Processing: {url}")
+    logger.info(f"📥 Processing: {url}")
 
     try:
         # Stream download and decompress
@@ -118,24 +148,31 @@ def process_hour(date_str, hour, producer, avro_serializer):
                         producer.poll(0)
                     # Print progress every 2000 messages
                     if count % 2000 == 0:
-                        print(f"  ↳ Sent {count} events...")
+                        logger.info(f"  ↳ Sent {count} events...")
                         
                 except Exception as e:
-                    print(f"  ⚠️ Error processing line: {e}")
+                    logger.warning(f"  ⚠️ Error processing line: {e}")
                     continue
         
-        producer.flush()
-        print(f"✅ Completed: {count} events sent from {url}")
+        # Flush remaining messages
+        logger.debug("Flushing producer...")
+        producer.flush(timeout=30)
+        
+        elapsed = time.time() - start_time
+        rate = count / elapsed if elapsed > 0 else 0
+        logger.info(f"✅ Completed: {count} events sent from {url} in {elapsed:.2f}s ({rate:.0f} events/sec)")
+        logger.info(f"   Delivery stats: {delivery_success} successful, {delivery_failed} failed")
         return count
 
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 404:
-            print(f"⚠️ Data not available yet: {url} (404)")
+            logger.warning(f"⚠️ Data not available yet: {url} (404)")
             return 0
         else:
+            logger.error(f"❌ HTTP error processing {url}: {e}")
             raise
     except Exception as e:
-        print(f"❌ Error processing {url}: {e}")
+        logger.error(f"❌ Error processing {url}: {e}", exc_info=True)
         raise
     finally:
         if os.path.exists(file_name):
@@ -144,23 +181,55 @@ def process_hour(date_str, hour, producer, avro_serializer):
 
 def run_continuous_producer():
     """Main loop for continuously running producer"""
-    print("=" * 60)
-    print("🚀 Starting Continuous GH Archive Producer")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("🚀 Starting Continuous GH Archive Producer")
+    logger.info("=" * 60)
     
     # Setup Kafka (initialize outside loop to avoid repeated creation)
-    print("📡 Initializing Kafka producer...")
-    schema_registry_client = SchemaRegistryClient({'url': SCHEMA_REGISTRY_URL})
-    avro_serializer = AvroSerializer(schema_registry_client, SCHEMA_STR)
+    logger.info("📡 Initializing Kafka producer...")
+    logger.info(f"   Bootstrap servers: {KAFKA_BOOTSTRAP_SERVERS}")
+    logger.info(f"   Topic: {TOPIC_NAME}")
+    logger.info(f"   Schema Registry: {SCHEMA_REGISTRY_URL}")
+    
+    try:
+        schema_registry_client = SchemaRegistryClient({'url': SCHEMA_REGISTRY_URL})
+        logger.info("✅ Schema Registry client created")
+        avro_serializer = AvroSerializer(schema_registry_client, SCHEMA_STR)
+        logger.info("✅ Avro serializer created")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize Schema Registry: {e}", exc_info=True)
+        raise
+    
     # Configure Producer: increase queue size for higher throughput
     producer_config = {
         'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS,
         'queue.buffering.max.messages': 100000,  # Increase queue size
         'queue.buffering.max.kbytes': 1048576,  # 1GB
         'batch.num.messages': 10000,  # Batch size
+        'log.connection.close': True,  # Log connection close events
     }
-    producer = Producer(producer_config)
-    print("✅ Kafka producer initialized")
+    
+    # Add debug configuration if specified
+    if KAFKA_DEBUG:
+        producer_config['debug'] = KAFKA_DEBUG
+        logger.info(f"🔍 Kafka debug enabled: {KAFKA_DEBUG}")
+    
+    try:
+        producer = Producer(producer_config)
+        logger.info("✅ Kafka producer created")
+        
+        # Test connection
+        logger.info("🔌 Testing Kafka connection...")
+        metadata = producer.list_topics(timeout=10)
+        logger.info(f"✅ Connected to Kafka. Available topics: {len(metadata.topics)}")
+        if TOPIC_NAME in metadata.topics:
+            topic_metadata = metadata.topics[TOPIC_NAME]
+            logger.info(f"✅ Topic '{TOPIC_NAME}' exists with {len(topic_metadata.partitions)} partitions")
+        else:
+            logger.warning(f"⚠️  Topic '{TOPIC_NAME}' not found! It may be created automatically.")
+    except Exception as e:
+        logger.error(f"❌ Failed to connect to Kafka: {e}", exc_info=True)
+        raise
     
     # Use variable to track last processed hour (stateless operation)
     last_processed_hour = None
@@ -169,22 +238,23 @@ def run_continuous_producer():
     if last_processed_hour is None:
         # First run, start from 3 days ago
         current_hour = get_initial_start_hour()
-        print(f"🆕 Starting from {format_hour_key(current_hour)} (3 days ago)")
+        logger.info(f"🆕 Starting from {format_hour_key(current_hour)} (3 days ago)")
     else:
         # Resume from last processed time point
         current_hour = last_processed_hour + timedelta(hours=1)
-        print(f"🔄 Resuming from {format_hour_key(current_hour)}")
+        logger.info(f"🔄 Resuming from {format_hour_key(current_hour)}")
     
     cycle_count = 0
     while True:
         cycle_count += 1
-        print(f"\n{'='*60}")
-        print(f"📊 Cycle #{cycle_count} - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
-        print(f"{'='*60}")
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info(f"📊 Cycle #{cycle_count} - {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        logger.info("=" * 60)
         
         target_hour = get_target_hour()
-        print(f"🎯 Target hour: {format_hour_key(target_hour)} (3 hours ago)")
-        print(f"📍 Current hour: {format_hour_key(current_hour)}")
+        logger.info(f"🎯 Target hour: {format_hour_key(target_hour)} (3 hours ago)")
+        logger.info(f"📍 Current hour: {format_hour_key(current_hour)}")
         
         # Process all hours that need processing
         processed_in_cycle = 0
@@ -201,26 +271,28 @@ def run_continuous_producer():
                     current_hour += timedelta(hours=1)
                 else:
                     # Data not available (possibly 404), wait before retrying
-                    print(f"⏳ Waiting 60 seconds before retrying...")
+                    logger.info(f"⏳ Waiting 60 seconds before retrying...")
                     time.sleep(60)
                     # Don't update current_hour, will retry in next cycle
                     break
                     
             except Exception as e:
-                print(f"❌ Failed to process {format_hour_key(current_hour)}: {e}")
-                print(f"⏳ Waiting 60 seconds before retrying...")
+                logger.error(f"❌ Failed to process {format_hour_key(current_hour)}: {e}", exc_info=True)
+                logger.info(f"⏳ Waiting 60 seconds before retrying...")
                 time.sleep(60)
                 # Don't update current_hour, will retry in next cycle
                 break
         
         if processed_in_cycle > 0:
-            print(f"\n✅ Cycle completed: Processed {processed_in_cycle} hours")
+            logger.info("")
+            logger.info(f"✅ Cycle completed: Processed {processed_in_cycle} hours")
         else:
-            print(f"\n⏸️  No new data to process (caught up to {format_hour_key(target_hour)})")
+            logger.info("")
+            logger.info(f"⏸️  No new data to process (caught up to {format_hour_key(target_hour)})")
         
         # Wait before next check (target time advances with current time)
         wait_seconds = 300  # 5 minutes
-        print(f"⏳ Waiting {wait_seconds} seconds before next cycle...")
+        logger.info(f"⏳ Waiting {wait_seconds} seconds before next cycle...")
         time.sleep(wait_seconds)
 
 if __name__ == "__main__":
@@ -228,9 +300,7 @@ if __name__ == "__main__":
     try:
         run_continuous_producer()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Producer stopped by user")
+        logger.info("\n\n⚠️  Producer stopped by user")
     except Exception as e:
-        print(f"\n\n❌ Fatal error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"\n\n❌ Fatal error: {e}", exc_info=True)
         raise
