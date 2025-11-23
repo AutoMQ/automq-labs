@@ -7,14 +7,14 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=automq:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
     networks:
-      - playground_default
+      - table_topic_playground
 
   debug:
     image: curlimages/curl
     container_name: github-event-debug
     command: ["sleep", "infinity"]
     networks:
-      - playground_default
+      - table_topic_playground
 
   marimo:
     image: tabulario/spark-iceberg
@@ -40,10 +40,10 @@ services:
       marimo run analysis.py --host 0.0.0.0 --port 2718
       "
     networks:
-      - playground_default
+      - table_topic_playground
 
 networks:
-  playground_default:
+  table_topic_playground:
     external: true
-    name: playground_default
+    name: table_topic_playground
 

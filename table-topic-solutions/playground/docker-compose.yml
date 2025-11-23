@@ -41,6 +41,8 @@ services:
     depends_on:
       - minio
       - mc
+    networks:
+      - table_topic_playground
 
   minio:
     image: minio/minio:RELEASE.2025-05-24T17-08-30Z
@@ -59,6 +61,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 3
+    networks:
+      - table_topic_playground
 
   mc:
     image: minio/mc:RELEASE.2025-05-21T01-59-54Z
@@ -81,6 +85,8 @@ services:
       /usr/bin/mc anonymous set public minio/warehouse;
       tail -f /dev/null
       "
+    networks:
+      - table_topic_playground
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
@@ -101,6 +107,8 @@ services:
       interval: 10s
       timeout: 60s
       retries: 30
+    networks:
+      - table_topic_playground
 
   kafka-client:
     build: ./tools/kafka-client
@@ -113,6 +121,8 @@ services:
     command: ["/home/kafka-client/setup.sh"]
     volumes:
       - ./tools/kafka-client:/home/kafka-client
+    networks:
+      - table_topic_playground
 
   rest:
     image: apache/iceberg-rest-fixture
@@ -136,6 +146,8 @@ services:
       timeout: 5s
       retries: 20
       start_period: 30s
+    networks:
+      - table_topic_playground
 
   spark-iceberg:
     image: tabulario/spark-iceberg
@@ -155,6 +167,8 @@ services:
       - 8080:8080
       - 10000:10000
       - 10001:10001
+    networks:
+      - table_topic_playground
 
   trino:
     image: trinodb/trino:472
@@ -167,3 +181,9 @@ services:
       - "8090:8080"
     volumes:
       - ./tools/trino-catalog:/etc/trino/catalog
+    networks:
+      - table_topic_playground
+
+networks:
+  table_topic_playground:
+    name: table_topic_playground
