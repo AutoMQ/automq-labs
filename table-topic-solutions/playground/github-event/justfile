@@ -1,0 +1,31 @@
+# AutoMQ TableTopic Playground - Github Event
+set working-directory := ".."
+default: help
+
+help:
+    @echo "AutoMQ TableTopic — Github Event Analysis"
+    @echo "========================"
+    @echo "Commands:"
+    @echo "  topic-create         - Create github_events_iceberg topic"
+    @echo "  producer-up          - Start the event producer"
+    @echo "  query                - Query the Iceberg table using Spark SQL"
+    @echo "  marimo-up            - Start Marimo notebook"
+    @echo ""
+
+topic-create:
+    @echo "Creating topic github_events_iceberg..."
+    @just topic-create-table github_events_iceberg
+    @echo "Topic created."
+
+producer-up:
+    @echo "Starting producer (rebuilding)..."
+    docker compose -f github-event/docker-compose.yml up -d --build producer
+
+query:
+    @echo "Querying table..."
+    @just spark-sql "SELECT id, type, actor_login, repo_name, created_at FROM default.github_events_iceberg ORDER BY created_at DESC LIMIT 20;"
+
+marimo-up:
+    @echo "Starting Marimo..."
+    docker compose -f github-event/docker-compose.yml up -d --build marimo
+    @echo "Marimo is running at http://localhost:2718"

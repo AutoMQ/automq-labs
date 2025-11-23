@@ -1,0 +1,99 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.18.0"
+  },
+  "cells": [
+    {
+      "id": "vblA",
+      "code_hash": "9603a950b0dd6755b55c2962e55e06c7",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"github-events-real-time-analytics\">\ud83d\ude80 GitHub Events Real-Time Analytics</h1>\n<span class=\"paragraph\">This demo showcases <strong><a href=\"https://github.com/AutoMQ/automq\" rel=\"noopener\" target=\"_blank\">AutoMQ</a> Table Topic</strong> - automatically converting Kafka topics into Apache Iceberg tables for real-time analytics.</span>\n<span class=\"paragraph\"><strong>Data Source</strong>: <a href=\"https://www.gharchive.org/\" rel=\"noopener\" target=\"_blank\">GH Archive</a> - Public GitHub timeline events\n<strong>Technology</strong>: AutoMQ Table Topic (Zero ETL, Real-time Ingestion)</span>\n<hr /></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Hbol",
+      "code_hash": "9fd47fcbc968984087dfcfb2ea01a412",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "c6356ebb44e440d8d19f448dcf271284",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "da806a0f11fd58be0135857042103c09",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "e665443a525c28719bc420c3c3d18ad1",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"live-github-events-data\">\ud83d\udcca Live GitHub Events Data</h2></span><span class=\"markdown prose dark:prose-invert contents\"><span class=\"paragraph\"><em>Last updated: 05:52:20 \u2022 Auto-refresh every 10 seconds</em></span></span></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "3d936869866a2df6d96b561f1991c59a",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "b85c8fa93518d7fc75b2b6ea8ecdd59f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><h3 id=\"recent-github-events\">Recent GitHub Events</h3></span><marimo-ui-element object-id='Xref-0' random-id='92e9cfa4-abf9-2afe-86de-df04b2e01f17'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;[{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709190&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;WatchEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;luxl&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;henrygd/beszel&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709271&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;PushEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;github-actions[bot]&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;xrwt/degisiklik-yapan-sistem&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709237&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;PushEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;Research-Trends&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;Research-Trends/DataExplorar&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709193&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;PushEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;github-actions[bot]&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;acefrogge/CS-RSS-Feed&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709261&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;WatchEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;Arslangjr&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;AstroX11/Xstro&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709172&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;WatchEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;otey247&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;huggingface/llm_training_handbook&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709171&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;IssueCommentEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;Simn&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;HaxeFoundation/haxe&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709259&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;PushEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;github-actions[bot]&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;PedroManuelAtienzaHuerta/skills-resolve-merge-conflicts&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709214&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;ForkEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;hamiddstm12&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;DigitalPlatDev/FreeDomain&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;},{&#92;&quot;id&#92;&quot;:&#92;&quot;45193709173&#92;&quot;,&#92;&quot;type&#92;&quot;:&#92;&quot;PushEvent&#92;&quot;,&#92;&quot;actor_login&#92;&quot;:&#92;&quot;LiZistudio&#92;&quot;,&#92;&quot;repo_name&#92;&quot;:&#92;&quot;LiZistudio/rust_study&#92;&quot;,&#92;&quot;created_at&#92;&quot;:&#92;&quot;2025-01-01T15:59:59.000&#92;&quot;}]&quot;' data-total-rows='20' data-total-columns='5' data-max-columns='50' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;id&quot;,[&quot;string&quot;,&quot;object&quot;]],[&quot;type&quot;,[&quot;string&quot;,&quot;object&quot;]],[&quot;actor_login&quot;,[&quot;string&quot;,&quot;object&quot;]],[&quot;repo_name&quot;,[&quot;string&quot;,&quot;object&quot;]],[&quot;created_at&quot;,[&quot;datetime&quot;,&quot;datetime64[ns]&quot;]]]' data-show-filters='true' data-show-download='true' data-show-column-summaries='false' data-show-data-types='true' data-show-page-size-selector='true' data-show-column-explorer='true' data-show-chart-builder='false' data-row-headers='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element></div>"
+          }
+        }
+      ],
+      "console": []
+    }
+  ]
+}
