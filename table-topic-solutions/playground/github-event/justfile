@@ -10,11 +10,12 @@ help:
     @echo "  producer-up          - Start the event producer"
     @echo "  query                - Query the Iceberg table using Spark SQL"
     @echo "  marimo-up            - Start Marimo notebook"
+    @echo "  down                 - Stop all services (producer and marimo)"
     @echo ""
 
 topic-create:
     @echo "Creating topic github_events_iceberg..."
-    @just topic-create-table github_events_iceberg
+    @just topic-create-table github_events_iceberg retention_ms=345600000
     @echo "Topic created."
 
 producer-up:
@@ -29,3 +30,8 @@ marimo-up:
     @echo "Starting Marimo..."
     docker compose -f github-event/docker-compose.yml up -d --build marimo
     @echo "Marimo is running at http://localhost:2718"
+
+down:
+    @echo "Stopping all services..."
+    docker compose -f github-event/docker-compose.yml down
+    @echo "All services stopped."

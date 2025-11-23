@@ -74,13 +74,14 @@ topic-describe topic:
     docker compose -f docker-compose.yml exec automq \
       /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic {{topic}}
 
-topic-create-table topic convert_type='by_schema_id' transform_type='flatten':
-    @echo "Creating table topic {{topic}} (convert={{convert_type}}, transform={{transform_type}})"
+topic-create-table topic convert_type='by_schema_id' transform_type='flatten' retention_ms='345600000':
+    @echo "Creating table topic {{topic}} (convert={{convert_type}}, transform={{transform_type}}, retention={{retention_ms}})"
     docker compose -f docker-compose.yml exec automq \
       /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
       --create --topic {{topic}} \
       --partitions 16 \
       --config automq.table.topic.enable=true \
+      --config retention.ms={{retention_ms}} \
       --config automq.table.topic.commit.interval.ms=1000 \
       --config automq.table.topic.convert.value.type={{convert_type}} \
       --config automq.table.topic.transform.value.type={{transform_type}} \
