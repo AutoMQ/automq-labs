@@ -15,7 +15,7 @@ help:
 
 topic-create:
     @echo "Creating topic github_events_iceberg..."
-    @just topic-create-table github_events_iceberg retention_ms=345600000
+    @just topic-create-table github_events_iceberg
     @echo "Topic created."
 
 producer-up:
