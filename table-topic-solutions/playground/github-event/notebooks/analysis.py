@@ -8,10 +8,6 @@ app = marimo.App(width="medium", app_title="GitHub Real-Time Analytics")
 def _():
     # Import required libraries
     import marimo as mo
-    import os
-
-    # 简化包配置，使用 tabulario/spark-iceberg 镜像预装的包
-    # 不需要额外下载包，直接使用镜像中已有的配置
     print("✓ Using pre-configured Spark packages from tabulario/spark-iceberg image")
 
     # Now import pyspark after setting environment variable
@@ -39,19 +35,12 @@ def _():
 @app.cell(hide_code=True)
 def _(mo):
     import time
-    import threading
-    import schedule
     
     # 状态管理
     get_events, set_events = mo.state(value=[])
-    get_spark_session, set_spark_session = mo.state(value=None)
-    get_restart_count, set_restart_count = mo.state(value=0)
-    get_scheduler_started, set_scheduler_started = mo.state(value=False)
     get_last_update, set_last_update = mo.state(value="Never")
     
-    return (get_events, set_events, get_spark_session, set_spark_session, 
-            get_restart_count, set_restart_count, get_scheduler_started, 
-            set_scheduler_started, get_last_update, set_last_update, time, threading, schedule)
+    return (get_events, set_events, get_last_update, set_last_update, time)
 
 
 @app.cell
@@ -66,130 +55,55 @@ def _(mo):
     """)
     return
 
+@app.cell
+def _(mo):
+    # 创建自动刷新组件，每30秒刷新一次
+    dataRefresh = mo.ui.refresh(options=["30s"], default_interval="30s")
+    return (dataRefresh,)
+
 
 @app.cell(hide_code=True)
-def _(get_spark_session, set_spark_session, get_restart_count, set_restart_count, 
-      get_scheduler_started, set_scheduler_started, get_events, set_events, get_last_update, 
-      set_last_update, threading, schedule, time, SparkSession, spark):
+def _(dataRefresh, get_events, set_events, get_last_update, set_last_update, spark, time):
+    # 使用 mo.ui.refresh 触发数据刷新
+    # 关键：直接使用 dataRefresh.value，让 marimo 检测到变化并触发 cell 重新执行
+    # 在 SQL 查询的注释中使用，确保当值变化时 SQL 字符串变化，从而触发重新执行
+    _refresh_value = dataRefresh.value
     
-    def refresh_data():
-        print('refresh event data')
-        """刷新数据的函数"""
-        try:
-            # 使用当前可用的 Spark 会话
-            current_spark = get_spark_session() if get_spark_session() is not None else spark
-            
-            # Query the latest data
-            df = current_spark.sql("SELECT * FROM default.github_events_iceberg ORDER BY created_at DESC LIMIT 20")
-            pandas_df = df.toPandas()
-            
-            # Update state
-            set_events(pandas_df)
-            
-            # Update last refresh time
-            current_time = time.strftime("%H:%M:%S")
-            set_last_update(current_time)
-            
-            print(f"🔄 [Auto-refresh] Data updated at {current_time} - Found {len(pandas_df)} records")
-            
-        except Exception as e:
-            print(f"❌ [Auto-refresh] Error refreshing data: {e}")
+    try:
+        # 在 SQL 查询的注释中使用 _refresh_value，确保响应式更新
+        _df = spark.sql(f"""
+            -- Refresh trigger: {_refresh_value}
+            SELECT * FROM default.github_events_iceberg ORDER BY RAND() LIMIT 20
+        """)
+        _pandas_df = _df.toPandas()
+        
+        # Update state
+        set_events(_pandas_df)
+        
+        # Update last refresh time
+        current_time = time.strftime("%H:%M:%S")
+        set_last_update(current_time)
+        
+        print(f"🔄 [Auto-refresh] Data updated at {current_time} - Found {len(_pandas_df)} records (refresh value: {_refresh_value})")
+        
+    except Exception as e:
+        print(f"❌ [Auto-refresh] Error refreshing data: {e}")
     
-    def restart_spark():
-        """重启 Spark 会话的函数"""
-        print(f"🔄 [Background] Auto-restarting Spark (restart #{get_restart_count() + 1})...")
-        try:
-            # 停止当前 Spark 会话
-            current_spark = get_spark_session()
-            
-            # 等待一下
-            time.sleep(3)
-            
-            # 创建新的 Spark 会话
-            new_spark = SparkSession.builder \
-                .appName(f"GitHub Events Analytics - Auto Restart {get_restart_count() + 1}") \
-                .getOrCreate()
-
-            if current_spark is not None:
-                current_spark.stop()
-                print("✓ [Background] Previous Spark session stopped")
-            
-            # 更新状态
-            set_restart_count(get_restart_count() + 1)
-            set_spark_session(new_spark)
-            
-            print(f"✓ [Background] New Spark session created")
-            print(f"✓ [Background] Spark version: {new_spark.version}")
-            
-        except Exception as e:
-            print(f"❌ [Background] Error restarting Spark: {e}")
-    
-    def run_scheduler():
-        """运行调度器的后台线程函数"""
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
-    
-    # 启动后台调度器（只启动一次）
-    if not get_scheduler_started():
-        print("🚀 Starting background schedulers...")
-        
-        # 设置每10秒刷新数据
-        schedule.every(10).seconds.do(refresh_data)
-        
-        # 设置每10分钟重启Spark
-        schedule.every(30).minutes.do(restart_spark)
-        
-        # 启动后台线程
-        scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
-        scheduler_thread.start()
-        
-        # 标记调度器已启动
-        set_scheduler_started(True)
-        
-        print("✓ Background schedulers started:")
-        print("  • Data refresh: every 10 seconds")
-        print("  • Spark restart: every 10 minutes")
-        
-        # 立即执行一次数据刷新
-        refresh_data()
-    else:
-        print("✓ Background schedulers already running")
+    # 返回 _refresh_value 确保 marimo 检测到变化
+    return _refresh_value
 
 
 @app.cell
-def _(mo, get_last_update):
+def _(dataRefresh, mo, get_last_update):
+    # 注意：刷新组件需要被渲染才能工作，所以先渲染再隐藏
+    # 或者不隐藏，让用户看到刷新状态
+    dataRefresh.style({"display": None})
+    
     mo.vstack([
         mo.md("## 📊 Live GitHub Events Data"),
-        mo.md(f"*Last updated: {get_last_update()} • Auto-refresh every 10 seconds*")
+        mo.md(f"*Last updated: {get_last_update()} • Auto-refresh every 30 seconds*"),
+        dataRefresh  # 确保刷新组件被渲染（即使被隐藏）
     ])
-
-
-@app.cell(hide_code=True)
-def _(get_events, set_events, spark, get_spark_session, set_last_update, time):
-    # 初始数据加载（只在首次启动时执行）
-    if len(get_events()) == 0:
-        print("🔍 Initial data loading...")
-        try:
-            # 使用当前可用的 Spark 会话
-            current_spark = get_spark_session() if get_spark_session() is not None else spark
-            
-            # Query the data
-            df = current_spark.sql("SELECT * FROM default.github_events_iceberg ORDER BY created_at DESC LIMIT 20")
-            pandas_df = df.toPandas()
-            
-            # Store the data in state
-            set_events(pandas_df)
-            set_last_update(time.strftime("%H:%M:%S"))
-            
-            print(f"✓ Initial data loaded - Found {len(pandas_df)} records")
-            
-        except Exception as e:
-            print(f"❌ Error loading initial data: {e}")
-            print("💡 Background scheduler will handle data refresh automatically")
-            set_events([])
-    else:
-        print("✓ Data already loaded, background refresh is active")
 
 
 @app.cell
