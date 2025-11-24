@@ -162,6 +162,7 @@ test-all:
         just -f "$scenario/justfile" test
         echo "$scenario: PASSED"
         echo ""
+        docker system prune --volumes -f
     done
 
     echo "=== All Tests Completed Successfully ==="
