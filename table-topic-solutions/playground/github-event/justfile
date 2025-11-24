@@ -6,12 +6,23 @@ help:
     @echo "AutoMQ TableTopic — Github Event Analysis"
     @echo "========================"
     @echo "Commands:"
+    @echo "  up                   - Start all services (producer and marimo)"
     @echo "  topic-create         - Create github_events_iceberg topic"
     @echo "  producer-up          - Start the event producer"
     @echo "  query                - Query the Iceberg table using Spark SQL"
     @echo "  marimo-up            - Start Marimo notebook"
     @echo "  down                 - Stop all services (producer and marimo)"
+    @echo "  test                 - Run full scenario test"
     @echo ""
+
+up:
+    @echo "Starting all services..."
+    @just -f github-event/justfile topic-create
+    @sleep 5
+    @just -f github-event/justfile producer-up
+    @sleep 10
+    @just -f github-event/justfile marimo-up
+    @echo "All services started."
 
 topic-create:
     @echo "Creating topic github_events_iceberg..."
@@ -24,7 +35,7 @@ producer-up:
 
 query:
     @echo "Querying table..."
-    @just spark-sql "SELECT id, type, actor_login, repo_name, created_at FROM default.github_events_iceberg ORDER BY created_at DESC LIMIT 20;"
+    @just spark-sql "SELECT * FROM default.github_events_iceberg ORDER BY created_at DESC LIMIT 20;"
 
 marimo-up:
     @echo "Starting Marimo..."
@@ -33,5 +44,21 @@ marimo-up:
 
 down:
     @echo "Stopping all services..."
-    docker compose -f docker-compose.yml-f github-event/docker-compose.yml down
+    docker compose -f docker-compose.yml -f github-event/docker-compose.yml down -v
     @echo "All services stopped."
+
+test:
+    @echo "🚀 Starting GitHub Event Scenario Test..."
+    @just up
+    @echo "Step 1: Start All Services (including topic creation)"
+    @just -f github-event/justfile up
+    @echo "Waiting for producer to process data (60 seconds)..."
+    @sleep 60
+    
+    @echo "Step 2: Query Data (verify data ingestion)"
+    @just -f github-event/justfile query
+    
+    @echo "Step 3: Cleanup - Stopping all services"
+    @just -f github-event/justfile down
+    
+    @echo "✅ GitHub Event Scenario Test Completed Successfully"

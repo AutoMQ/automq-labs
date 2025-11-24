@@ -51,7 +51,6 @@ class GithubEventMapper:
 
     @staticmethod
     def map_event(raw):
-        payload = raw.get('payload', {})
         t = raw.get('type')
 
         # 1. Basic fields

@@ -154,7 +154,7 @@ _wait-for-services:
 test-all:
     #!/usr/bin/env bash
     set -e
-    scenarios=("append-scenario" "insert-scenario" "partition-scenario" "protobuf-latest-scenario" "cdc-scenario")
+    scenarios=("append-scenario" "insert-scenario" "partition-scenario" "protobuf-latest-scenario" "cdc-scenario" "github-event")
 
     echo "=== Running All Scenario Tests ==="
     for scenario in "${scenarios[@]}"; do
