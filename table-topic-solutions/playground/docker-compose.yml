@@ -167,3 +167,4 @@ services:
       - "8090:8080"
     volumes:
       - ./tools/trino-catalog:/etc/trino/catalog
+
