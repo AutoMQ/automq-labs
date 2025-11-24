@@ -1,27 +1,24 @@
 services:
   producer:
     build:
-      context: ./producer
+      context: ./github-event/producer
     container_name: github-event-producer
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=automq:9092
       - SCHEMA_REGISTRY_URL=http://schema-registry:8081
-    networks:
-      - table_topic_playground
+
 
   debug:
     image: curlimages/curl
     container_name: github-event-debug
     command: ["sleep", "infinity"]
-    networks:
-      - table_topic_playground
 
   marimo:
     image: tabulario/spark-iceberg
     container_name: github-event-marimo
     working_dir: /home/iceberg
     volumes:
-      - ./notebooks:/home/iceberg/notebooks
+      - ./github-event/notebooks:/home/iceberg/notebooks
     ports:
       - "2718:2718"
     environment:
@@ -39,11 +36,4 @@ services:
       cd /home/iceberg/notebooks &&
       marimo run analysis.py --host 0.0.0.0 --port 2718
       "
-    networks:
-      - table_topic_playground
-
-networks:
-  table_topic_playground:
-    external: true
-    name: table_topic_playground
 

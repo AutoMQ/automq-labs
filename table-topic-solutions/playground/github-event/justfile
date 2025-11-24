@@ -20,7 +20,7 @@ topic-create:
 
 producer-up:
     @echo "Starting producer (rebuilding)..."
-    docker compose -f github-event/docker-compose.yml up -d --build producer
+    docker compose -f docker-compose.yml -f github-event/docker-compose.yml up -d --build producer
 
 query:
     @echo "Querying table..."
@@ -28,10 +28,10 @@ query:
 
 marimo-up:
     @echo "Starting Marimo..."
-    docker compose -f github-event/docker-compose.yml up -d --build marimo
+    docker compose -f docker-compose.yml -f github-event/docker-compose.yml up -d --build marimo
     @echo "Marimo is running at http://localhost:2718"
 
 down:
     @echo "Stopping all services..."
-    docker compose -f github-event/docker-compose.yml down
+    docker compose -f docker-compose.yml-f github-event/docker-compose.yml down
     @echo "All services stopped."
