@@ -14,7 +14,7 @@ locals {
 
 # Network module: Creates VPC, subnets, and other network resources
 module "network" {
-  source = "network"
+  source = "./network"
 
   region          = local.region
   resource_suffix = local.resource_suffix
@@ -22,7 +22,7 @@ module "network" {
 
 # EKS module: Creates and configures the EKS cluster
 module "eks" {
-  source = "eks"
+  source = "./eks"
 
   region          = local.region
   vpc_id          = module.network.vpc_id
@@ -34,7 +34,7 @@ module "eks" {
 
 # IAM module: Configures required IAM roles and permissions for the cluster
 module "cluster-iam" {
-  source           = "iam"
+  source           = "./iam"
   region           = local.region
   resource_suffix  = local.resource_suffix
   ops_bucket_name  = "*"
