@@ -1,0 +1,256 @@
+# AutoMQ Quick Setup & Benchmark
+
+Deploying a complete AutoMQ cluster on AWS traditionally involves multiple, complex steps, from setting up the control
+and data planes to manually configuring a separate observability environment and benchmarking tools.
+
+This project eliminates that complexity. It is designed to provide a seamless, one-click solution using Terraform to
+automatically provision an entire AutoMQ ecosystem on AWS.
+
+The primary goal is to empower users to effortlessly spin up a fully operational, observable, and testable AutoMQ
+cluster, drastically reducing setup time and manual configuration.
+
+## Overview
+
+This project follows a simple, three-step end-to-end flow to go from infrastructure to benchmarking with minimal manual
+work:
+
+The resources that need to be installed this time include EKS, along with three corresponding node groups, about 10 EC2
+instance, and their AutoMQ Console nodes.
+
+1) Provision with Terraform: bring up the required components — `EKS`, `AutoMQ Console` (BYOC control plane), and the
+   observability stack (Prometheus/Grafana). After this step, the Kubernetes cluster and monitoring environment are
+   ready.
+
+2) Configure in AutoMQ Console and create the cluster: create the required `Profile` and credentials in the Console,
+   then create or connect your `AutoMQ Cluster` (BYOC). Use these values in the subsequent Terraform/Helm configuration
+   to enable connectivity.
+
+3) Run benchmarks via the provided Helm chart: go to `automq-benchmark-chart`, set connection details and workload
+   parameters (topics, partitions, message size, concurrency, etc.), deploy the benchmark Job, and observe throughput
+   and latency in Grafana.
+
+## Architecture
+
+![architecture](architecture.png)
+
+## Prerequisites
+
+Before using this project, ensure you have:
+
+### Required Tools
+
+- **Terraform** (>= 1.0)
+- **kubectl** configured for your EKS cluster
+- **Helm** (>= 3.0)
+- **AWS CLI** configured with appropriate permissions
+
+### Environment Setup
+
+To ensure all commands execute correctly, set the `BASE_DIR` environment variable to the root directory of this
+repository:
+
+```bash
+export BASE_DIR=$(pwd)
+```
+
+### Required Permissions
+
+- EKS cluster management permissions
+- EC2 instance and networking permissions
+- IAM role management permissions
+- S3 bucket access (for AutoMQ data storage)
+
+## Quick Start
+
+### Step 1: Deploy Benchmark Infrastructure
+
+This step provisions and integrates everything via Terraform in `./terraform`:
+
+- EKS cluster (creating and configuring required `VPC`, subnets, `Security Group`, `IAM`, and related
+  networking/permission resources)
+- AutoMQ BYOC Console (deployed in the same VPC public subnet, with access and security integrated to the EKS cluster)
+- Observability stack (Prometheus/Grafana) installed via Helm `kube-prometheus-stack` for collecting and visualizing
+  benchmark metrics
+
+All necessary cloud resources (including networking and object storage such as `S3`) will be newly created and wired up
+in this step.
+
+1. Plan the Deployment Run terraform plan to preview the resources that will be created.
+
+Tip: To control resource naming and avoid conflicts, set `resource_suffix` in `./terraform/variables.tf`.
+
+```bash
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/terraform
+terraform init
+terraform plan
+```
+
+2. Apply the Deployment After reviewing the plan, execute terraform apply to begin the deployment. This process may take
+   25-30 minutes.
+
+```bash
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/terraform
+terraform apply
+```
+
+Enter yes at the prompt to confirm.
+
+Upon successful deployment, Terraform will display the following outputs. You can also retrieve them at any time using
+the `terraform output` command:
+
+| Name                              | Description                                                |
+|-----------------------------------|------------------------------------------------------------|
+| `console_endpoint`                | The endpoint URL for the AutoMQ BYOC Console.              |
+| `initial_username`                | The initial username for logging into the Console.         |
+| `initial_password`                | The initial password for logging into the Console.         |
+| `cluster_name`                    | The name of the created EKS cluster.                       |
+| `node_group_instance_profile_arn` | The IAM Instance Profile ARN used by the EKS node group.   |
+| `dns_zone_id`                     | The Route 53 DNS Zone ID created for the BYOC environment. |
+| `vpc_id`                          | The ID of the VPC created for the environment.             |
+| `env_id`                          | The ID of the AutoMQ environment.                          |
+| `data_bucket`                     | The S3 data bucket of the AutoMQ environment.              |
+
+Terraform will initiate the corresponding EKS-related nodes and the AutoMQ control plane, and create an AutoMQ cluster
+within EKS.
+
+Please follow the steps below to ensure that all newly created resources can be accessed normally before proceeding to
+the next step.
+
+#### Access Control Panel
+
+You can use console_endpoint and initial_username/initial_password to log in to the AutoMQ Console.
+
+#### Access EKS Cluster
+
+To access the EKS cluster using this command, and the placeholders in the command can be replaced with the actual values
+obtained from the output above.
+
+```bash
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/terraform
+REGION=$(terraform output -raw region)
+CLUSTER_NAME=$(terraform output -raw cluster_name)
+
+aws eks update-kubeconfig --region $REGION --name $CLUSTER_NAME
+```
+
+#### Access Grafana Dashboard
+
+To visit the observability stack, use the following command to obtain the public endpoint of Grafana.
+The username is admin, and the password can be obtained through the command below. If you wish to change it, you can
+configure it in the `./terraform/monitoring/prometheus.yaml` file.
+
+AutoMQ provides [grafana official dashboards](https://www.automq.com/docs/automq/observability/dashboard-configuration).
+In this example, Grafana dashboards come pre-installed with broker, topic, group, and cluster dashboards.
+
+Terraform will help you create these dashboards in Grafana. If you need further guidance, please feel free
+to [contact the AutoMQ team](https://www.automq.com/contact).
+
+```bash
+# Get the public endpoint of Grafana. Please make sure to use the HTTP protocol for access.
+kubectl get service prometheus-grafana -n monitoring
+
+# Get the Grafana password
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/terraform
+kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 --decode
+```
+
+### Step 2: Deploy AutoMQ Instance
+
+1.
+
+Follow [Create a Service Account](https://www.automq.com/docs/automq-cloud/manage-identities-and-access/service-accounts#create-a-service-account)
+to create a Service Account and obtain the `Client ID` and `Client Secret` (Remember to save these two pieces of
+information, as you will need to enter them in the subsequent installation script).
+
+For this service account, you need to select EnvironmentAdmin to easily create and manage resources.
+
+2. In the AutoMQ Console, create a Deploy Profile named `eks` for the EKS environment.
+
+Kubernetes Cluster, bucket name, DNS ZoneId and Node pool IAM Role ARN are all obtained from the output of the previous
+step.
+
+When creating `Deploy Profiles`, in the second step `Configure IAM Authorization`, you do not need to perform the first
+and second sub-steps. You can directly copy the content of `node_group_instance_profile_arn` from the output into the
+input box.
+
+Reference: [Create a Deploy Profile](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-12%3A-access-the-environment-console-and-create-deployment-configuration).
+
+3. Fill variables `automq/terraform.tfvars` and apply Terraform to create the AutoMQ cluster with observability
+   integration. You may need to wait approximately 5 to 10 minutes for the cluster to be fully created.
+
+We have prepared a script for you, `modify-automq-tf-config.sh`, which automatically fills in the required variables.
+The file is located in the root directory of this example. You can execute this script, and it will automatically
+populate the necessary parameter information for you.
+
+If you need further configuration, you can also refer to the comments and modify `automq/terraform.tfvars` directly.
+
+```bash
+$BASE_DIR/modify-automq-tf-config.sh
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/automq
+terraform init
+terraform plan
+terraform apply
+```
+
+### Step 3: Run Benchmark Tests
+
+This step involves executing performance tests on your AutoMQ cluster using customizable workloads. The benchmark is
+designed to simulate Kafka usage patterns and allows you to adjust parameters like throughput, message size, topic
+configuration, and test duration. These tests generate comprehensive metrics that are automatically collected by your
+monitoring stack.
+
+To begin, you need to update the bootstrapServer parameter to point to the endpoint of your current cluster, which can
+be found in the detailed cluster information from Step 2. In the values.yaml file, the default settings write 160
+messages per second, each 51 KiB in size (without batching), resulting in a write speed of 8 MiB/s.
+
+For larger scale tests, you can modify the recordSize and sendRate parameters within the values.yaml file. For more
+details on Helm configuration options, please refer to the [README](automq-benchmark-chart/README.md) located in the
+automq-benchmark folder.
+
+With the current instance specifications and JVM parameter configurations, the setup can achieve approximately 200 MBps
+in a 1:1 production-to-consumption scenario, which should meet the performance testing needs of your 3-10 AKU AutoMQ
+cluster. If you need to further increase throughput, consider upgrading the machine type of the test node group and
+adjusting the JVM parameters. For more information, you can refer to the
+AutoMQ [blog](https://www.automq.com/blog/how-to-perform-a-performance-test-on-automq) or consult with AutoMQ product
+experts.
+
+**Expected Result**: Benchmark jobs will run and generate load against the AutoMQ cluster. Performance metrics including
+throughput, latency, and resource utilization will be collected and visible in Grafana dashboards. You should see data
+flowing through the system and performance characteristics of your AutoMQ deployment.
+
+1. **Configure benchmark parameters**:
+
+```bash
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/helm-chart/automq-benchmark
+```
+
+2. **Deploy benchmark workload**:
+
+```bash
+helm install automq-benchmark . \
+  --namespace default \
+  --values values.yaml
+```
+
+3. **View results in Grafana**:
+
+After completing the above steps, you can see the corresponding metrics on the Grafana dashboard. Adjust the stress test
+parameters according to the corresponding specifications to further understand the specifications and performance
+related to AutoMQ.
+
+## Cleanup
+
+To remove all deployed resources:
+
+```bash
+# Remove benchmark workload
+helm uninstall automq-benchmark
+
+# Remove AutoMQ instance
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/automq
+terraform destroy
+
+# Remove EKS and AutoMQ Console
+cd $BASE_DIR/cloudservice-setup/aws/eks-benchmark/terraform
+terraform destroy
+```
