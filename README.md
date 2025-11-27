@@ -12,7 +12,7 @@
 </div>
 
 [![Linkedin Badge](https://img.shields.io/badge/-LinkedIn-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/company/automq)](https://www.linkedin.com/company/automq)
-[![](https://badgen.net/badge/Slack/Join%20AutoMQ/0abd59?icon=slack)](https://join.slack.com/t/automq/shared_invite/zt-29h17vye9-thf31ebIVL9oXuRdACnOIA)
+[![](https://badgen.net/badge/Slack/Join%20AutoMQ/0abd59?icon=slack)](https://go.automq.com/slack)
 
 
 # AutoMQ Labs
