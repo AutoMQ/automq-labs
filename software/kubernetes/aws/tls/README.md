@@ -51,11 +51,12 @@ Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a 
 - `<your-eks-role-arn>`
 - `<your-s3-buckets-and-region>`
 - `<your-route53-zone-id>`
-- `<your-sasl-password>` for both `_automq` and `my-user`.
+- `<your-sasl-password>` for both `_automq` and `my-user`
+- `<your_multi_az_subnet_ids>` split by commas
 
 Then, deploy the chart:
 ```bash
-helm upgrade --install automq-sasl oci://automq.azurecr.io/helm/automq-enterprise \
+helm upgrade --install automq-release oci://automq.azurecr.io/helm/automq-enterprise \
   -f values-sasl-ssl.yaml \
   --namespace <your-namespace> \
   --create-namespace
@@ -65,12 +66,11 @@ helm upgrade --install automq-sasl oci://automq.azurecr.io/helm/automq-enterpris
 
 1.  **Get the Load Balancer Hostname:**
     ```bash
-    NLB_HOSTNAME=$(kubectl get svc automq-sasl-automq-enterprise-controller-ext -n <your-namespace> -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-    echo "NLB Hostname: $NLB_HOSTNAME"
+    kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
     ```
 
 2.  **Create a CNAME Record:**
-    In your DNS provider (e.g., AWS Route 53), create a CNAME record pointing `loadbalancer.automq.private` to the `$NLB_HOSTNAME`.
+    In your DNS provider (AWS Route 53), create a CNAME record pointing `loadbalancer.automq.private` to the Load Balancer Hostname.
 
 ### Step 1.5: Grant ACLs and Test Client
 
@@ -165,7 +165,7 @@ This is the same as in Path 1. Point `loadbalancer.automq.private` to the new Lo
 ### Step 2.5: Grant ACLs and Test Client
 
 1.  **Create Admin & Client Properties:**
-    - `admin.properties`: For the `automq-admin` superuser, using its certificate.
+    - `admin.properties`: For the `_automq` superuser, using its certificate.
     - `client.properties`: For the `my-app` application user, using its certificate.
 
     ```properties

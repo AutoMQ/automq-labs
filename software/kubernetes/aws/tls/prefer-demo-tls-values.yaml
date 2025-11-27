@@ -1,30 +1,25 @@
 global:
+  automqInstanceId: "<your-unique-instance-id>"
   cloudProvider:
     name: aws
     credentials: pod://?
-  automqInstanceId: ${your-instance-id}
+  serviceAccount:
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: "<your-eks-role-arn>"
   config: |
-    s3.ops.buckets=1@s3://${ops-bucket}?region=${region}&endpoint=${endpoint}
-    s3.data.buckets=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
-    s3.wal.path=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
+    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
+    s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
+    s3.wal.path=0@s3://<your-data-bucket>?region=<aws-region>
+    automq.zonerouter.channels=0@s3://<your-data-bucket>?region=<aws-region>
     # TLS Settings
-    listener.name.client_mtls.ssl.client.auth=required
-    automq.dns.client_sasl_ssl.zone.id=${private-hosted-zone-id}
-    automq.dns.client_mtls.zone.id=${private-hosted-zone-id}
+    automq.dns.client_sasl_ssl.zone.id=<your-route53-zone-id>
+    automq.dns.client_mtls.zone.id=<your-route53-zone-id>
   livenessProbe:
     probePort: 9122
   readinessProbe:
     probePort: 9122
   zoneSpreadConstraints: true
-
-#  ----- node affinities -----
-#  nodeAffinities:
-#    - key: "eks.amazonaws.com/nodegroup"
-#      values:
-#        - "${your-node-group-name}"
-#    - key: "node.kubernetes.io/instance-type"
-#      values:
-#        - "r6in.large"
 
 listeners:
   controller:
@@ -39,6 +34,7 @@ listeners:
     - containerPort: 9122
       protocol: SSL
       name: CLIENT_MTLS
+      sslClientAuth: required
     - containerPort: 9112
       protocol: SASL_SSL
       name: CLIENT_SASL_SSL
@@ -100,10 +96,10 @@ acl:
 # ---- JAAS Configurations ----
 sasl:
   controller:
-    password: ${password}
+    password: "<your-sasl-password>"
     user: _automq
   interbroker:
-    password: ${passowrd}
+    password: "<your-sasl-password>"
     user: _automq
 
 # ---- TLS Configurations ----

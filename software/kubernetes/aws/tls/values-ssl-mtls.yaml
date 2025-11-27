@@ -20,10 +20,6 @@ global:
     s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
     s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
     s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
-
-    # --- mTLS Settings ---
-    # Enforce client certificate authentication.
-    listener.name.client_mtls.ssl.client.auth=required
     
     # --- DNS Settings for Hostname Verification ---
     automq.dns.client_mtls.zone.id=<your-route53-zone-id>
@@ -34,6 +30,7 @@ listeners:
     - containerPort: 9122
       protocol: SSL
       name: CLIENT_MTLS
+      sslClientAuth: required
 
 # Configure server-side TLS by referencing the Kubernetes secret containing the server certificate.
 tls:
@@ -47,7 +44,9 @@ externalAccess:
     service:
       type: LoadBalancer
       loadBalancerAnnotations:
-        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
+        service.beta.kubernetes.io/aws-load-balancer-type: external
       extraPorts:
         - name: "tls-client"
           port: 9122
@@ -55,11 +54,11 @@ externalAccess:
           targetPort: 9122
 
 # Enable ACLs and define a certificate-based superuser.
-# The principal 'User:automq-admin' corresponds to a client certificate with CN=automq-admin.
+# The principal 'User:_automq' corresponds to a client certificate with CN=automq-admin.
 acl:
   enabled: true
   superUsers:
-    - "User:automq-admin"
+    - "User:_automq"
 
 # SASL is still required for internal inter-broker communication.
 sasl:
