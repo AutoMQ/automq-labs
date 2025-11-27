@@ -1,0 +1,128 @@
+global:
+  cloudProvider:
+    name: aws
+    credentials: pod://?
+  automqInstanceId: ${your-instance-id}
+  config: |
+    s3.ops.buckets=1@s3://${ops-bucket}?region=${region}&endpoint=${endpoint}
+    s3.data.buckets=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
+    s3.wal.path=0@s3://${data-bucket}?region=${region}&endpoint=${endpoint}
+    # TLS Settings
+    listener.name.client_mtls.ssl.client.auth=required
+    automq.dns.client_sasl_ssl.zone.id=${private-hosted-zone-id}
+    automq.dns.client_mtls.zone.id=${private-hosted-zone-id}
+  livenessProbe:
+    probePort: 9122
+  readinessProbe:
+    probePort: 9122
+  zoneSpreadConstraints: true
+
+#  ----- node affinities -----
+#  nodeAffinities:
+#    - key: "eks.amazonaws.com/nodegroup"
+#      values:
+#        - "${your-node-group-name}"
+#    - key: "node.kubernetes.io/instance-type"
+#      values:
+#        - "r6in.large"
+
+listeners:
+  controller:
+    - containerPort: 9103
+      name: CONTROLLER_SASL
+      protocol: SASL_PLAINTEXT
+  interbroker:
+    - containerPort: 9102
+      name: BROKER_SASL
+      protocol: SASL_PLAINTEXT
+  client:
+    - containerPort: 9122
+      protocol: SSL
+      name: CLIENT_MTLS
+    - containerPort: 9112
+      protocol: SASL_SSL
+      name: CLIENT_SASL_SSL
+
+controller:
+  create: true
+  replicas: 3
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
+  persistence:
+    metadata:
+      enabled: true
+      storageClass: "gp3"
+      size: "20Gi"
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+
+broker:
+  create: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
+  persistence:
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+
+# ---- ACL Configurations ----
+acl:
+  enabled: true
+  superUsers:
+    - _automq
+
+# ---- JAAS Configurations ----
+sasl:
+  controller:
+    password: ${password}
+    user: _automq
+  interbroker:
+    password: ${passowrd}
+    user: _automq
+
+# ---- TLS Configurations ----
+tls:
+  type: PEM
+  existingSecret: automq-server-tls
+
+# ---- LoadBalancer ------
+externalAccess:
+  controller:
+    enabled: true
+    service:
+      loadBalancerAnnotations:
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-subnets: "${your_multi_az_subnet_ids}"
+        service.beta.kubernetes.io/aws-load-balancer-type: external
+      extraPorts:
+        - name: "tcp-9122"
+          port: 9122
+          protocol: "TCP"
+          targetPort: 9122
+
