@@ -68,15 +68,38 @@ helm upgrade --install automq-release oci://automq.azurecr.io/helm/automq-enterp
   --create-namespace
 ```
 
-### Step 1.4: Create DNS Record
+### Step 1.4: Publish the bootstrap DNS record
 
-1.  **Get the Load Balancer Hostname:**
+You have two options for binding the Route 53 record to the NLB.
+
+**Option A – Automatic (recommended)**
+
+1. Install [external-dns](https://github.com/kubernetes-sigs/external-dns) in your cluster with `--source=service --provider=aws --policy=upsert-only --registry=txt`. Bind its ServiceAccount to an IAM role that can call `route53:ListHostedZones`, `route53:ListResourceRecordSets`, and `route53:ChangeResourceRecordSets`.
+2. Ensure the hosted zone domain matches your `values-sasl-ssl.yaml`:
+   ```yaml
+   externalAccess:
+     loadBalancer:
+       domain: automq.private          # must equal the Route 53 hosted zone domain
+       bootstrapPrefix: automq-bootstrap
+       externalDns:
+         enabled: true
+         targetService: controller
+         listenerKey: client_mtls      # resolves automq.dns.client_mtls.zone.id from global.config
+         recordType: CNAME             # switch to A if you prefer an Alias
+         ttl: 60
+   global:
+     config: |
+       automq.dns.client_mtls.zone.id=<your_hosted_zone_id>
+   ```
+3. Redeploy (or `helm upgrade`) so the controller Service renders the annotations. After the Service obtains an NLB hostname, run `kubectl logs -n kube-system deploy/external-dns | grep automq-bootstrap` to confirm external-dns created `automq-bootstrap.automq.private` automatically.
+
+**Option B – Manual fallback**
+
+1.  Get the Load Balancer Hostname:
     ```bash
     kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
     ```
-
-2.  **Create a CNAME Record:**
-    In your DNS provider (AWS Route 53), create a CNAME record pointing `loadbalancer.automq.private` to the Load Balancer Hostname.
+2.  Create a CNAME (or Alias A) record in Route 53 pointing `loadbalancer.automq.private` to the hostname from step 1.
 
 ### Step 1.5: Grant ACLs and Test Client
 
@@ -170,9 +193,9 @@ helm upgrade --install automq-mtls oci://automq.azurecr.io/helm/automq-enterpris
   --create-namespace
 ```
 
-### Step 2.4: Create DNS Record
+### Step 2.4: Publish the bootstrap DNS record
 
-This is the same as in Path 1. Point `loadbalancer.automq.private` to the new Load Balancer's hostname.
+You can reuse the automatic/manual options described in Step 1.4. If both SASL_SSL and mTLS clusters share the same Route 53 hosted zone, make sure each cluster uses a unique `bootstrapPrefix` (for example `sasl-bootstrap` vs `mtls-bootstrap`) so external-dns writes distinct records.
 
 ### Step 2.5: Grant ACLs and Test Client
 
