@@ -42,6 +42,12 @@ kubectl create secret generic automq-server-tls \
   --namespace <your-namespace>
 ```
 
+<Tip>
+
+You only need this single PEM bundle. During pod startup AutoMQ automatically converts it into the keystore/truststore files consumed by **all** broker/controller listeners and by the internal `automq.admin.*` clients (AutoBalancer, admin utilities, inter-controller RPCs). No extra client-specific secret is required.
+
+</Tip>
+
 ### Step 1.3: Configure and Deploy AutoMQ
 
 Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a `SASL_SSL` listener, sets `_automq` as the SASL superuser, and defines a regular SASL user `my-user`.
@@ -143,6 +149,12 @@ kubectl create secret generic automq-server-tls \
   --from-file=ca.crt=./ca.crt \
   --namespace <your-namespace>
 ```
+
+<Tip>
+
+AutoMQ reuses this secret for its internal clients as well; the chart converts it into keystore/truststore files under `/opt/automq/kafka/config/certs/` and wires them into the `automq.admin.*` configuration with hostname verification disabled so the control plane can connect via Pod IPs. You only need to manage this one secret even in mTLS mode.
+
+</Tip>
 
 ### Step 2.3: Configure and Deploy AutoMQ
 
