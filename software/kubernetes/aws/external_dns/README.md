@@ -126,24 +126,6 @@ kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n auto
 k8s-automq-automqre-xxxxxxxxxx-xxxxxxxxxxxxxxx.elb.xxxxxx.amazonaws.com
 ```
 
-Verify that your bootstrap hostname in the Route 53 private hosted zone correctly resolves to the NLB endpoint in same VPC :
-
-```bash
-dig +short bootstrap.automq.private
-```
-
-```
-# ELB ips
-10.0.xxx.xxx
-10.0.xxx.xxx
-10.0.xxx.xxx
-```
-
-Compare the resolved IPs of the NLB hostname and your bootstrap hostname to ensure they match:
-```bash
-diff <(dig +short k8s-automq-automqre-xxxxxxxxxx-xxxxxxxxxxxxxxx.elb.xxxxxx.amazonaws.com | sort) <(dig +short automq-bootstrap.automq.private | sort)
-```
-
 ---
 
 ## 3. Usage and Testing
@@ -265,7 +247,7 @@ kafka-acls.sh --bootstrap-server bootstrap.automq.private:9122 \
 # create topic
 def BOOTSTRAP=bootstrap.automq.private:9122
 kafka-topics.sh --create --bootstrap-server $BOOTSTRAP \
-  --topic my-topic --partitions 3 --replication-factor 3 \
+  --topic my-topic --partitions 3 \
   --command-config user-ssl.properties
 
 # produce message
@@ -282,4 +264,4 @@ If the external Client can complete sending and receiving through the above comm
 
 ---
 
-For a more in-depth parameter description, please refer to the detailed configuration section in the [AutoMQ Helm Chart official documentation](https://github.com/AutoMQ/automq-labs), or refer to the advanced example in `automq-labs/software/kubernetes/aws/tls/README.md`. Wish you a smooth deployment!
+For a more in-depth parameter description, please refer to the detailed configuration section in the [AutoMQ Helm Chart official documentation](https://www.automq.com/docs/automq-cloud/appendix/helm-chart-values-readme), or refer to the advanced example in `automq-labs/software/kubernetes/aws/tls/README.md`. Wish you a smooth deployment!
