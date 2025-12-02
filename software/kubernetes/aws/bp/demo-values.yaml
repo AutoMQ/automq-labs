@@ -1,20 +1,18 @@
 global:
-  automqInstanceId: "<your-unique-instance-id>"
+  automqInstanceId: "kf-wc6xhp09fs8i3j46"
   cloudProvider:
     name: aws
     credentials: pod://?
   serviceAccount:
     create: true
+    name: automq-sa
     annotations:
-      eks.amazonaws.com/role-arn: "<your-eks-role-arn>"
+      eks.amazonaws.com/role-arn: <your-eks-role-arn>
   config: |
-    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
     s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
     s3.wal.path=0@s3://<your-data-bucket>?region=<aws-region>
     automq.zonerouter.channels=0@s3://<your-data-bucket>?region=<aws-region>
-    # TLS Settings
-    automq.dns.client_sasl_ssl.zone.id=<your-route53-zone-id>
-    automq.dns.client_mtls.zone.id=<your-route53-zone-id>
+    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
   livenessProbe:
     probePort: 9122
   readinessProbe:
@@ -24,20 +22,25 @@ global:
 listeners:
   controller:
     - containerPort: 9103
-      name: CONTROLLER_SASL
-      protocol: SASL_PLAINTEXT
+      name: CONTROLLER_MTLS
+      protocol: SSL
+      sslClientAuth: required
   interbroker:
     - containerPort: 9102
-      name: BROKER_SASL
-      protocol: SASL_PLAINTEXT
+      name: BROKER_MTLS
+      protocol: SSL
+      sslClientAuth: required
   client:
     - containerPort: 9122
       protocol: SSL
       name: CLIENT_MTLS
       sslClientAuth: required
-    - containerPort: 9112
-      protocol: SASL_SSL
-      name: CLIENT_SASL_SSL
+      advertisedHostnames:
+        enabled: true
+        baseDomain: "<your-route53-zone-domain>"
+        externalDns:
+          enabled: true
+          privateZoneId: "<your-route53-zone-id>"
 
 controller:
   create: true
@@ -52,7 +55,7 @@ controller:
   persistence:
     metadata:
       enabled: true
-      storageClass: "gp3"
+      storageClass: "gp2"
       size: "20Gi"
     wal:
       enabled: false
@@ -91,34 +94,30 @@ broker:
 acl:
   enabled: true
   superUsers:
-    - _automq
-
-# ---- JAAS Configurations ----
-sasl:
-  controller:
-    password: "<your-sasl-password>"
-    user: _automq
-  interbroker:
-    password: "<your-sasl-password>"
-    user: _automq
+    - "CN=automq-server"
+    - "CN=admin"
 
 # ---- TLS Configurations ----
 tls:
   type: PEM
-  existingSecret: automq-server-tls
+  existingSecret: automq-tls-secret
 
 # ---- LoadBalancer ------
 externalAccess:
   controller:
     enabled: true
     service:
-      loadBalancerAnnotations:
+      type: LoadBalancer
+      annotations:
         service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
-        service.beta.kubernetes.io/aws-load-balancer-subnets: "${your_multi_az_subnet_ids}"
+        service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
         service.beta.kubernetes.io/aws-load-balancer-type: external
       extraPorts:
         - name: "tcp-9122"
           port: 9122
           protocol: "TCP"
           targetPort: 9122
-
+    externalDns:
+      enabled: true
+      hostname: "<your-boostrap-server-hostname>"
+      privateZoneId: "<your-route53-zone-id>"

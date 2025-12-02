@@ -44,13 +44,13 @@ kubectl create secret generic automq-server-tls \
 
 <Tip>
 
-You only need this single PEM bundle. During pod startup AutoMQ automatically converts it into the keystore/truststore files consumed by **all** broker/controller listeners and by the internal `automq.admin.*` clients (AutoBalancer, admin utilities, inter-controller RPCs). No extra client-specific secret is required.
+You only need this single PEM bundle. During pod startup AutoMQ mounts the PEM files directly for **all** broker/controller listeners and the internal `automq.admin.*` clients, so no extra client-specific Secret is required.
 
 </Tip>
 
 ### Step 1.3: Configure and Deploy AutoMQ
 
-Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a `SASL_SSL` listener, sets `_automq` as the SASL superuser, and defines a regular SASL user `my-user`.
+Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a `SASL_SSL` listener, sets `_automq` as the SASL superuser, and defines a regular SASL user `my-user`. Only the controller Service is exposed via an AWS NLB; clients must be able to reach that private NLB endpoint (for example via VPC peering or the same VPC). Broker Services remain internal.
 
 **Before deploying, review `values-sasl-ssl.yaml` and update the following placeholders:**
 - `<your-unique-instance-id>`
@@ -58,7 +58,8 @@ Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a 
 - `<your-s3-buckets-and-region>`
 - `<your-route53-zone-id>`
 - `<your-sasl-password>` for both `_automq` and `my-user`
-- `<your_multi_az_subnet_ids>` split by commas
+- `<your_multi_az_subnet_ids>` split by commas (only needed if you add AWS-specific annotations)
+- `automq-bootstrap.automq.private` (the controller bootstrap hostname) and `automq.private` (the advertised base domain) can be changed to fit your Route 53 zone naming conventions.
 
 Then, deploy the chart:
 ```bash
@@ -74,22 +75,31 @@ You have two options for binding the Route 53 record to the NLB.
 
 **Option A – Automatic (recommended)**
 
-1. Install [external-dns](https://github.com/kubernetes-sigs/external-dns) in your cluster with `--source=service --provider=aws --policy=upsert-only --registry=txt`. Bind its ServiceAccount to an IAM role that can call `route53:ListHostedZones`, `route53:ListResourceRecordSets`, and `route53:ChangeResourceRecordSets`.
-2. Ensure the hosted zone domain matches your `values-sasl-ssl.yaml`:
+1. Install [external-dns](https://github.com/kubernetes-sigs/external-dns) in your cluster with `--source=service --provider=aws --policy=upsert-only --registry=txt`. Bind its ServiceAccount to an IAM role that can call `route53:ListHostedZones`, `route53:ListResourceRecordSets`, and `route53:ChangeResourceRecordSets`. This section assumes the controller Service already runs as an AWS NLB (using the default AWS VPC CNI or equivalent networking).
+2. Configure both the listener’s `advertisedHostnames` block and the controller Service DNS block so they reference the same hosted zone:
    ```yaml
+   listeners:
+     client:
+       - name: CLIENT_SASL_SSL
+         containerPort: 9112
+         protocol: SASL_SSL
+         advertisedHostnames:
+           enabled: true
+           baseDomain: automq.private
+           externalDns:
+             privateZoneId: <your-route53-zone-id>
+
    externalAccess:
-     loadBalancer:
-       domain: automq.private          # must equal the Route 53 hosted zone domain
-       bootstrapPrefix: automq-bootstrap
+     controller:
+       enabled: true
+       service:
+         type: LoadBalancer
        externalDns:
          enabled: true
-         targetService: controller
-         listenerKey: client_mtls      # resolves automq.dns.client_mtls.zone.id from global.config
-         recordType: CNAME             # switch to A if you prefer an Alias
+         hostname: automq-bootstrap.automq.private
+         privateZoneId: <your-route53-zone-id>
+         recordType: A
          ttl: 60
-   global:
-     config: |
-       automq.dns.client_mtls.zone.id=<your_hosted_zone_id>
    ```
 3. Redeploy (or `helm upgrade`) so the controller Service renders the annotations. After the Service obtains an NLB hostname, run `kubectl logs -n kube-system deploy/external-dns | grep automq-bootstrap` to confirm external-dns created `automq-bootstrap.automq.private` automatically.
 
@@ -99,7 +109,7 @@ You have two options for binding the Route 53 record to the NLB.
     ```bash
     kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
     ```
-2.  Create a CNAME (or Alias A) record in Route 53 pointing `loadbalancer.automq.private` to the hostname from step 1.
+2.  Create a CNAME (or Alias A) record in Route 53 pointing `loadbalancer.automq.private` (or whatever hostname you used under `externalAccess.controller.externalDns.hostname`) to the hostname from step 1. If you prefer manual control, leave `externalAccess.controller.externalDns.enabled=false` so the Service renders no annotations.
 
 ### Step 1.5: Grant ACLs and Test Client
 
@@ -175,7 +185,7 @@ kubectl create secret generic automq-server-tls \
 
 <Tip>
 
-AutoMQ reuses this secret for its internal clients as well; the chart converts it into keystore/truststore files under `/opt/automq/kafka/config/certs/` and wires them into the `automq.admin.*` configuration with hostname verification disabled so the control plane can connect via Pod IPs. You only need to manage this one secret even in mTLS mode.
+AutoMQ mounts the same PEM bundle under `/opt/automq/kafka/config/certs/` and wires it into the `automq.admin.*` configuration (hostname verification disabled so the control plane can talk via Pod IPs), so even in mTLS mode you only manage one Secret.
 
 </Tip>
 
@@ -195,7 +205,7 @@ helm upgrade --install automq-mtls oci://automq.azurecr.io/helm/automq-enterpris
 
 ### Step 2.4: Publish the bootstrap DNS record
 
-You can reuse the automatic/manual options described in Step 1.4. If both SASL_SSL and mTLS clusters share the same Route 53 hosted zone, make sure each cluster uses a unique `bootstrapPrefix` (for example `sasl-bootstrap` vs `mtls-bootstrap`) so external-dns writes distinct records.
+Same as Step 1.4: external access is only required for the controller Service, so reuse the automatic/manual options above and ensure each cluster uses a unique `bootstrapPrefix`.
 
 ### Step 2.5: Grant ACLs and Test Client
 
