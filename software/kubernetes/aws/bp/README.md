@@ -171,18 +171,6 @@ Use the corresponding CSR to generate certificates/keys for your superuser and r
 
 1. Admin CSR
 
-```bash
-cat /path/to/admin-key.pem /path/to/admin-cert.pem > /path/to/admin-keystore.pem
-```
-
-```
-security.protocol=SSL
-ssl.truststore.type=PEM
-ssl.truststore.location=/path/to/ca-cert.pem
-ssl.keystore.type=PEM
-ssl.keystore.location=/path/to/admin-keystore.pem
-```
-
 ```
 [req]
 distinguished_name = req_distinguished_name
@@ -207,7 +195,7 @@ DNS.1 = *.automq.private
 > - CN must match the name of the Admin superuser you set in demo-values.yaml.
 > - SAN needs to use a wildcard domain name and match the domain name corresponding to the Private DNS Zone Id you set in demo-values.yaml, which is used for TLS host domain name verification.
 
-1. Common User CSR
+2. Common User CSR
 
 ```
 [req]
@@ -233,10 +221,32 @@ DNS.1 = *.automq.private
 > - CN needs to correspond to the name of the User subsequently authorized by ACL
 > - SAN also needs to match your Private DNS Zone for TLS host domain name verification
 
-1. Client separately configures `admin-ssl.properties`/`client-ssl.properties`, specifying certificate/key paths for Admin and regular users respectively
+1. Client separately configures `admin-ssl.properties`, specifying certificate/key paths for Admin user respectively
+
+```bash
+cat /path/to/admin-key.pem /path/to/admin-cert.pem > /path/to/admin-keystore.pem
+```
+
+```bash
+vim admin-ssl.properties
+```
+
+```
+security.protocol=SSL
+ssl.truststore.type=PEM
+ssl.truststore.location=/path/to/ca-cert.pem
+ssl.keystore.type=PEM
+ssl.keystore.location=/path/to/admin-keystore.pem
+```
+
+2. Client separately configures `user-ssl.properties`, specifying certificate/key paths for regular users respectively
 
 ```bash
 cat /path/to/user-key.pem /path/to/user-cert.pem > /path/to/user-keystore.pem
+```
+
+```bash
+vim user-ssl.properties
 ```
 
 ```
@@ -271,15 +281,15 @@ kafka-acls.sh --bootstrap-server bootstrap.automq.private:9122 \
 def BOOTSTRAP=bootstrap.automq.private:9122
 kafka-topics.sh --create --bootstrap-server $BOOTSTRAP \
   --topic my-topic --partitions 3 --replication-factor 3 \
-  --command-config client-ssl.properties
+  --command-config user-ssl.properties
 
 # 发送消息
 kafka-console-producer.sh --bootstrap-server $BOOTSTRAP \
-  --topic my-topic --producer.config client-ssl.properties
+  --topic my-topic --producer.config user-ssl.properties
 
 # 消费消息
 kafka-console-consumer.sh --bootstrap-server $BOOTSTRAP \
-  --topic my-topic --consumer.config client-ssl.properties \
+  --topic my-topic --consumer.config user-ssl.properties \
   --from-beginning
 ```
 
