@@ -46,9 +46,9 @@ Once your `demo-values.yaml` file is ready, use the `helm install` command to de
 Run the following command to install AutoMQ in a dedicated namespace:
 
 ```shell
-helm install automq-release oci://automq.azurecr.io/helm/automq-enterprise \
-  -f demo-values.yaml \
-  --version 5.2.0 \
+helm install automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart \
+  -f static/demo-static-values.yaml \
+  --version 5.3.2 \
   --namespace automq \
   --create-namespace
 ```
@@ -62,9 +62,9 @@ This command will create a new release named `automq-release` in the `automq` na
 To apply changes to your deployment after updating `demo-values.yaml`, use the `helm upgrade` command:
 
 ```shell
-helm upgrade automq-release oci://automq.azurecr.io/helm/automq-enterprise \
+helm upgrade automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart \
   -f demo-values.yaml \
-  --version 5.2.0 \
+  --version 5.3.2 \
   --namespace automq
 ```
 

@@ -1,0 +1,102 @@
+#
+# values-ssl-mtls.yaml
+# This file is for deploying AutoMQ with SSL (mTLS) authentication.
+# Clients will authenticate using their own unique TLS certificate.
+#
+global:
+  automqInstanceId: "<your-unique-instance-id>"
+  image:
+    tag: "5.3.1-snapshot-1763923342"
+    pullPolicy: Always
+  cloudProvider:
+    name: aws
+    credentials: pod://?
+  serviceAccount:
+    create: true
+    annotations:
+      eks.amazonaws.com/role-arn: "<your-eks-role-arn>"
+  config: |
+    # --- S3 and WAL Configuration ---
+    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
+    s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
+    s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
+    
+    # --- DNS Settings for Hostname Verification ---
+    automq.dns.client_mtls.zone.id=<your-route53-zone-id>
+
+# Define a listener for mTLS clients.
+listeners:
+  client:
+    - containerPort: 9122
+      protocol: SSL
+      name: CLIENT_MTLS
+      sslClientAuth: required
+
+# Configure server-side TLS by referencing the Kubernetes secret containing the server certificate.
+tls:
+  type: PEM
+  existingSecret: automq-server-tls
+
+# Expose the mTLS port (9122) via a Network Load Balancer.
+externalAccess:
+  controller:
+    enabled: true
+    service:
+      type: LoadBalancer
+      loadBalancerAnnotations:
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
+        service.beta.kubernetes.io/aws-load-balancer-type: external
+      extraPorts:
+        - name: "tls-client"
+          port: 9122
+          protocol: "TCP"
+          targetPort: 9122
+
+# Enable ACLs and define a certificate-based superuser.
+# The principal 'User:_automq' corresponds to a client certificate with CN=automq-admin.
+acl:
+  enabled: true
+  superUsers:
+    - "User:_automq"
+
+# SASL is still required for internal inter-broker communication.
+sasl:
+  controller:
+    password: "<your-sasl-password>"
+    user: _automq
+  interbroker:
+    password: "<your-sasl-password>"
+    user: _automq
+
+# --- Resource and Persistence Settings ---
+controller:
+  replicas: 3
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+  persistence:
+    metadata:
+      storageClass: "gp3"
+      size: "20Gi"
+    wal:
+      storageClass: "gp3"
+      size: "20Gi"
+  env:
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g"
+
+broker:
+  replicas: 0
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+  persistence:
+    wal:
+      storageClass: "gp3"
+      size: "20Gi"
+  env:
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g"

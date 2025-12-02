@@ -1,0 +1,62 @@
+{
+  "Statement": [
+    {
+      "Action": [
+        "s3:GetLifecycleConfiguration",
+        "s3:PutLifecycleConfiguration",
+        "s3:ListBucket"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::*",
+        "arn:aws:s3:::*"
+      ]
+    },
+    {
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:AbortMultipartUpload",
+        "s3:PutObjectTagging",
+        "s3:DeleteObject"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "arn:aws:s3:::*/*",
+        "arn:aws:s3:::*/*"
+      ]
+    },
+    {
+      "Action": [
+        "ec2:AttachVolume",
+        "ec2:DetachVolume"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "*"
+      ]
+    },
+    {
+      "Action": [
+        "ec2:DescribeVolumes",
+        "ec2:DescribeAvailabilityZones"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+        "*"
+      ]
+    },
+    {
+      "Action": [
+        "route53:GetHostedZone",
+        "route53:ListResourceRecordSets",
+        "route53:ChangeResourceRecordSets"
+      ],
+      "Effect": "Allow",
+      "Resource": [
+          "*"
+      ]
+    }
+  ],
+  "Version": "2012-10-17"
+}

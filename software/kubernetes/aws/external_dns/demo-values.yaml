@@ -1,0 +1,129 @@
+global:
+  automqInstanceId: "kf-wc6xhp09fs8i3j46"
+  cloudProvider:
+    name: aws
+    credentials: pod://?
+  serviceAccount:
+    create: true
+    name: automq-sa
+    annotations:
+      eks.amazonaws.com/role-arn: <your-eks-role-arn>
+  config: |
+    s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
+    s3.wal.path=0@s3://<your-data-bucket>?region=<aws-region>
+    automq.zonerouter.channels=0@s3://<your-data-bucket>?region=<aws-region>
+    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
+  livenessProbe:
+    probePort: 9122
+  readinessProbe:
+    probePort: 9122
+  zoneSpreadConstraints: true
+
+listeners:
+  controller:
+    - containerPort: 9103
+      name: CONTROLLER_MTLS
+      protocol: SSL
+      sslClientAuth: required
+  interbroker:
+    - containerPort: 9102
+      name: BROKER_MTLS
+      protocol: SSL
+      sslClientAuth: required
+  client:
+    - containerPort: 9122
+      protocol: SSL
+      name: CLIENT_MTLS
+      sslClientAuth: required
+      advertisedHostnames:
+        enabled: true
+        # e.g. "automq.private"
+        baseDomain: "<your-route53-zone-domain>"
+        externalDns:
+          enabled: true
+          privateZoneId: "<your-route53-zone-id>"
+
+controller:
+  create: true
+  replicas: 3
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
+  persistence:
+    metadata:
+      enabled: true
+      storageClass: "gp2"
+      size: "20Gi"
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+
+broker:
+  create: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: "1000m"
+      memory: "12Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
+  persistence:
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+
+# ---- ACL Configurations ----
+acl:
+  enabled: true
+  # ---- superuser definitions ----
+  # 1. intra cluster communication client with server cert CN=automq-server
+  # 2. admin client with CN=admin
+  superUsers:
+    - "CN=automq-server"
+    - "CN=admin"
+
+# ---- TLS Configurations ----
+tls:
+  type: PEM
+  # associate an existing secret containing the TLS certs
+  existingSecret: automq-tls-secret
+
+# ---- LoadBalancer ------
+externalAccess:
+  controller:
+    enabled: true
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
+        service.beta.kubernetes.io/aws-load-balancer-type: external
+      extraPorts:
+        - name: "tcp-9122"
+          port: 9122
+          protocol: "TCP"
+          targetPort: 9122
+    externalDns:
+      enabled: true
+      # e.g. "bootstrap.automq.private"
+      hostname: "<your-boostrap-server-hostname>"
+      privateZoneId: "<your-route53-zone-id>"
