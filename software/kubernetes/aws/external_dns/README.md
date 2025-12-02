@@ -204,7 +204,7 @@ DNS.1 = *.automq.private
 > - CN needs to correspond to the name of the User subsequently authorized by ACL
 > - SAN also needs to match your Private DNS Zone for TLS host domain name verification
 
-1. Client separately configures `admin-ssl.properties`, specifying certificate/key paths for Admin user respectively
+3. Client separately configures `admin-ssl.properties`, specifying certificate/key paths for Admin user respectively
 
 ```bash
 cat /path/to/admin-key.pem /path/to/admin-cert.pem > /path/to/admin-keystore.pem
@@ -220,9 +220,10 @@ ssl.truststore.type=PEM
 ssl.truststore.location=/path/to/ca-cert.pem
 ssl.keystore.type=PEM
 ssl.keystore.location=/path/to/admin-keystore.pem
+ssl.endpoint.identification.algorithm=https
 ```
 
-2. Client separately configures `user-ssl.properties`, specifying certificate/key paths for regular users respectively
+4. Client separately configures `user-ssl.properties`, specifying certificate/key paths for regular users respectively
 
 ```bash
 cat /path/to/user-key.pem /path/to/user-cert.pem > /path/to/user-keystore.pem
@@ -238,6 +239,7 @@ ssl.truststore.type=PEM
 ssl.truststore.location=/path/to/ca-cert.pem
 ssl.keystore.type=PEM
 ssl.keystore.location=/path/to/user-keystore.pem
+ssl.endpoint.identification.algorithm=https
 ```
 
 
