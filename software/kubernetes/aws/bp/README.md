@@ -12,7 +12,7 @@ This demo summarizes the best practice for deploying AutoMQ Enterprise version o
 
 ## 1. Preparatory Work
 
-1. **Kubernetes Cluster ** (Recommended to git clone locally and use the template in the [ Terraform guide for AWS EKS ](https://github.com/AutoMQ/automq-labs/blob/main/byoc-examples/setup/kubernetes/aws/terraform/README.md) documentation).
+1. **Kubernetes Cluster** (Recommended to git clone locally and use the template in the [ Terraform guide for AWS EKS ](https://github.com/AutoMQ/automq-labs/blob/main/byoc-examples/setup/kubernetes/aws/terraform/README.md) documentation).
    If it is a custom deployment, the following conditions must be met:
 
    - Has installed `AWS Load Balancer Controller`, `external-dns` and `CSI Driver`;
@@ -118,7 +118,7 @@ automq-release-automq-enterprise-controller-2   1/1     Running   0          5m5
 
 Confirm `automq-release-automq-enterprise-controller-loadbalancer` has obtained the NLB Hostname:
 
-```
+```bash
 kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
 
@@ -126,39 +126,22 @@ kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n auto
 k8s-automq-automqre-xxxxxxxxxx-xxxxxxxxxxxxxxx.elb.xxxxxx.amazonaws.com
 ```
 
-Confirm Route 53
+Verify that your bootstrap hostname in the Route 53 private hosted zone correctly resolves to the NLB endpoint in same VPC :
+
+```bash
+dig +short bootstrap.automq.private
+```
 
 ```
-aws route53 list-resource-record-sets --hosted-zone-id <your-route53-zone-id>
+# ELB ips
+10.0.xxx.xxx
+10.0.xxx.xxx
+10.0.xxx.xxx
 ```
 
-```sql
-{
-    "ResourceRecordSets": [
-        {
-            "Name": "automq.private.",
-            "Type": "NS",
-            "TTL": 172800,
-            "ResourceRecords": [
-               ...
-            ]
-        },
-        
-        ...
-        
-        {
-            "Name": "bootstrap.automq.private.",
-            "Type": "A",
-            "AliasTarget": {
-                "HostedZoneId": "XXXXXXX",
-                "DNSName": "k8s-automq-automqre-xxxxxxxxxx-xxxxxxxxxxxxxxx.elb.xxxxxx.amazonaws.com.",
-                "EvaluateTargetHealth": true
-            }
-        }
-        
-        ...
-    ]
-}
+Compare the resolved IPs of the NLB hostname and your bootstrap hostname to ensure they match:
+```bash
+diff <(dig +short k8s-automq-automqre-xxxxxxxxxx-xxxxxxxxxxxxxxx.elb.xxxxxx.amazonaws.com | sort) <(dig +short automq-bootstrap.automq.private | sort)
 ```
 
 ---
@@ -277,17 +260,17 @@ kafka-acls.sh --bootstrap-server bootstrap.automq.private:9122 \
 ### 3.3 Create a Topic and verify sending and receiving
 
 ```bash
-# 创建 Topic
+# create topic
 def BOOTSTRAP=bootstrap.automq.private:9122
 kafka-topics.sh --create --bootstrap-server $BOOTSTRAP \
   --topic my-topic --partitions 3 --replication-factor 3 \
   --command-config user-ssl.properties
 
-# 发送消息
+# produce message
 kafka-console-producer.sh --bootstrap-server $BOOTSTRAP \
   --topic my-topic --producer.config user-ssl.properties
 
-# 消费消息
+# consume message
 kafka-console-consumer.sh --bootstrap-server $BOOTSTRAP \
   --topic my-topic --consumer.config user-ssl.properties \
   --from-beginning
