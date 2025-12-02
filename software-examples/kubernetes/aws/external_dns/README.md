@@ -102,7 +102,7 @@ helm install automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart
 
 ### 2.4 Verification Deployment
 
-Ensure the controller StatefulSet is Ready:
+Ensure the controller/broker pods is Ready:
 
 ```
 kubectl get pods -n automq -w
@@ -116,15 +116,7 @@ automq-release-automq-enterprise-controller-1   1/1     Running   0          5m5
 automq-release-automq-enterprise-controller-2   1/1     Running   0          5m59s
 ```
 
-Confirm `automq-release-automq-enterprise-controller-loadbalancer` has obtained the NLB Hostname instead of Pending status:
-
-```bash
-kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-```
-
-```
-k8s-automq-automqre-xxxxxxxxxx-xxxxxxxxxxxxxxx.elb.xxxxxx.amazonaws.com
-```
+Once the cluster is ready, access it using the endpoint `bootstrap.automq.private` or your custom hostname.
 
 ---
 
