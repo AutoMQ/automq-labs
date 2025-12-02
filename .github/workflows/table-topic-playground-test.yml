@@ -5,10 +5,10 @@ on:
     branches:
       - main
     paths:
-      - 'table-topic-solutions/playground/**'
+      - 'opensource-examples/table-topic/playground/**'
   pull_request:
     paths:
-      - 'table-topic-solutions/playground/**'
+      - 'opensource-examples/table-topic/playground/**'
 
 jobs:
   test-playground:
@@ -16,6 +16,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Free Disk Space (Ubuntu)
+      uses: jlumbroso/free-disk-space@main
+      with:
+        tool-cache: false
+        android: true
+        dotnet: true
+        haskell: true
+        large-packages: true
+        docker-images: true
+        swap-storage: true         
+
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -41,10 +52,10 @@ jobs:
           ${{ runner.os }}-buildx-
 
     - name: Run all scenario tests
-      working-directory: table-topic-solutions/playground
+      working-directory: opensource-examples/table-topic/playground
       run: just test-all
 
     - name: Cleanup
       if: always()
-      working-directory: table-topic-solutions/playground
+      working-directory: opensource-examples/table-topic/playground
       run: just down || true

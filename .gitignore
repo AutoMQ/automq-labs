@@ -75,6 +75,7 @@ env/
 venv/
 ENV/
 **/*_pb2.py
+__marimo__/
 
 # Node.js
 node_modules/

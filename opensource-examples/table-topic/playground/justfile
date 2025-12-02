@@ -1,0 +1,168 @@
+# AutoMQ TableTopic Playground
+
+# Configuration
+SCHEMA_REGISTRY_URL := "http://schema-registry:8081"
+BOOTSTRAP_SERVERS := "automq:9092"
+
+SPARK_PACKAGES := "org.apache.iceberg:iceberg-spark-runtime-3.4_2.12:1.5.2,org.apache.spark:spark-avro_2.12:3.4.0"
+S3A_PACKAGES := "org.apache.hadoop:hadoop-aws:3.3.4,software.amazon.awssdk:bundle:2.17.257"
+SPARK_CONF := "--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+              --conf spark.hadoop.fs.s3a.endpoint=http://minio:9000 \
+              --conf spark.hadoop.fs.s3a.access.key=admin \
+              --conf spark.hadoop.fs.s3a.secret.key=password \
+              --conf spark.hadoop.fs.s3a.path.style.access=true \
+              --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+              --conf spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem"
+
+default: help
+
+help:
+    @echo "AutoMQ TableTopic — REST"
+    @echo "========================"
+    @echo "Environment:"
+    @echo "  up                   - Start REST services"
+    @echo "  down                 - Stop and remove services"
+    @echo "  status               - Check service status"
+    @echo "  logs [service]       - View logs (all or specific)"
+    @echo ""
+    @echo "Topics:"
+    @echo "  topic-list               - List all Kafka topics"
+    @echo "  topic-describe <topic>   - Describe a topic"
+    @echo "  topic-create-table <topic> [convert_type] [transform_type]"
+    @echo "                           - Create a simple Table Topic"
+    @echo ""
+    @echo "Tools:"
+    @echo "  pyspark                  - Start PySpark shell"
+    @echo "  spark-sql <SQL>          - Execute SQL via Spark"
+    @echo "  trino-sql <SQL>          - Execute SQL via Trino"
+    @echo ""
+    @echo "Test All Scenarios:"
+    @echo "  test-all                 - Run all scenario tests"
+    @echo ""
+    @echo "(Produce/consume and schema registration are provided in scenario justfiles.)"
+
+# Environment
+up:
+    @echo "Starting REST services..."
+    docker compose -f docker-compose.yml up -d
+    @just _wait-for-services
+
+down:
+    @echo "Stopping services..."
+    docker compose -f docker-compose.yml down -v
+
+status:
+    @echo "Service status:"
+    docker compose -f docker-compose.yml ps
+
+logs service="":
+    #!/usr/bin/env bash
+    if [ "{{service}}" = "" ]; then
+      docker compose -f docker-compose.yml logs -f
+    else
+      docker compose -f docker-compose.yml logs -f {{service}}
+    fi
+
+# Topics
+topic-list:
+    @echo "Listing Kafka topics..."
+    docker compose -f docker-compose.yml exec automq \
+      /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list
+
+topic-describe topic:
+    @echo "Describing topic {{topic}}..."
+    docker compose -f docker-compose.yml exec automq \
+      /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic {{topic}}
+
+topic-create-table topic convert_type='by_schema_id' transform_type='flatten' retention_ms='345600000':
+    @echo "Creating table topic {{topic}} (convert={{convert_type}}, transform={{transform_type}}, retention={{retention_ms}})"
+    docker compose -f docker-compose.yml exec automq \
+      /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} \
+      --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config retention.ms={{retention_ms}} \
+      --config automq.table.topic.commit.interval.ms=1000 \
+      --config automq.table.topic.convert.value.type={{convert_type}} \
+      --config automq.table.topic.transform.value.type={{transform_type}} \
+      --config automq.table.topic.namespace=default || true
+    @echo "Table topic created."
+
+# Tools
+pyspark:
+    @echo "Starting PySpark shell..."
+    docker compose -f docker-compose.yml exec spark-iceberg pyspark \
+      --packages {{SPARK_PACKAGES}},{{S3A_PACKAGES}} \
+      {{SPARK_CONF}}
+
+spark-sql SQL:
+    @echo "Executing SQL: {{SQL}}"
+    docker compose -f docker-compose.yml exec spark-iceberg spark-sql \
+      --packages {{SPARK_PACKAGES}},{{S3A_PACKAGES}} \
+      {{SPARK_CONF}} \
+      -e '{{SQL}}'
+
+trino-sql SQL:
+    @echo 'Executing SQL (Trino): {{SQL}}'
+    docker compose -f docker-compose.yml exec trino trino \
+      --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg --schema default
+
+# =============================================================================
+# Helper Functions (shared across scenarios)
+# =============================================================================
+
+# Wait for Schema Registry to be ready
+_wait-for-schema-registry:
+    #!/usr/bin/env bash
+    set -e
+    echo "Waiting for Schema Registry..."
+    timeout=30; counter=0
+    while [ $counter -lt $timeout ]; do
+        if curl -s http://localhost:8081/subjects >/dev/null 2>&1; then
+            echo "Schema Registry ready"
+            exit 0
+        fi
+        sleep 2; counter=$((counter + 2))
+    done
+    echo "ERROR: Schema Registry not ready within $timeout seconds"
+    exit 1
+
+# Wait for AutoMQ to be ready
+_wait-for-automq:
+    #!/usr/bin/env bash
+    set -e
+    echo "Waiting for AutoMQ..."
+    timeout=60; counter=0
+    while [ $counter -lt $timeout ]; do
+        if docker compose -f docker-compose.yml exec -T automq \
+            /opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1; then
+            echo "AutoMQ ready"
+            exit 0
+        fi
+        sleep 2; counter=$((counter + 2))
+    done
+    echo "ERROR: AutoMQ not ready within $timeout seconds"
+    exit 1
+
+# Wait for basic services (AutoMQ + Schema Registry)
+_wait-for-services:
+    @just _wait-for-automq
+    @just _wait-for-schema-registry
+    @echo "Basic services ready"
+
+# Test all scenarios
+test-all:
+    #!/usr/bin/env bash
+    set -e
+    scenarios=("append-scenario" "insert-scenario" "partition-scenario" "protobuf-latest-scenario" "cdc-scenario" "github-event")
+
+    echo "=== Running All Scenario Tests ==="
+    for scenario in "${scenarios[@]}"; do
+        echo "========================Testing $scenario..========================"
+        just -f "$scenario/justfile" test
+        echo "$scenario: PASSED"
+        echo ""
+        docker system prune --volumes -f
+    done
+
+    echo "=== All Tests Completed Successfully ==="

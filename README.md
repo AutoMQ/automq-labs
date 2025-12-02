@@ -12,7 +12,7 @@
 </div>
 
 [![Linkedin Badge](https://img.shields.io/badge/-LinkedIn-blue?style=flat-square&logo=Linkedin&logoColor=white&link=https://www.linkedin.com/company/automq)](https://www.linkedin.com/company/automq)
-[![](https://badgen.net/badge/Slack/Join%20AutoMQ/0abd59?icon=slack)](https://join.slack.com/t/automq/shared_invite/zt-29h17vye9-thf31ebIVL9oXuRdACnOIA)
+[![](https://badgen.net/badge/Slack/Join%20AutoMQ/0abd59?icon=slack)](https://go.automq.com/slack)
 
 
 # AutoMQ Labs
@@ -32,18 +32,31 @@ This repository provides a collection of samples to help you get started with [A
 > -   **Open Source Binaries**: Download the latest release from [GitHub Releases](https://github.com/AutoMQ/automq/releases).
 > -   **AutoMQ Cloud**: View the latest version details in the [Cloud Release Notes](https://www.automq.com/docs/automq-cloud/release-notes).
 
-## Overview
+## Repository Structure
 
-This repository is organized into the following sections:
+This repository is organized into three main directories:
 
-*   **[Open Source Setup](./opensource-setup/)**: Deploy AutoMQ open-source version using Docker Compose, Kubernetes, and Ansible.
-*   **[Client Examples](./client-examples/)**: Build and run demos for various language clients, including Java, C++, Go, and Python.
-*   **[Table Topic Solutions](./table-topic-solutions/)**: Explore solutions for append and CDC scenarios with Table Topic, and integrations with Iceberg REST Catalog, AWS Glue, and Hive Metastore.
-*   **[Cloud Service Setup](./cloudservice-setup/)**: Deploy AutoMQ cloud service on AWS (EC2 and EKS), GCP (Kubernetes), and Azure (Kubernetes) using Terraform.
-*   **[Observability](./observability/)**: Set up a monitoring stack with Mimir and Grafana for AutoMQ using Docker Compose.
-*   **[Kubernetes](./kubernetes/)**: Provides Terraform scripts for provisioning Kubernetes clusters on AWS, Azure, and GCP.
-*   **[Kafka Linking Demos](./kafka-linking-demos/)**: Learn how to migrate from any Kafka cluster to AutoMQ with demos for standard clients and Flink applications.
-*   **[Auto-Balancing Demos](./auto-balancing-demos/)**: See how AutoMQ automatically balances workloads based on traffic, QPS, and node health.
+### 📦 [opensource-examples](opensource-examples/)
+
+Examples and demos for the **AutoMQ Open Source** version. This directory contains:
+
+*   **[Setup](opensource-examples/setup/)**: Deploy AutoMQ open-source version using Docker Compose and Kubernetes (Bitnami/Strimzi Helm charts).
+*   **[Clients](opensource-examples/clients/)**: Build and run demos for various language clients, including Java, C++, Go, Python, and JavaScript.
+*   **[Table Topic](opensource-examples/table-topic/)**: Explore AutoMQ's Table Topic feature that automatically streams Kafka messages into Apache Iceberg tables.
+*   **[UI Tools](opensource-examples/ui/)**: Set up web-based management UIs for AutoMQ, including Kafka UI, Kafdrop, and Redpanda Console.
+
+### ☁️ [byoc-examples](byoc-examples/)
+
+Examples for deploying **AutoMQ Cloud Service (BYOC - Bring Your Own Cloud)**. This directory contains:
+
+*   **[Setup](byoc-examples/setup/)**: Deploy AutoMQ cloud service on AWS (EC2 and EKS) and Azure using Terraform.
+*   **[Kubernetes Infrastructure](byoc-examples/setup/kubernetes/)**: Provides Terraform scripts for provisioning Kubernetes clusters on AWS, Azure, and GCP.
+
+### 🚀 [software-examples](software-examples/)
+
+Kubernetes deployment examples for AutoMQ software with different configurations:
+
+*   **[Kubernetes](software-examples/kubernetes/)**: Deployment examples with role-based, static, and TLS configurations.
 
 ## Getting Started
 
@@ -56,11 +69,3 @@ Each section contains a detailed `README.md` file with instructions on how to ru
 > For production deployments, we strongly recommend discussing your architecture and best practices with our engineering team to ensure optimal performance, reliability, and cost-efficiency.
 >
 > Please **[contact us](https://www.automq.com/contact)** to get in touch.
-
-## Contributing
-
-We welcome contributions! Please see our [contributing guidelines](./CONTRIBUTING.md) for more information.
-
-## License
-
-This project is licensed under the [Apache License 2.0](./LICENSE).

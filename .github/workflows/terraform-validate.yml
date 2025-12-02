@@ -1,0 +1,58 @@
+name: Terraform Validate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+
+jobs:
+  terraform-validate:
+    name: 'Terraform Validate'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Validate Terraform modules
+      run: |
+        set +e  # Continue on error to validate all modules
+        failed=0
+        
+        # Find all Terraform module directories (exclude .terraform and .git)
+        echo "📋 Finding Terraform modules to validate..."
+        modules=$(find . -type d \( -name ".terraform" -o -name ".git" \) -prune -o \
+          -name "*.tf" -type f -print | xargs dirname | sort -u | grep -v "/\.terraform")
+        
+        # List all modules
+        counter=1
+        for dir in $modules; do
+          echo "  $counter. $dir"
+          counter=$((counter + 1))
+        done
+        
+        # Validate each module
+        counter=1
+        for dir in $modules; do
+          echo "::group::[$counter/$module_count] Validating $dir"
+          cd "$dir"
+          terraform init -backend=false > /dev/null 2>&1
+          if ! terraform validate; then
+            failed=1
+          fi
+          cd "${{ github.workspace }}"
+          echo "::endgroup::"
+          counter=$((counter + 1))
+        done
+        
+
