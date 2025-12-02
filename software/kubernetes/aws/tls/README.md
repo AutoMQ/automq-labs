@@ -63,8 +63,9 @@ Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a 
 
 Then, deploy the chart:
 ```bash
-helm upgrade --install automq-release oci://automq.azurecr.io/helm/automq-enterprise \
+helm upgrade --install automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart \
   -f values-sasl-ssl.yaml \
+  --version 5.3.2 \
   --namespace <your-namespace> \
   --create-namespace
 ```
@@ -197,8 +198,9 @@ Use the `values-ssl-mtls.yaml` file provided in this directory. It configures an
 
 Then, deploy the chart:
 ```bash
-helm upgrade --install automq-mtls oci://automq.azurecr.io/helm/automq-enterprise \
+helm upgrade --install automq-mtls oci://automq.azurecr.io/helm/automq-enterprise-chart \
   -f values-ssl-mtls.yaml \
+  --version 5.3.2 \
   --namespace <your-namespace> \
   --create-namespace
 ```

@@ -17,11 +17,13 @@ locals {
   lb_service_account                 = "aws-load-balancer-controller"
   ebs_csi_service_account            = "ebs-csi-controller-sa"
   cluster_autoscaler_service_account = "cluster-autoscaler"
+  external_dns_service_account       = "external-dns"
 
   # IAM role names
   alb_controller_role_name     = "alb-role-${var.resource_suffix}"
   ebs_csi_role_name            = "csi-role-${var.resource_suffix}"
   cluster_autoscaler_role_name = "autoscaler-role-${var.resource_suffix}"
+  external_dns_role_name       = "external-dns-role-${var.resource_suffix}"
 
   # Helm release names
   cluster_autoscaler_release_name = "cluster-autoscaler"

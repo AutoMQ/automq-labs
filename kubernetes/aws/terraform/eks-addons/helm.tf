@@ -59,3 +59,29 @@ resource "helm_release" "alb_controller" {
     kubernetes_service_account.lb_controller_sa
   ]
 }
+
+resource "helm_release" "external_dns" {
+  namespace = "kube-system"
+  wait      = true
+  timeout   = 600
+
+  name = "external-dns"
+
+  repository = "https://kubernetes-sigs.github.io/external-dns/"
+  chart      = "external-dns"
+  version    = "1.12.1"
+
+
+  set {
+    name  = "provider"
+    value = "aws"
+  }
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = module.cluster_exteranl_dns_irsa_role.arn
+  }
+  depends_on = [
+    module.cluster_exteranl_dns_irsa_role
+  ]
+}
