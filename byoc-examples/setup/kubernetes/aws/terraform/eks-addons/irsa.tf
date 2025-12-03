@@ -63,15 +63,16 @@ module "cluster_exteranl_dns_irsa_role" {
 
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
 
-  name                             = local.external_dns_role_name
-  attach_external_dns_policy = true
+  name                          = local.external_dns_role_name
+  attach_external_dns_policy    = true
   external_dns_hosted_zone_arns = ["arn:aws:route53:::hostedzone/*"]
 
 
   oidc_providers = {
     main = {
-      provider_arn               = local.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:${local.external_dns_service_account}"]
+      provider_arn = local.oidc_provider_arn
+      // hardcoded for external-dns service account
+      namespace_service_accounts = ["kube-system:external-dns"]
     }
   }
 }
