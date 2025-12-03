@@ -7,21 +7,21 @@ services:
       MINIO_ROOT_PASSWORD: minio123
     ports: ["9000:9000","9001:9001"]
   
+  polaris:
+    image: polarismesh/polaris-server:latest
+    ports:
+      - "8181:8181"
+    environment:
+      POLARIS_LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  
   automq:
     image: automqinc/automq:latest
-    depends_on: [minio]
-    environment:
-      AWS_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: minio
-      AWS_SECRET_ACCESS_KEY: minio123
-      AWS_ENDPOINT_OVERRIDE: http://minio:9000
-      AUTOMQ_CONFIG: /opt/automq/automq.properties
-    volumes:
-      - ./configs/automq.properties:/opt/automq/automq.properties:ro
-    ports: ["9092:9092"]
-  spark:
-    image: apache/spark:3.5.0
-    depends_on: [minio]
+    depends_on: [minio, polaris]
     environment:
       - SPARK_MODE=client
     volumes:
