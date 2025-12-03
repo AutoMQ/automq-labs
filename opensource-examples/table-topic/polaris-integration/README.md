@@ -70,7 +70,6 @@ security:
 ## docker-compose.yml
 Services: MinIO, Polaris, AutoMQ, Spark.
 ```yaml
-version: "3.9"
 services:
   minio:
     image: minio/minio:RELEASE.2024-09-22T00-00-00Z
