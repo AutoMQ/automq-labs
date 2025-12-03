@@ -1,13 +1,10 @@
 #
 # values-sasl-ssl.yaml
 # This file is for deploying AutoMQ with SASL_SSL authentication.
-# Clients will authenticate using username/password over a TLS-encrypted channel.
+# Controller/InterBroker/Clients will authenticate using username/password over a TLS-encrypted channel.
 #
 global:
   automqInstanceId: "<your-unique-instance-id>"
-  image:
-    tag: "5.3.1-snapshot-1763923342"
-    pullPolicy: Always
   cloudProvider:
     name: aws
     credentials: pod://?
@@ -20,16 +17,31 @@ global:
     s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
     s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
     s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
-    
-    # --- DNS Settings for Hostname Verification ---
-    automq.dns.client_sasl_ssl.zone.id=<your-route53-zone-id>
 
-# Define a listener for SASL_SSL clients.
+# Define a listener for SASL_SSL.
 listeners:
+  controller:
+    - containerPort: 9103
+      name: CONTROLLER_SASL_SSL
+      protocol: SSL
+      sslClientAuth: required
+  interbroker:
+    - containerPort: 9102
+      name: BROKER_SASL_SSL
+      protocol: SSL
+      sslClientAuth: required
   client:
     - containerPort: 9112
       protocol: SASL_SSL
       name: CLIENT_SASL_SSL
+      sslClientAuth: required
+      advertisedHostnames:
+        enabled: true
+        # e.g. "automq.private"
+        baseDomain: "<your-route53-zone-domain>"
+        externalDns:
+          enabled: true
+          privateZoneId: "<your-route53-zone-id>"
 
 # Configure server-side TLS by referencing the Kubernetes secret containing the server certificate.
 tls:
@@ -42,21 +54,28 @@ externalAccess:
     enabled: true
     service:
       type: LoadBalancer
-      loadBalancerAnnotations:
+      annotations:
         service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
         service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
         service.beta.kubernetes.io/aws-load-balancer-type: external
       extraPorts:
-        - name: "sasl-client"
+        - name: "tcp-9112"
           port: 9112
           protocol: "TCP"
           targetPort: 9112
+    externalDns:
+      enabled: true
+      # e.g. "bootstrap.automq.private"
+      hostname: "<your-boostrap-server-hostname>"
+      privateZoneId: "<your-route53-zone-id>"
 
 # Enable ACLs and define the SASL user '_automq' as the superuser.
 acl:
   enabled: true
   superUsers:
     - "_automq"
+    - "admin"
+    - "CN=kafka-server"
 
 # Define credentials for the superuser '_automq' and a regular user 'my-user'.
 sasl:
@@ -68,7 +87,7 @@ sasl:
     user: _automq
   client:
     users:
-      - "my-user"
+      - "admin"
     passwords:
       - "<your-sasl-password>"
 
@@ -81,10 +100,10 @@ controller:
       memory: "12Gi"
   persistence:
     metadata:
-      storageClass: "gp3"
+      storageClass: "gp2"
       size: "20Gi"
     wal:
-      storageClass: "gp3"
+      storageClass: "gp2"
       size: "20Gi"
   env:
     - name: "KAFKA_HEAP_OPTS"
@@ -98,7 +117,7 @@ broker:
       memory: "12Gi"
   persistence:
     wal:
-      storageClass: "gp3"
+      storageClass: "gp2"
       size: "20Gi"
   env:
     - name: "KAFKA_HEAP_OPTS"
