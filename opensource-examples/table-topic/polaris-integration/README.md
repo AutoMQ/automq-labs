@@ -24,7 +24,7 @@ docker compose up -d --build
 
 2) Verify Polaris REST
 ```bash
-curl -s -H "Polaris-Realm=POLARIS" -H "Authorization=Bearer test" http://localhost:8181/v1/config
+curl -s -H "Polaris-Realm=POLARIS" -H "Authorization=Bearer test-token" http://localhost:8181/v1/config
 ```
 
 3) Create a Table Topic and write
