@@ -71,7 +71,8 @@ module "cluster_exteranl_dns_irsa_role" {
   oidc_providers = {
     main = {
       provider_arn               = local.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:${local.external_dns_service_account}"]
+      // hardcoded for external-dns service account
+      namespace_service_accounts = ["kube-system:external-dns"]
     }
   }
 }

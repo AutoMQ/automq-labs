@@ -24,13 +24,6 @@ variable "enable_autoscaler" {
   default     = true
 }
 
-variable "enable_external_dns" {
-  description = "Enable the External DNS"
-  type        = bool
-  default     = true
-}
-
-
 variable "enable_alb_ingress_controller" {
   description = "Enable the AWS Load Balancer Controller"
   type        = bool
