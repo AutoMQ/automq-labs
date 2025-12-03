@@ -7,7 +7,7 @@ This guide shows how to run AutoMQ Table Topic with Apache Polaris (Iceberg REST
 - Required headers: `Polaris-Realm`, `Authorization`
 - Header config pattern: `automq.table.topic.catalog.header.{HeaderName}={Value}`
 
-## Directory
+## Directory Structure
 - docker-compose.yml: Polaris + MinIO + Spark + AutoMQ
 - configs/
   - automq.properties
