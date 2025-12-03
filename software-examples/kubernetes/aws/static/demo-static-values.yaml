@@ -89,10 +89,18 @@ externalAccess:
   controller:
     enabled: true
     service:
-      loadBalancerAnnotations:
-        service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
+        service.beta.kubernetes.io/aws-load-balancer-type: external
       extraPorts:
         - name: "tcp-9092"
           port: 9092
           protocol: "TCP"
           targetPort: 9092
+    externalDns:
+      enabled: true
+      # e.g. "bootstrap.automq.private"
+      hostname: "<your-boostrap-server-hostname>"
+      privateZoneId: "<your-route53-zone-id>"
