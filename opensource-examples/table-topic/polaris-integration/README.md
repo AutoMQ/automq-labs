@@ -81,7 +81,7 @@ services:
     ports: ["9000:9000","9001:9001"]
 
   polaris:
-    image: apache/polaris:1.1.0
+    image: polaris-catalog/polaris:latest
     ports: ["8181:8181"]
     volumes:
       - ./configs/polaris.yaml:/opt/polaris/config.yaml:ro
