@@ -101,7 +101,7 @@ services:
     ports: ["9092:9092"]
 
   spark:
-    image: bitnami/spark:3.5
+    image: apache/spark:3.5.0
     depends_on: [polaris]
     environment:
       - SPARK_MODE=client
