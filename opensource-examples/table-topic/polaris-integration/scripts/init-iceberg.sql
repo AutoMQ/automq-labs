@@ -1,2 +1,8 @@
 -- Create and inspect an Iceberg table via Polaris REST catalog headers set in AutoMQ
--- This file is a placeholder for users to add Spark SQL statements as needed
+-- Example: Create a sample Iceberg table and list tables in the default namespace
+CREATE TABLE IF NOT EXISTS default.sample_iceberg_table (
+  id INT,
+  name STRING
+) USING ICEBERG;
+
+SHOW TABLES IN default;
