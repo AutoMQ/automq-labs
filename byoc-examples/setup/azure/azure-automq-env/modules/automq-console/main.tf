@@ -68,15 +68,23 @@ variable "cluster_identity_id" {
   description = "User-assigned identity ID used by the cluster and console"
 }
 
+variable "subscription_id" {
+  type        = string
+  description = "Subscription ID for role assignments"
+}
+
 locals {
-  env_name              = "automq-console"
-  vm_admin_username     = "azureuser"
-  ssh_algorithm         = "RSA"
-  ssh_bits              = 4096
-  dns_zone_name         = "automq-console.automq.private"
-  dns_link_name         = "automq-console-vnet-link"
-  storage_account_scope = "/subscriptions/${split("/", var.vnet_id)[2]}/resourceGroups/${split("/", var.vnet_id)[4]}"
-  ssh_private_key_path  = "${pathexpand("~/.ssh")}/${"${local.env_name}-ssh-key"}.pem"
+  env_name                  = "automq-console"
+  vm_admin_username         = "azureuser"
+  ssh_algorithm             = "RSA"
+  ssh_bits                  = 4096
+  dns_zone_name             = "automq-console.automq.private"
+  dns_link_name             = "automq-console-vnet-link"
+  storage_account_scope     = "/subscriptions/${split("/", var.vnet_id)[2]}/resourceGroups/${split("/", var.vnet_id)[4]}"
+  ssh_private_key_path      = pathexpand("~/.ssh/${local.env_name}-ssh-key.pem")
+  data_disk_name            = "${local.env_name}-datadisk"
+  disk_size_gb              = 20
+  disk_storage_account_type = "Premium_LRS"
 }
 
 # SSH key for console access
@@ -96,6 +104,30 @@ resource "azurerm_user_assigned_identity" "console" {
   name                = "uai-${local.env_name}"
   location            = var.location
   resource_group_name = var.resource_group_name
+}
+
+resource "azurerm_role_assignment" "console_storage_blob_data_contributor" {
+  role_definition_name = "Storage Blob Data Contributor"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.console.principal_id
+}
+
+resource "azurerm_role_assignment" "console_reader" {
+  role_definition_name = "Reader"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.console.principal_id
+}
+
+resource "azurerm_role_assignment" "console_private_dns_contributor" {
+  role_definition_name = "Private DNS Zone Contributor"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.console.principal_id
+}
+
+resource "azurerm_role_assignment" "console_aks_admin" {
+  role_definition_name = "Azure Kubernetes Service Cluster Admin Role"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.console.principal_id
 }
 
 # DNS zone for internal records
@@ -215,6 +247,24 @@ resource "azurerm_linux_virtual_machine" "console" {
   }))
 }
 
+
+resource "azurerm_managed_disk" "data_disk" {
+  name                 = local.data_disk_name
+  location             = var.location
+  resource_group_name  = var.resource_group_name
+  storage_account_type = local.disk_storage_account_type
+  create_option        = "Empty"
+  disk_size_gb         = local.disk_size_gb
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "data_disk_attachment" {
+  managed_disk_id    = azurerm_managed_disk.data_disk.id
+  virtual_machine_id = azurerm_linux_virtual_machine.console.id
+  lun                = 10
+  caching            = "ReadWrite"
+}
+
+
 output "console_endpoint" {
   value = "http://${azurerm_public_ip.console.ip_address}:8080"
 }
@@ -233,4 +283,21 @@ output "console_role_id" {
 
 output "console_role_arn" {
   value = azurerm_user_assigned_identity.console.id
+}
+
+output "dns_zone_name" {
+  value = azurerm_private_dns_zone.zone.name
+}
+
+output "dns_zone_id" {
+  value = azurerm_private_dns_zone.zone.id
+}
+
+output "data_bucket_name" {
+  # Blob container name supplied by user
+  value = var.data_container_name
+}
+
+output "data_bucket_endpoint" {
+  value = data.azurerm_storage_account.data.primary_blob_endpoint
 }

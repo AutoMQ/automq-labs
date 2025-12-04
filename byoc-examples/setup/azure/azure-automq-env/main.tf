@@ -99,6 +99,7 @@ module "automq_console" {
   image_id                    = var.automq_console_id
   vm_size                     = var.automq_console_vm_size
   cluster_identity_id         = module.iam.workload_identity_id
+  subscription_id             = var.subscription_id
 }
 
 output "resource_group_name" {
@@ -140,4 +141,25 @@ output "automq_console_username" {
 output "automq_console_password" {
   sensitive = true
   value     = module.automq_console.console_initial_password
+}
+
+output "dns_zone_name" {
+  value = module.automq_console.dns_zone_name
+}
+
+output "dns_zone_id" {
+  value = module.automq_console.dns_zone_id
+}
+
+output "data_bucket_name" {
+  value = module.automq_console.data_bucket_name
+}
+
+output "data_bucket_endpoint" {
+  value = module.automq_console.data_bucket_endpoint
+}
+
+output "nodepool_identity_client_id" {
+  description = "Managed Identity Client ID associated with the AutoMQ AKS node pool"
+  value       = module.iam.workload_identity_client_id
 }
