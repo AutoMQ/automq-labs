@@ -35,6 +35,17 @@ variable "kubeconfig_path" {
   default     = "~/.kube/automq-aks-config"
 }
 
+variable "identity_id" {
+  type        = string
+  description = "User assigned identity ID for AKS control plane"
+}
+
+variable "temporary_name_for_rotation" {
+  type        = string
+  description = "Temporary name used by AKS during node pool rotation"
+  default     = "tmp"
+}
+
 variable "service_cidr" {
   type        = string
   description = "AKS service CIDR (must not overlap VNet/subnets)"
@@ -61,10 +72,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
     vnet_subnet_id               = var.subnet_id
     only_critical_addons_enabled = true
     orchestrator_version         = var.kubernetes_version
+    temporary_name_for_rotation  = var.temporary_name_for_rotation
   }
 
   identity {
-    type = "SystemAssigned"
+    type         = "UserAssigned"
+    identity_ids = [var.identity_id]
   }
 
   network_profile {
@@ -78,6 +91,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   role_based_access_control_enabled = true
   oidc_issuer_enabled               = true
+  workload_identity_enabled         = true
 }
 
 # Ensure kubeconfig directory exists and write kubeconfig locally

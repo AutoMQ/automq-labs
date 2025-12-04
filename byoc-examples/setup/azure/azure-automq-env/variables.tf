@@ -53,6 +53,12 @@ variable "kubeconfig_path" {
   default     = "~/.kube/automq-aks-config"
 }
 
+variable "temporary_name_for_rotation" {
+  description = "Temporary name used by AKS for node pool rotation"
+  type        = string
+  default     = "tmp"
+}
+
 variable "env_prefix" {
   description = "Short prefix used for naming resources"
   type        = string

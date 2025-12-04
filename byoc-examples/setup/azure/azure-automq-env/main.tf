@@ -45,15 +45,17 @@ resource "azurerm_resource_group" "rg" {
 module "aks" {
   source = "./modules/aks"
 
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  aks_name            = "aks-${local.name_suffix}"
-  kubernetes_version  = var.kubernetes_version
-  subnet_id           = var.private_subnet_id
-  dns_prefix          = "${var.env_prefix}-dns"
-  service_cidr        = var.service_cidr
-  dns_service_ip      = var.dns_service_ip
-  kubeconfig_path     = var.kubeconfig_path
+  location                    = var.location
+  resource_group_name         = azurerm_resource_group.rg.name
+  aks_name                    = "aks-${local.name_suffix}"
+  kubernetes_version          = var.kubernetes_version
+  subnet_id                   = var.private_subnet_id
+  dns_prefix                  = "${var.env_prefix}-dns"
+  service_cidr                = var.service_cidr
+  dns_service_ip              = var.dns_service_ip
+  kubeconfig_path             = var.kubeconfig_path
+  identity_id                 = module.iam.identity_id
+  temporary_name_for_rotation = var.temporary_name_for_rotation
 }
 
 module "iam" {
