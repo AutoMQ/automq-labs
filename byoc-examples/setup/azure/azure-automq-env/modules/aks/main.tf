@@ -72,7 +72,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     only_critical_addons_enabled = true
     orchestrator_version         = var.kubernetes_version
     temporary_name_for_rotation  = "systmp"
-    zones = [1, 2, 3]
+    zones                        = [1, 2, 3]
   }
 
   network_profile {

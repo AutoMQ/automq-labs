@@ -32,6 +32,11 @@ Optional network bootstrap example (standalone): `byoc-examples/setup/azure/netw
 - AKS control plane uses its own UAI created inside the AKS module; workload identity and OIDC issuer are enabled.
 - System node pool: single node, auto-scaling enabled, `only_critical_addons_enabled = true`, temporary name for rotation (default `tmp`).
 - User node pool `automq`: taint `dedicated=automq:NoSchedule`, supports spot/regular, subnet from input, UAI assigned to VMSS post-creation.
+- 节点池 VMSS 身份：模块会自动调用 `modules/nodepool-automq/attach_vmss_identity.sh`，为节点池对应的 VMSS 绑定传入的 `cluster_identity_id`。该脚本也可单独执行：
+  ```bash
+  bash modules/nodepool-automq/attach_vmss_identity.sh \
+    <AKS_CLUSTER_ID> <NODEPOOL_NAME> <UAI_ID>
+  ```
 - Network profile: Azure CNI/policy, LB Standard, outbound via load balancer; service CIDR and DNS service IP are configurable (defaults 10.2.0.0/16 and 10.2.0.10) to avoid overlap with VNet/subnets.
 - Kubeconfig: written locally to `kubeconfig_path` (default `~/.kube/automq-aks-config`), not output in plaintext.
 - Console SSH key: written to `~/.ssh/automq-console-ssh-key.pem` by Terraform (local_file).

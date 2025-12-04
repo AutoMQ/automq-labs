@@ -97,24 +97,7 @@ resource "null_resource" "vmss_identity" {
 
   provisioner "local-exec" {
     when        = create
-    command     = <<-EOT
-      set -euo pipefail
-      if [ -z "${var.cluster_identity_id}" ]; then
-        echo "cluster_identity_id is empty, skip VMSS identity assignment"
-        exit 0
-      fi
-
-      CLUSTER_ID="${azurerm_kubernetes_cluster_node_pool.automq.kubernetes_cluster_id}"
-      CLUSTER_RG=$(echo "$CLUSTER_ID" | awk -F'/' '{print $5}')
-      CLUSTER_NAME=$(echo "$CLUSTER_ID" | awk -F'/' '{print $9}')
-
-      NODE_RG=$(az aks show --resource-group "$CLUSTER_RG" --name "$CLUSTER_NAME" --query nodeResourceGroup -o tsv)
-      VMSS_NAME=$(az vmss list -g "$NODE_RG" -o json | jq -r '.[] | select(.tags["aks-managed-poolName"]=="${azurerm_kubernetes_cluster_node_pool.automq.name}").name')
-
-      echo "Assigning identity ${var.cluster_identity_id} to VMSS $${VMSS_NAME} in $${NODE_RG}"
-      az vmss identity assign -g "$NODE_RG" -n "$VMSS_NAME" --identities "${var.cluster_identity_id}" 1>/dev/null
-      echo "Identity assigned."
-    EOT
+    command     = "${path.module}/attach_vmss_identity.sh ${azurerm_kubernetes_cluster_node_pool.automq.kubernetes_cluster_id} ${azurerm_kubernetes_cluster_node_pool.automq.name} ${var.cluster_identity_id}"
     interpreter = ["bash", "-c"]
   }
 }
