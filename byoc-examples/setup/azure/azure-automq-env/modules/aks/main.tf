@@ -72,6 +72,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     only_critical_addons_enabled = true
     orchestrator_version         = var.kubernetes_version
     temporary_name_for_rotation  = "systmp"
+    zones = [1, 2, 3]
   }
 
   network_profile {
@@ -80,7 +81,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
     load_balancer_sku = "standard"
     outbound_type     = "loadBalancer"
     service_cidr      = var.service_cidr
-    dns_service_ip    = var.dns_service_ip
   }
 
   role_based_access_control_enabled = true
