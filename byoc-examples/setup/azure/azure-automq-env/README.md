@@ -32,7 +32,7 @@ Optional network bootstrap example (standalone): `byoc-examples/setup/azure/netw
 - AKS control plane uses its own UAI created inside the AKS module; workload identity and OIDC issuer are enabled.
 - System node pool: single node, auto-scaling enabled, `only_critical_addons_enabled = true`, temporary name for rotation (default `tmp`).
 - User node pool `automq`: taint `dedicated=automq:NoSchedule`, supports spot/regular, subnet from input, UAI assigned to VMSS post-creation.
-- 节点池 VMSS 身份：模块会自动调用 `modules/nodepool-automq/attach_vmss_identity.sh`，为节点池对应的 VMSS 绑定传入的 `cluster_identity_id`。该脚本也可单独执行：
+- Nodepool VMSS identity: the module automatically invokes `modules/nodepool-automq/attach_vmss_identity.sh` to bind the provided `cluster_identity_id` to the VMSS corresponding to the node pool. This script can also be run standalone:
   ```bash
   bash modules/nodepool-automq/attach_vmss_identity.sh \
     <AKS_CLUSTER_ID> <NODEPOOL_NAME> <UAI_ID>
