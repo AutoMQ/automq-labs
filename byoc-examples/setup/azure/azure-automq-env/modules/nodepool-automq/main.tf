@@ -73,6 +73,8 @@ resource "azurerm_kubernetes_cluster_node_pool" "automq" {
   eviction_policy = var.spot ? "Delete" : null
   spot_max_price  = var.spot ? -1 : null
 
+  zones = [1, 2, 3]
+
   node_taints = ["dedicated=automq:NoSchedule"]
 
   upgrade_settings {
