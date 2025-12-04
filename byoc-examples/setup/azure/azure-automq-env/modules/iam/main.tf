@@ -18,28 +18,37 @@ variable "name_suffix" {
   description = "Suffix for identity name"
 }
 
-resource "azurerm_user_assigned_identity" "automq" {
-  name                = "uai-automq-${var.name_suffix}"
+# Identity for workloads / nodegroup / console
+resource "azurerm_user_assigned_identity" "workload" {
+  name                = "uai-workload-${var.name_suffix}"
   location            = var.location
   resource_group_name = var.resource_group_name
 }
 
-resource "azurerm_role_assignment" "storage_blob_data_contributor" {
+resource "azurerm_role_assignment" "workload_storage_blob_data_contributor" {
   role_definition_name = "Storage Blob Data Contributor"
   scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.automq.principal_id
+  principal_id         = azurerm_user_assigned_identity.workload.principal_id
 }
 
-resource "azurerm_role_assignment" "contributor" {
+resource "azurerm_role_assignment" "workload_contributor" {
   role_definition_name = "Contributor"
   scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.automq.principal_id
+  principal_id         = azurerm_user_assigned_identity.workload.principal_id
 }
 
-output "identity_id" {
-  value = azurerm_user_assigned_identity.automq.id
+output "aks_identity_id" {
+  value = null
 }
 
-output "identity_client_id" {
-  value = azurerm_user_assigned_identity.automq.client_id
+output "aks_identity_client_id" {
+  value = null
+}
+
+output "workload_identity_id" {
+  value = azurerm_user_assigned_identity.workload.id
+}
+
+output "workload_identity_client_id" {
+  value = azurerm_user_assigned_identity.workload.client_id
 }

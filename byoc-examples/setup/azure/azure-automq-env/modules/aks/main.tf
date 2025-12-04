@@ -35,15 +35,15 @@ variable "kubeconfig_path" {
   default     = "~/.kube/automq-aks-config"
 }
 
-variable "identity_id" {
-  type        = string
-  description = "User assigned identity ID for AKS control plane"
-}
-
 variable "temporary_name_for_rotation" {
   type        = string
   description = "Temporary name used by AKS during node pool rotation"
   default     = "tmp"
+}
+
+variable "subscription_id" {
+  type        = string
+  description = "Subscription ID for role assignments"
 }
 
 variable "service_cidr" {
@@ -65,6 +65,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
   dns_prefix          = var.dns_prefix
   kubernetes_version  = var.kubernetes_version
 
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.aks.id]
+  }
+
   default_node_pool {
     name                         = "system"
     vm_size                      = "Standard_D4s_v3"
@@ -73,11 +78,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
     only_critical_addons_enabled = true
     orchestrator_version         = var.kubernetes_version
     temporary_name_for_rotation  = var.temporary_name_for_rotation
-  }
-
-  identity {
-    type         = "UserAssigned"
-    identity_ids = [var.identity_id]
   }
 
   network_profile {
@@ -93,6 +93,26 @@ resource "azurerm_kubernetes_cluster" "aks" {
   oidc_issuer_enabled               = true
   workload_identity_enabled         = true
 }
+
+# Dedicated AKS control-plane identity
+resource "azurerm_user_assigned_identity" "aks" {
+  name                = "uai-aks-${var.aks_name}"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+}
+
+resource "azurerm_role_assignment" "aks_network_contributor" {
+  role_definition_name = "Network Contributor"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.aks.principal_id
+}
+
+resource "azurerm_role_assignment" "aks_contributor" {
+  role_definition_name = "Contributor"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.aks.principal_id
+}
+
 
 # Ensure kubeconfig directory exists and write kubeconfig locally
 resource "null_resource" "kubeconfig_dir" {

@@ -54,7 +54,7 @@ module "aks" {
   service_cidr                = var.service_cidr
   dns_service_ip              = var.dns_service_ip
   kubeconfig_path             = var.kubeconfig_path
-  identity_id                 = module.iam.identity_id
+  subscription_id             = var.subscription_id
   temporary_name_for_rotation = var.temporary_name_for_rotation
 }
 
@@ -79,7 +79,7 @@ module "nodepool_automq" {
   node_count            = var.nodepool.node_count
   spot                  = var.nodepool.spot
   orchestrator_version  = module.aks.kubernetes_version
-  cluster_identity_id   = module.iam.identity_id
+  cluster_identity_id   = module.iam.workload_identity_id
 }
 
 module "automq_console" {
@@ -98,7 +98,7 @@ module "automq_console" {
   data_container_name         = var.data_container_name
   image_id                    = var.automq_console_id
   vm_size                     = var.automq_console_vm_size
-  cluster_identity_id         = module.iam.identity_id
+  cluster_identity_id         = module.iam.workload_identity_id
 }
 
 output "resource_group_name" {

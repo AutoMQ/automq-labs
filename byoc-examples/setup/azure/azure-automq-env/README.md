@@ -29,7 +29,7 @@ azure-automq-env/
 Optional network bootstrap example (standalone): `byoc-examples/setup/azure/network-example`
 
 ## AKS configuration notes
-- Uses User Assigned Identity (UAI) for control plane; workload identity and OIDC issuer are enabled.
+- AKS control plane uses its own UAI created inside the AKS module; workload identity and OIDC issuer are enabled.
 - System node pool: single node, auto-scaling enabled, `only_critical_addons_enabled = true`, temporary name for rotation (default `tmp`).
 - User node pool `automq`: taint `dedicated=automq:NoSchedule`, supports spot/regular, subnet from input, UAI assigned to VMSS post-creation.
 - Network profile: Azure CNI/policy, LB Standard, outbound via load balancer; service CIDR and DNS service IP are configurable (defaults 10.2.0.0/16 and 10.2.0.10) to avoid overlap with VNet/subnets.
