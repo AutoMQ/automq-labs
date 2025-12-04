@@ -36,13 +36,13 @@ variable "kubernetes_version" {
 }
 
 variable "service_cidr" {
-  description = "AKS service CIDR (must not overlap VNet/subnets)"
+  description = "CIDR range for Kubernetes ClusterIP services; must be a private, non-overlapping range outside the AKS VNet and subnets."
   type        = string
   default     = "10.2.0.0/16"
 }
 
 variable "dns_service_ip" {
-  description = "DNS service IP inside service CIDR"
+  description = "Cluster DNS service IP (CoreDNS) allocated from service_cidr; must be a single, unused IP within the service CIDR range."
   type        = string
   default     = "10.2.0.10"
 }
@@ -51,12 +51,6 @@ variable "kubeconfig_path" {
   description = "Local path to write kubeconfig file"
   type        = string
   default     = "~/.kube/automq-aks-config"
-}
-
-variable "temporary_name_for_rotation" {
-  description = "Temporary name used by AKS for node pool rotation"
-  type        = string
-  default     = "tmp"
 }
 
 variable "env_prefix" {

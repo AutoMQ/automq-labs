@@ -69,6 +69,8 @@ resource "azurerm_kubernetes_cluster_node_pool" "automq" {
   max_count            = var.max_count
   node_count           = var.node_count
 
+  temporary_name_for_rotation = "automqtmp"
+
   priority        = var.spot ? "Spot" : "Regular"
   eviction_policy = var.spot ? "Delete" : null
   spot_max_price  = var.spot ? -1 : null

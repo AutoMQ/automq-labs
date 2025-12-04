@@ -35,12 +35,6 @@ variable "kubeconfig_path" {
   default     = "~/.kube/automq-aks-config"
 }
 
-variable "temporary_name_for_rotation" {
-  type        = string
-  description = "Temporary name used by AKS during node pool rotation"
-  default     = "tmp"
-}
-
 variable "subscription_id" {
   type        = string
   description = "Subscription ID for role assignments"
@@ -77,7 +71,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     vnet_subnet_id               = var.subnet_id
     only_critical_addons_enabled = true
     orchestrator_version         = var.kubernetes_version
-    temporary_name_for_rotation  = var.temporary_name_for_rotation
+    temporary_name_for_rotation  = "systmp"
   }
 
   network_profile {

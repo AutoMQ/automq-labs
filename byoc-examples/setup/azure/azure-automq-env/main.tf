@@ -55,7 +55,6 @@ module "aks" {
   dns_service_ip              = var.dns_service_ip
   kubeconfig_path             = var.kubeconfig_path
   subscription_id             = var.subscription_id
-  temporary_name_for_rotation = var.temporary_name_for_rotation
 }
 
 module "iam" {
