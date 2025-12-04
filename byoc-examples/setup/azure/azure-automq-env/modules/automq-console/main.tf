@@ -76,6 +76,7 @@ locals {
   dns_zone_name         = "automq-console.automq.private"
   dns_link_name         = "automq-console-vnet-link"
   storage_account_scope = "/subscriptions/${split("/", var.vnet_id)[2]}/resourceGroups/${split("/", var.vnet_id)[4]}"
+  ssh_private_key_path  = "${pathexpand("~/.ssh")}/${"${local.env_name}-ssh-key"}.pem"
 }
 
 # SSH key for console access
@@ -85,7 +86,7 @@ resource "tls_private_key" "ssh" {
 }
 
 resource "local_file" "ssh_private_key" {
-  filename        = "${path.module}/${local.env_name}-ssh-key.pem"
+  filename        = local.ssh_private_key_path
   file_permission = "0600"
   content         = tls_private_key.ssh.private_key_pem
 }

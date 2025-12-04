@@ -34,6 +34,7 @@ Optional network bootstrap example (standalone): `byoc-examples/setup/azure/netw
 - User node pool `automq`: taint `dedicated=automq:NoSchedule`, supports spot/regular, subnet from input, UAI assigned to VMSS post-creation.
 - Network profile: Azure CNI/policy, LB Standard, outbound via load balancer; service CIDR and DNS service IP are configurable (defaults 10.2.0.0/16 and 10.2.0.10) to avoid overlap with VNet/subnets.
 - Kubeconfig: written locally to `kubeconfig_path` (default `~/.kube/automq-aks-config`), not output in plaintext.
+- Console SSH key: written to `~/.ssh/automq-console-ssh-key.pem` by Terraform (local_file).
 
 ## Quick start
 1. Prepare `terraform.tfvars`:
