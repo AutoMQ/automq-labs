@@ -47,12 +47,6 @@ variable "dns_service_ip" {
   default     = "10.2.0.10"
 }
 
-variable "docker_bridge_cidr" {
-  type        = string
-  description = "Docker bridge CIDR"
-  default     = "172.17.0.1/16"
-}
-
 resource "azurerm_kubernetes_cluster" "aks" {
   name                = var.aks_name
   location            = var.location
@@ -74,13 +68,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   network_profile {
-    network_plugin     = "azure"
-    network_policy     = "azure"
-    load_balancer_sku  = "standard"
-    outbound_type      = "loadBalancer"
-    service_cidr       = var.service_cidr
-    dns_service_ip     = var.dns_service_ip
-    docker_bridge_cidr = var.docker_bridge_cidr
+    network_plugin    = "azure"
+    network_policy    = "azure"
+    load_balancer_sku = "standard"
+    outbound_type     = "loadBalancer"
+    service_cidr      = var.service_cidr
+    dns_service_ip    = var.dns_service_ip
   }
 
   role_based_access_control_enabled = true

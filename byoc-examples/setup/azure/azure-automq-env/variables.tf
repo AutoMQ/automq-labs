@@ -47,12 +47,6 @@ variable "dns_service_ip" {
   default     = "10.2.0.10"
 }
 
-variable "docker_bridge_cidr" {
-  description = "Docker bridge CIDR"
-  type        = string
-  default     = "172.17.0.1/16"
-}
-
 variable "kubeconfig_path" {
   description = "Local path to write kubeconfig file"
   type        = string

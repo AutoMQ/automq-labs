@@ -53,7 +53,6 @@ module "aks" {
   dns_prefix          = "${var.env_prefix}-dns"
   service_cidr        = var.service_cidr
   dns_service_ip      = var.dns_service_ip
-  docker_bridge_cidr  = var.docker_bridge_cidr
   kubeconfig_path     = var.kubeconfig_path
 }
 
