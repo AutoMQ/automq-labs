@@ -1,0 +1,5 @@
+location            = "eastus"
+subscription_id     = "xxxx"
+resource_group_name = "rg-xxxx"
+name_suffix         = "xxxx"
+vnet_cidr           = "10.0.0.0/16"

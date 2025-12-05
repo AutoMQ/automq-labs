@@ -19,6 +19,12 @@ variable "kubernetes_version" {
   default     = null
 }
 
+variable "kubernetes_pricing_tier" {
+  type        = string
+  description = "AKS pricing tier"
+  default     = "Free"
+}
+
 variable "subnet_id" {
   type        = string
   description = "Subnet ID for the default node pool"
@@ -58,6 +64,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   resource_group_name = var.resource_group_name
   dns_prefix          = var.dns_prefix
   kubernetes_version  = var.kubernetes_version
+  sku_tier            = var.kubernetes_pricing_tier
 
   identity {
     type         = "UserAssigned"
@@ -81,6 +88,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
     load_balancer_sku = "standard"
     outbound_type     = "loadBalancer"
     service_cidr      = var.service_cidr
+    dns_service_ip    = var.dns_service_ip
   }
 
   role_based_access_control_enabled = true
