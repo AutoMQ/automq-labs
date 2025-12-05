@@ -23,29 +23,9 @@ variable "private_subnet_ids" {
   description = "Private subnet IDs associated with the VNet"
 }
 
-variable "ops_storage_account_name" {
-  type        = string
-  description = "Existing storage account name for ops bucket"
-}
-
-variable "ops_storage_resource_group" {
-  type        = string
-  description = "Resource group name for the ops storage account"
-}
-
 variable "ops_container_name" {
   type        = string
   description = "Existing container name for ops bucket"
-}
-
-variable "data_storage_account_name" {
-  type        = string
-  description = "Existing storage account name for data bucket"
-}
-
-variable "data_storage_resource_group" {
-  type        = string
-  description = "Resource group name for the data storage account"
 }
 
 variable "data_container_name" {
@@ -71,6 +51,11 @@ variable "cluster_identity_id" {
 variable "subscription_id" {
   type        = string
   description = "Subscription ID for role assignments"
+}
+
+variable "storage_account_name" {
+  type        = string
+  description = "The name of the storage account."
 }
 
 locals {
@@ -201,15 +186,22 @@ resource "azurerm_network_interface_security_group_association" "console" {
   network_security_group_id = azurerm_network_security_group.console.id
 }
 
-# Reference existing storage accounts
-data "azurerm_storage_account" "ops" {
-  name                = var.ops_storage_account_name
-  resource_group_name = var.ops_storage_resource_group
+resource "azurerm_storage_account" "storage" {
+  name                     = var.storage_account_name
+  resource_group_name      = var.resource_group_name
+  location                 = var.location
+  account_tier             = "Standard"
+  account_replication_type = "GRS"
 }
 
-data "azurerm_storage_account" "data" {
-  name                = var.data_storage_account_name
-  resource_group_name = var.data_storage_resource_group
+resource "azurerm_storage_container" "automq_data" {
+  name                 = var.data_container_name
+  storage_account_name = azurerm_storage_account.storage.name
+}
+
+resource "azurerm_storage_container" "automq_ops" {
+  name                 = var.ops_container_name
+  storage_account_name = azurerm_storage_account.storage.name
 }
 
 resource "azurerm_linux_virtual_machine" "console" {
@@ -227,7 +219,7 @@ resource "azurerm_linux_virtual_machine" "console" {
 
   identity {
     type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.console.id, var.cluster_identity_id]
+    identity_ids = [azurerm_user_assigned_identity.console.id]
   }
 
   os_disk {
@@ -240,7 +232,7 @@ resource "azurerm_linux_virtual_machine" "console" {
   custom_data = base64encode(templatefile("${path.module}/init.sh", {
     managedIdentityClientId   = azurerm_user_assigned_identity.console.client_id
     opsContainerName          = var.ops_container_name
-    opsStorageAccountEndpoint = data.azurerm_storage_account.ops.primary_blob_endpoint
+    opsStorageAccountEndpoint = azurerm_storage_account.storage.primary_blob_endpoint
     uniqueId                  = local.env_name
     vpcName                   = split("/", var.vnet_id)[8]
     vpcResourceGroupName      = split("/", var.vnet_id)[4]
@@ -299,5 +291,5 @@ output "data_bucket_name" {
 }
 
 output "data_bucket_endpoint" {
-  value = data.azurerm_storage_account.data.primary_blob_endpoint
+  value = azurerm_storage_account.storage.primary_blob_endpoint
 }

@@ -6,7 +6,6 @@ variable "subscription_id" {
 variable "location" {
   description = "Azure region for all resources"
   type        = string
-  default     = "eastus"
 }
 
 variable "resource_group_name" {
@@ -32,19 +31,25 @@ variable "private_subnet_id" {
 variable "kubernetes_version" {
   description = "AKS control plane version"
   type        = string
-  default     = null
+  default     = "1.32.9"
+}
+
+variable "kubernetes_pricing_tier" {
+  type        = string
+  description = "AKS pricing tier"
+  default     = "Free"
 }
 
 variable "service_cidr" {
   description = "CIDR range for Kubernetes ClusterIP services; must be a private, non-overlapping range outside the AKS VNet and subnets."
   type        = string
-  default     = "10.2.0.0/16"
+
 }
 
 variable "dns_service_ip" {
   description = "Cluster DNS service IP (CoreDNS) allocated from service_cidr; must be a single, unused IP within the service CIDR range."
   type        = string
-  default     = "10.2.0.10"
+
 }
 
 variable "kubeconfig_path" {
@@ -56,7 +61,6 @@ variable "kubeconfig_path" {
 variable "env_prefix" {
   description = "Short prefix used for naming resources"
   type        = string
-  default     = "automq"
 }
 
 variable "nodepool" {
@@ -72,41 +76,11 @@ variable "nodepool" {
   default = {
     name       = "automq"
     vm_size    = "Standard_D4as_v5"
-    min_count  = 1
-    max_count  = 5
-    node_count = 2
+    min_count  = 3
+    max_count  = 20
+    node_count = 3
     spot       = false
   }
-}
-
-variable "ops_storage_account_name" {
-  description = "Existing storage account name for operations bucket"
-  type        = string
-}
-
-variable "ops_storage_resource_group" {
-  description = "Resource group name for the ops storage account"
-  type        = string
-}
-
-variable "ops_container_name" {
-  description = "Existing container name in the ops storage account"
-  type        = string
-}
-
-variable "data_storage_account_name" {
-  description = "Existing storage account name for data bucket"
-  type        = string
-}
-
-variable "data_storage_resource_group" {
-  description = "Resource group name for the data storage account"
-  type        = string
-}
-
-variable "data_container_name" {
-  description = "Existing container name in the data storage account"
-  type        = string
 }
 
 variable "automq_console_id" {
