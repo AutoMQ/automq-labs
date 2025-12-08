@@ -63,9 +63,9 @@ externalAccess:
     service:
       type: LoadBalancer
       loadBalancerAnnotations:
-        oci-network-load-balancer.oraclecloud.com/security-list-management-mode: "All"
-        oci-network-load-balancer.oraclecloud.com/subnet: "<your_oci_subnet_ocid>"
-        oci-network-load-balancer.oraclecloud.com/is-private: "true"
+        oci.oraclecloud.com/load-balancer-type: "nlb"
+        oci-network-load-balancer.oraclecloud.com/internal: "true"
+        oci-network-load-balancer.oraclecloud.com/subnet: "<your_private_subnet_ocid>"
       extraPorts:
         - name: "tcp-9092"
           port: 9092
