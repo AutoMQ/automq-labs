@@ -61,7 +61,7 @@ acl:
   enabled: true
   # ---- superuser definitions ----
   # 1. intra cluster communication client with server cert CN=automq-server
-  # 2. admin client with CN=admin
+  # 2. admin client with client cert CN=admin
   superUsers:
     - "CN=automq-server"
     - "CN=admin"
