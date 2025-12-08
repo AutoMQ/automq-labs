@@ -34,13 +34,6 @@ listeners:
       protocol: SSL
       name: CLIENT_MTLS
       sslClientAuth: required
-      advertisedHostnames:
-        enabled: true
-        # e.g. "automq.private"
-        baseDomain: "<your-route53-zone-domain>"
-        externalDns:
-          enabled: true
-          privateZoneId: "<your-route53-zone-id>"
 
 # Configure server-side TLS by referencing the Kubernetes secret containing the server certificate.
 tls:
