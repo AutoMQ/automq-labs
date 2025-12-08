@@ -66,7 +66,13 @@ helm upgrade --install automq-mtls oci://automq.azurecr.io/helm/automq-enterpris
 
 ### Step 1.4: Publish the bootstrap DNS record
 
-Same as Step 1.4: external access is only required for the controller Service, so reuse the manual options above .
+**Manual**
+
+1.  Get the Load Balancer external IP:
+    ```bash
+    kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq
+    ```
+2.  Create a A record in Private DNS pointing `loadbalancer.automq.private` to the hostname from step 1.
 
 ### Step 1.5: Grant ACLs and Test Client
 
@@ -164,7 +170,7 @@ Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a 
 **Before deploying, review `values-sasl-ssl.yaml` and update the following placeholders:**
 - `<your-unique-instance-id>`
 - `<your-data-bucket>` and `<your-ops-bucket>`
-- `<your-sasl-password>` for both `_automq` and `my-user`
+- `<your-sasl-password>` for `_automq` and `admin`
 - `<your_private_subnet_ocid>` split by commas (only needed if you add OCI-specific annotations)
 - `automq-bootstrap.automq.private` (the controller bootstrap hostname) and `automq.private` (the advertised base domain) can be changed to fit your Private DNS zone naming conventions.
 
@@ -179,32 +185,20 @@ helm upgrade --install automq-release oci://automq.azurecr.io/helm/automq-enterp
 
 ### Step 2.4: Publish the bootstrap DNS record
 
-**Manual**
-
-1.  Get the Load Balancer external IP:
-    ```bash
-    kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq
-    ```
-2.  Create a A record in Private DNS pointing `loadbalancer.automq.private` to the hostname from step 1.
+Same as Step 1.4: external access is only required for the controller Service, so reuse the manual options above .
 
 ### Step 2.5: Grant ACLs and Test Client
 
 1.  **Create Admin Properties:**
-    - `admin.properties`: For the `_automq` admin to manage ACLs.
-
-    ```bash
-    cat /path/to/admin-key.pem /path/to/admin-cert.pem > /path/to/admin-keystore.pem
-    ```
+    - `admin.properties`: For the `admin` client to manage ACLs.
 
     ```properties
     # admin.properties
     security.protocol=SASL_SSL
     sasl.mechanism=PLAIN
-    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="_automq" password="<your-sasl-password>";
-    ssl.keystore.type=PEM
+    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="admin" password="<your-sasl-password>";
     ssl.truststore.location=/path/to/ca-cert.pem
     ssl.truststore.type=PEM
-    ssl.keystore.location=/path/to/admin-keystore.pem
     ssl.endpoint.identification.algorithm=
     ```
 
@@ -236,10 +230,8 @@ helm upgrade --install automq-release oci://automq.azurecr.io/helm/automq-enterp
     security.protocol=SASL_SSL
     sasl.mechanism=SCRAM-SHA-256
     sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="my-user" password="<your-sasl-password>";
-    ssl.keystore.type=PEM
     ssl.truststore.location=/path/to/ca-cert.pem
     ssl.truststore.type=PEM
-    ssl.keystore.location=/path/to/user-keystore.pem
     ssl.endpoint.identification.algorithm=
     ```
 

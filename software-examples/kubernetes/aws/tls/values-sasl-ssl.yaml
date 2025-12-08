@@ -28,17 +28,14 @@ listeners:
     - containerPort: 9103
       name: CONTROLLER_SASL_SSL
       protocol: SSL
-      sslClientAuth: required
   interbroker:
     - containerPort: 9102
       name: BROKER_SASL_SSL
       protocol: SSL
-      sslClientAuth: required
   client:
     - containerPort: 9112
       protocol: SASL_SSL
       name: CLIENT_SASL_SSL
-      sslClientAuth: required
       advertisedHostnames:
         enabled: true
         # e.g. "automq.private"
