@@ -1,6 +1,6 @@
-# Deploying AutoMQ on AWS EKS with TLS Encryption
+# Deploying AutoMQ on OCI OKE with TLS Encryption
 
-This guide provides two distinct, independent paths for deploying a secure AutoMQ cluster on AWS EKS:
+This guide provides two distinct, independent paths for deploying a secure AutoMQ cluster on OCI OKE:
 
 1.  **Path 1: SASL_SSL** - Clients authenticate using a username and password, with the connection encrypted by TLS.
 2.  **Path 2: SSL (mTLS)** - Clients authenticate using mutually verified TLS certificates.
@@ -56,7 +56,7 @@ Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a 
 - `<your-unique-instance-id>`
 - `<your-data-bucket>` and `<your-ops-bucket>`
 - `<your-sasl-password>` for both `_automq` and `my-user`
-- `<your_private_subnet_ocid>` split by commas (only needed if you add AWS-specific annotations)
+- `<your_private_subnet_ocid>` split by commas (only needed if you add OCI-specific annotations)
 - `automq-bootstrap.automq.private` (the controller bootstrap hostname) and `automq.private` (the advertised base domain) can be changed to fit your Private DNS zone naming conventions.
 
 Then, deploy the chart:
