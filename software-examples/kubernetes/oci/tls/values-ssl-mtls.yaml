@@ -56,12 +56,15 @@ externalAccess:
           protocol: "TCP"
           targetPort: 9122
 
-# Enable ACLs and define a certificate-based superuser.
-# The principal 'User:_automq' corresponds to a client certificate with CN=automq-admin.
+# ---- ACL Configurations ----
 acl:
   enabled: true
+  # ---- superuser definitions ----
+  # 1. intra cluster communication client with server cert CN=automq-server
+  # 2. admin client with CN=admin
   superUsers:
-    - "User:_automq"
+    - "CN=automq-server"
+    - "CN=admin"
 
 # SASL is still required for internal inter-broker communication.
 sasl:
