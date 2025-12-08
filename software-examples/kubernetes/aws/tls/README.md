@@ -108,7 +108,7 @@ Same as Step 1.4: external access is only required for the controller Service, 
     
     # Create a topic
     kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVER --command-config admin.properties \
-      --create --topic mtls-test --partitions 1 --replication-factor 1
+      --create --topic mtls-test --partitions 1
     
     # Grant permissions to the application principal 'User:my-app'
     kafka-acls.sh --bootstrap-server $BOOTSTRAP_SERVER --command-config admin.properties \
