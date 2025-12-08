@@ -6,7 +6,7 @@
 global:
   automqInstanceId: "<your-unique-instance-id>"
   cloudProvider:
-    name: aws
+    name: noop
     credentials: pod://?
   serviceAccount:
     create: true
@@ -16,7 +16,7 @@ global:
     # --- S3 and WAL Configuration ---
     s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
     s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
-    s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
+    s3.wal.path=0@block:///dev/wal?&iodepth=8&iops=3000&capacity=2147483648
   livenessProbe:
     probePort: 9122
   readinessProbe:
@@ -59,19 +59,14 @@ externalAccess:
     service:
       type: LoadBalancer
       annotations:
-        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
-        service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
-        service.beta.kubernetes.io/aws-load-balancer-type: external
+        oci-network-load-balancer.oraclecloud.com/security-list-management-mode: "All"
+        oci-network-load-balancer.oraclecloud.com/subnet: "<your_oci_subnet_ocid>"
+        oci-network-load-balancer.oraclecloud.com/is-private: "true"
       extraPorts:
         - name: "tcp-9122"
           port: 9122
           protocol: "TCP"
           targetPort: 9122
-    externalDns:
-      enabled: true
-      # e.g. "bootstrap.automq.private"
-      hostname: "<your-boostrap-server-hostname>"
-      privateZoneId: "<your-route53-zone-id>"
 
 # Enable ACLs and define a certificate-based superuser.
 # The principal 'User:_automq' corresponds to a client certificate with CN=automq-admin.
@@ -94,14 +89,17 @@ controller:
   replicas: 3
   resources:
     requests:
-      cpu: "1000m"
+      cpu: "3000m"
       memory: "12Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
   persistence:
     metadata:
-      storageClass: "gp2"
+      storageClass: "<your-storage-class>"
       size: "20Gi"
     wal:
-      storageClass: "gp2"
+      storageClass: "<your-storage-class>"
       size: "20Gi"
   env:
     - name: "KAFKA_HEAP_OPTS"
@@ -111,14 +109,14 @@ broker:
   replicas: 0
   resources:
     requests:
-      cpu: "1000m"
+      cpu: "3000m"
       memory: "12Gi"
     limits:
-      cpu: "2000m"
+      cpu: "4000m"
       memory: "16Gi"
   persistence:
     wal:
-      storageClass: "gp2"
+      storageClass: "gp3"
       size: "20Gi"
   env:
     - name: "KAFKA_JVM_PERFORMANCE_OPTS"

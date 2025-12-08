@@ -22,8 +22,8 @@ Before you begin, ensure you have the following:
 The key to deploying AutoMQ is to provide a custom `values.yaml` file that configures the AutoMQ Enterprise Kafka chart to use AutoMQ's container image and settings.
 
 We provide some `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on AWS using `r6in.large` instances and different credential type.
-- AccessKey Credentials: [demo-static-values.yaml](credential/demo-static-values.yaml)
-- Instance profile Role Credentials: [demo-role-values.yaml](credential/demo-role-values.yaml)
+- AccessKey Credentials: [demo-static-values.yaml](static/demo-static-values.yaml)
+- Instance profile Role Credentials: [demo-role-values.yaml](role/demo-role-values.yaml)
 
 **Action:**
 

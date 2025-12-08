@@ -17,6 +17,10 @@ global:
     s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
     s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
     s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
+  livenessProbe:
+    probePort: 9112
+  readinessProbe:
+    probePort: 9112
 
 # Define a listener for SASL_SSL.
 listeners:
@@ -98,6 +102,9 @@ controller:
     requests:
       cpu: "1000m"
       memory: "12Gi"
+    limits:
+      cpu: "2000m"
+      memory: "16Gi"
   persistence:
     metadata:
       storageClass: "gp2"
@@ -120,5 +127,9 @@ broker:
       storageClass: "gp2"
       size: "20Gi"
   env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
     - name: "KAFKA_HEAP_OPTS"
       value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g"

@@ -1,0 +1,73 @@
+global:
+  automqInstanceId: "<your-unique-instance-id>"
+  cloudProvider:
+    name: noop
+    credentials: pod://?
+  config: |
+    s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
+    s3.wal.path=0@s3://<your-data-bucket>?region=<aws-region>
+    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
+
+controller:
+  create: true
+  replicas: 3
+  resources:
+    requests:
+      cpu: "3000m"
+      memory: "12Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+  persistence:
+    metadata:
+      enabled: true
+      storageClass: "<your-storage-class>"
+      size: "20Gi"
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+
+broker:
+  create: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: "3000m"
+      memory: "12Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+  persistence:
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+
+# ---- LoadBalancer ------
+externalAccess:
+  controller:
+    enabled: true
+    service:
+      type: LoadBalancer
+      annotations:
+        oci-network-load-balancer.oraclecloud.com/security-list-management-mode: "All"
+        oci-network-load-balancer.oraclecloud.com/subnet: "<your_oci_subnet_ocid>"
+        oci-network-load-balancer.oraclecloud.com/is-private: "true"
+      extraPorts:
+        - name: "tcp-9092"
+          port: 9092
+          protocol: "TCP"
+          targetPort: 9092
