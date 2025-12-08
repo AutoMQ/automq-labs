@@ -51,7 +51,7 @@ AutoMQ mounts the same PEM bundle under `/opt/automq/kafka/config/certs/` and wi
 
 ### Step 1.3: Configure and Deploy AutoMQ
 
-Use the `values-ssl-mtls.yaml` file provided in this directory. It configures an `SSL` listener and sets the certificate principal `User:automq-admin` as the superuser.
+Use the `values-ssl-mtls.yaml` file provided in this directory. It configures an `SSL` listener and sets the certificate principal `CN=automq-server` as the superuser.
 
 **Before deploying, review `values-ssl-mtls.yaml` and update placeholders.**
 
@@ -77,7 +77,7 @@ helm upgrade --install automq-mtls oci://automq.azurecr.io/helm/automq-enterpris
 ### Step 1.5: Grant ACLs and Test Client
 
 1.  **Create Admin & Client Properties:**
-    - `admin.properties`: For the `_automq` superuser, using its certificate.
+    - `admin.properties`: For the `admin` superuser, using its certificate.
     - `client.properties`: For the `my-app` application user, using its certificate.
 
     ```bash
@@ -165,7 +165,7 @@ You only need this single PEM bundle. During pod startup AutoMQ mounts the PEM f
 
 ### Step 2.3: Configure and Deploy AutoMQ
 
-Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a `SASL_SSL` listener, sets `_automq` as the SASL superuser, and defines a regular SASL user `my-user`. Only the controller Service is exposed via an OCI NLB; clients must be able to reach that private NLB endpoint (for example via VPC peering or the same VPC). Broker Services remain internal.
+Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a `SASL_SSL` listener, sets `admin` as the SASL superuser. Only the controller Service is exposed via an OCI NLB; clients must be able to reach that private NLB endpoint (for example via VPC peering or the same VPC). Broker Services remain internal.
 
 **Before deploying, review `values-sasl-ssl.yaml` and update the following placeholders:**
 - `<your-unique-instance-id>`
