@@ -14,8 +14,8 @@ global:
       eks.amazonaws.com/role-arn: "<your-eks-role-arn>"
   config: |
     # --- S3 and WAL Configuration ---
-    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<aws-region>
-    s3.data.buckets=0@s3://<your-data-bucket>?region=<aws-region>
+    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<your-bucket-region>
+    s3.data.buckets=0@s3://<your-data-bucket>?region=<your-bucket-region>
     s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
   livenessProbe:
     probePort: 9122

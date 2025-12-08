@@ -8,7 +8,7 @@ AutoMQ is a cloud-native streaming platform that is fully compatible with the Ka
 
 Before you begin, ensure you have the following:
 
-1.  **A Kubernetes Cluster**: If you don't have one, you can quickly provision a cluster on AWS EKS by following our [Terraform guide for AWS EKS](../../../byoc-examples/setup/kubernetes/aws/terraform/README.md).
+1.  **A Kubernetes Cluster**: If you don't have one, you can quickly provision a cluster on OCI OKE by following [Get started with Kubernetes Engine](https://www.oracle.com/cloud/cloud-native/kubernetes-engine/).
 2.  **Helm (v3.6.0+)**: The package manager for Kubernetes. You can verify your installation by running:
     ```shell
     helm version
@@ -21,13 +21,12 @@ Before you begin, ensure you have the following:
 
 The key to deploying AutoMQ is to provide a custom `values.yaml` file that configures the AutoMQ Enterprise Kafka chart to use AutoMQ's container image and settings.
 
-We provide some `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on AWS using `r6in.large` instances and different credential type.
-- AccessKey Credentials: [demo-static-values.yaml](static/demo-static-values.yaml)
-- Instance profile Role Credentials: [demo-role-values.yaml](role/demo-role-values.yaml)
+We provide some `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on OCI using `VM.Standard.E5.Flex` instances and different credential type.
+- AccessKey Credentials: [demo-static-values.yaml](credential/demo-static-values.yaml)
 
 **Action:**
 
-Edit the `demo-static-values.yaml` or `demo-role-values.yaml` file and customize it for your environment. You will need to replace the placeholder values (marked with `${...}`), such as the S3 bucket names (`ops-bucket`, `data-bucket`), AWS region, endpoint, AK/SK or instance profile role.
+Edit the `demo-static-values.yaml` file and customize it for your environment. You will need to replace the placeholder values (marked with `<...>`), such as the S3 bucket names (`your-ops-bucket`, `your-data-bucket`), OCI region, endpoint, AK/SK.
 
 - For more details on available parameters, refer to the [AutoMQ Enterprise Kafka chart values](https://www.automq.com/docs/automq-cloud/appendix/helm-chart-values-readme).
 

@@ -9,11 +9,11 @@ Choose the path that best fits your security requirements. The steps for each pa
 
 ## Prerequisites
 
-- An operational AWS EKS cluster.
+- An operational OCI OKE cluster.
 - `helm` CLI installed.
 - `kubectl` CLI installed and configured to connect to your EKS cluster.
 - A set of pre-signed, PEM-formatted TLS certificates obtained from your organization or a CA.
-- A private hosted zone in AWS Route 53 for creating DNS records.
+- A private hosted zone in OCI Private DNS for creating DNS records.
 
 ---
 
@@ -50,16 +50,14 @@ You only need this single PEM bundle. During pod startup AutoMQ mounts the PEM f
 
 ### Step 1.3: Configure and Deploy AutoMQ
 
-Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a `SASL_SSL` listener, sets `_automq` as the SASL superuser, and defines a regular SASL user `my-user`. Only the controller Service is exposed via an AWS NLB; clients must be able to reach that private NLB endpoint (for example via VPC peering or the same VPC). Broker Services remain internal.
+Use the `values-sasl-ssl.yaml` file provided in this directory. It configures a `SASL_SSL` listener, sets `_automq` as the SASL superuser, and defines a regular SASL user `my-user`. Only the controller Service is exposed via an OCI NLB; clients must be able to reach that private NLB endpoint (for example via VPC peering or the same VPC). Broker Services remain internal.
 
 **Before deploying, review `values-sasl-ssl.yaml` and update the following placeholders:**
 - `<your-unique-instance-id>`
-- `<your-eks-role-arn>`
-- `<your-s3-buckets-and-region>`
-- `<your-route53-zone-id>`
+- `<your-data-bucket>` and `<your-ops-bucket>`
 - `<your-sasl-password>` for both `_automq` and `my-user`
-- `<your_multi_az_subnet_ids>` split by commas (only needed if you add AWS-specific annotations)
-- `automq-bootstrap.automq.private` (the controller bootstrap hostname) and `automq.private` (the advertised base domain) can be changed to fit your Route 53 zone naming conventions.
+- `<your_private_subnet_ocid>` split by commas (only needed if you add AWS-specific annotations)
+- `automq-bootstrap.automq.private` (the controller bootstrap hostname) and `automq.private` (the advertised base domain) can be changed to fit your Private DNS zone naming conventions.
 
 Then, deploy the chart:
 ```bash
@@ -72,45 +70,13 @@ helm upgrade --install automq-release oci://automq.azurecr.io/helm/automq-enterp
 
 ### Step 1.4: Publish the bootstrap DNS record
 
-You have two options for binding the Route 53 record to the NLB.
-
-**Option A – Automatic (recommended)**
-
-1. Install [external-dns](https://github.com/kubernetes-sigs/external-dns) in your cluster with `--source=service --provider=aws --policy=upsert-only --registry=txt`. Bind its ServiceAccount to an IAM role that can call `route53:ListHostedZones`, `route53:ListResourceRecordSets`, and `route53:ChangeResourceRecordSets`. This section assumes the controller Service already runs as an AWS NLB (using the default AWS VPC CNI or equivalent networking).
-2. Configure both the listener’s `advertisedHostnames` block and the controller Service DNS block so they reference the same hosted zone:
-   ```yaml
-   listeners:
-     client:
-       - name: CLIENT_SASL_SSL
-         containerPort: 9112
-         protocol: SASL_SSL
-         advertisedHostnames:
-           enabled: true
-           baseDomain: automq.private
-           externalDns:
-             privateZoneId: <your-route53-zone-id>
-
-   externalAccess:
-     controller:
-       enabled: true
-       service:
-         type: LoadBalancer
-       externalDns:
-         enabled: true
-         hostname: automq-bootstrap.automq.private
-         privateZoneId: <your-route53-zone-id>
-         recordType: A
-         ttl: 60
-   ```
-3. Redeploy (or `helm upgrade`) so the controller Service renders the annotations. After the Service obtains an NLB hostname, run `kubectl logs -n kube-system deploy/external-dns | grep automq-bootstrap` to confirm external-dns created `automq-bootstrap.automq.private` automatically.
-
-**Option B – Manual fallback**
+**Manual**
 
 1.  Get the Load Balancer Hostname:
     ```bash
     kubectl get svc automq-release-automq-enterprise-controller-loadbalancer -n automq -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
     ```
-2.  Create a CNAME (or Alias A) record in Route 53 pointing `loadbalancer.automq.private` (or whatever hostname you used under `externalAccess.controller.externalDns.hostname`) to the hostname from step 1. If you prefer manual control, leave `externalAccess.controller.externalDns.enabled=false` so the Service renders no annotations.
+2.  Create a A record in Private DNS pointing `loadbalancer.automq.private` (or whatever hostname you used under `externalAccess.controller.externalDns.hostname`) to the hostname from step 1. If you prefer manual control, leave `externalAccess.controller.externalDns.enabled=false` so the Service renders no annotations.
 
 ### Step 1.5: Grant ACLs and Test Client
 
@@ -260,5 +226,5 @@ To remove the resources from either path, uninstall the Helm release and delete 
 ```bash
 helm uninstall automq-mtls --namespace <your-namespace>
 kubectl delete secret automq-server-tls --namespace <your-namespace>
-# Remember to delete the CNAME record in Route 53.
+# Remember to delete the A record in Private DNS.
 ```

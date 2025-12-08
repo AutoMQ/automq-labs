@@ -27,7 +27,7 @@ We provide some `demo-values.yaml` in this directory that is pre-configured for 
 
 **Action:**
 
-Edit the `demo-static-values.yaml` or `demo-role-values.yaml` file and customize it for your environment. You will need to replace the placeholder values (marked with `${...}`), such as the S3 bucket names (`ops-bucket`, `data-bucket`), AWS region, endpoint, AK/SK or instance profile role.
+Edit the `demo-static-values.yaml` or `demo-role-values.yaml` file and customize it for your environment. You will need to replace the placeholder values (marked with `<...>`), such as the S3 bucket names (`your-ops-bucket`, `your-data-bucket`), AWS region, endpoint, AK/SK or instance profile role.
 
 - For more details on available parameters, refer to the [AutoMQ Enterprise Kafka chart values](https://www.automq.com/docs/automq-cloud/appendix/helm-chart-values-readme).
 
