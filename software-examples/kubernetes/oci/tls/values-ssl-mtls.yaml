@@ -90,8 +90,7 @@ controller:
       storageClass: "<your-storage-class>"
       size: "20Gi"
     wal:
-      storageClass: "<your-storage-class>"
-      size: "20Gi"
+      enabled: false
   env:
     - name: "KAFKA_HEAP_OPTS"
       value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g"
@@ -107,8 +106,7 @@ broker:
       memory: "16Gi"
   persistence:
     wal:
-      storageClass: "gp3"
-      size: "20Gi"
+      enabled: false
   env:
     - name: "KAFKA_JVM_PERFORMANCE_OPTS"
       value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
