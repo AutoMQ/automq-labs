@@ -58,7 +58,7 @@ externalAccess:
     enabled: true
     service:
       type: LoadBalancer
-      annotations:
+      loadBalancerAnnotations:
         service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
         service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
         service.beta.kubernetes.io/aws-load-balancer-type: external
