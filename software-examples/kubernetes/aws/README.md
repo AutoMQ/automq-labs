@@ -36,6 +36,14 @@ Edit the `demo-static-values.yaml` or `demo-role-values.yaml` file and customize
 - For more details on other advanced configurations, refer to the [AutoMQ Enterprise Other Advanced Configurations](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart#other-advanced-configurations).
 
 - For more details on performance tuning, refer to the [AutoMQ Performance Tuning Guide](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker).
+- For Prometheus/Collector metrics integration (how to set `s3.telemetry.metrics.exporter.*` under `global.config` when you need either pull-only or OTLP push), follow the [Integrating Metrics with Prometheus guide](https://www.automq.com/docs/automq/observability/integrating-metrics-with-prometheus). For example:
+  ```yaml
+  global:
+    config: |
+      s3.telemetry.metrics.exporter.type=prometheus,otlp
+      s3.telemetry.metrics.exporter.uri=prometheus://?host=0.0.0.0&port=9090,otlp://?endpoint=http://otel-collector.monitoring:4317&protocol=grpc
+      s3.telemetry.metrics.base.labels=instance.id=<your-automq-instance-id>
+  ```
 
 ### 2. Install the Helm Chart
 

@@ -90,6 +90,16 @@ kubectl create secret generic automq-tls-secret \
 | External access   | `<your-bootstrap-server-hostname>`                 | Determine your bootstrap-server domain name.<br/>e.g.: `bootstrap.automq.private`   |
 | Multi-AZ          | `<your_multi_az_subnet_ids>`                       | Comma-separated list of Subnet IDs, corresponding to multiple private subnets of your node group |
 
+> Observability tip: when editing `demo-values.yaml`, you can enable pull-based Prometheus scraping or OTLP push (via Collector/Remote Write) by setting the `s3.telemetry.metrics.exporter.*` keys under `global.config`. For example:
+> ```yaml
+> global:
+>   config: |
+>     s3.telemetry.metrics.exporter.type=prometheus,otlp
+>     s3.telemetry.metrics.exporter.uri=prometheus://?host=0.0.0.0&port=9090,otlp://?endpoint=http://otel-collector.monitoring:4317&protocol=grpc
+>     s3.telemetry.metrics.base.labels=instance.id=<your-automq-instance-id>
+> ```
+> See the [Integrating Metrics with Prometheus guide](https://www.automq.com/docs/automq/observability/integrating-metrics-with-prometheus) for more details.
+
 ### 2.3 Install AutoMQ Enterprise
 
 ```bash
