@@ -11,7 +11,7 @@ Choose the path that best fits your security requirements. The steps for each pa
 
 - An operational OCI OKE cluster.
 - `helm` CLI installed.
-- `kubectl` CLI installed and configured to connect to your EKS cluster.
+- `kubectl` CLI installed and configured to connect to your OKE cluster.
 - A set of pre-signed, PEM-formatted TLS certificates obtained from your organization or a CA.
 - A private hosted zone in OCI Private DNS for creating DNS records.
 
