@@ -6,21 +6,17 @@
 global:
   automqInstanceId: "<your-unique-instance-id>"
   cloudProvider:
-    name: aws
-    credentials: pod://?
-  serviceAccount:
-    create: true
-    annotations:
-      eks.amazonaws.com/role-arn: "<your-eks-role-arn>"
+    name: noop
+    credentials: static://?accessKey=<your-access-key>&secretKey=<your-secret-key>
   config: |
-    # --- S3 and WAL Configuration ---
-    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<your-bucket-region>
-    s3.data.buckets=0@s3://<your-data-bucket>?region=<your-bucket-region>
-    s3.wal.path=0@block:///dev/wal?iobandwidth=131072000&iodepth=8&iops=3000&capacity=2147483648
+    s3.ops.buckets=1@s3://<your-ops-bucket>?region=<your-bucket-region>&endpoint=<your-bucket-endpoint>&pathStyle=true
+    s3.data.buckets=0@s3://<your-data-bucket>?region=<your-bucket-region>&endpoint=<your-bucket-endpoint>&pathStyle=true
+    s3.wal.path=0@s3://<your-data-bucket>?region=<your-bucket-region>&endpoint=<your-bucket-endpoint>&pathStyle=true
   livenessProbe:
     probePort: 9112
   readinessProbe:
     probePort: 9112
+
 
 # Define a listener for SASL_SSL.
 listeners:
@@ -36,13 +32,6 @@ listeners:
     - containerPort: 9112
       protocol: SASL_SSL
       name: CLIENT_SASL_SSL
-      advertisedHostnames:
-        enabled: true
-        # e.g. "automq.private"
-        baseDomain: "<your-route53-zone-domain>"
-        externalDns:
-          enabled: true
-          privateZoneId: "<your-route53-zone-id>"
 
 # Configure server-side TLS by referencing the Kubernetes secret containing the server certificate.
 tls:
@@ -56,19 +45,14 @@ externalAccess:
     service:
       type: LoadBalancer
       loadBalancerAnnotations:
-        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
-        service.beta.kubernetes.io/aws-load-balancer-subnets: "<your_multi_az_subnet_ids>"
-        service.beta.kubernetes.io/aws-load-balancer-type: external
+        oci.oraclecloud.com/load-balancer-type: "nlb"
+        oci-network-load-balancer.oraclecloud.com/internal: "true"
+        oci-network-load-balancer.oraclecloud.com/subnet: "<your_private_subnet_ocid>"
       extraPorts:
         - name: "tcp-9112"
           port: 9112
           protocol: "TCP"
           targetPort: 9112
-    externalDns:
-      enabled: true
-      # e.g. "bootstrap.automq.private"
-      hostname: "<your-boostrap-server-hostname>"
-      privateZoneId: "<your-route53-zone-id>"
 
 acl:
   enabled: true
@@ -100,18 +84,17 @@ controller:
   replicas: 3
   resources:
     requests:
-      cpu: "1000m"
+      cpu: "3000m"
       memory: "12Gi"
     limits:
-      cpu: "2000m"
+      cpu: "4000m"
       memory: "16Gi"
   persistence:
     metadata:
-      storageClass: "gp2"
+      storageClass: "<your-storage-class>"
       size: "20Gi"
     wal:
-      storageClass: "gp2"
-      size: "20Gi"
+      enabled: false
   env:
     - name: "KAFKA_HEAP_OPTS"
       value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g"
@@ -120,12 +103,14 @@ broker:
   replicas: 0
   resources:
     requests:
-      cpu: "1000m"
+      cpu: "3000m"
       memory: "12Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
   persistence:
     wal:
-      storageClass: "gp2"
-      size: "20Gi"
+      enabled: false
   env:
     - name: "KAFKA_JVM_PERFORMANCE_OPTS"
       value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
