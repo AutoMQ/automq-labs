@@ -114,40 +114,63 @@ You have two options for binding the Route 53 record to the NLB.
 
 ### Step 1.5: Grant ACLs and Test Client
 
-1.  **Create Admin & Client Properties:**
-    - `superuser.properties`: For the `_automq` admin to manage ACLs.
-    - `client.properties`: For the regular user `my-user` to produce/consume.
+1.  **Create Admin Properties:**
+    - `admin.properties`: For the `_automq` admin to manage ACLs.
+
+    ```bash
+    cat /path/to/admin-key.pem /path/to/admin-cert.pem > /path/to/admin-keystore.pem
+    ```
 
     ```properties
-    # superuser.properties
+    # admin.properties
     security.protocol=SASL_SSL
     sasl.mechanism=PLAIN
     sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="_automq" password="<your-sasl-password>";
-    ssl.truststore.certificates=/path/to/ca.crt
+    ssl.keystore.type=PEM
+    ssl.truststore.location=/path/to/ca-cert.pem
+    ssl.truststore.type=PEM
+    ssl.keystore.location=/path/to/admin-keystore.pem
+    ssl.endpoint.identification.algorithm=https
     ```
 
-    ```properties
-    # client.properties
-    security.protocol=SASL_SSL
-    sasl.mechanism=PLAIN
-    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="my-user" password="<your-sasl-password>";
-    ssl.truststore.certificates=/path/to/ca.crt
-    ```
 
 2.  **Grant ACLs as Superuser:**
     ```bash
     BOOTSTRAP_SERVER="loadbalancer.automq.private:9112"
     
     # Create a topic
-    kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVER --command-config superuser.properties \
-      --create --topic sasl-test --partitions 1 --replication-factor 1
-      
+    kafka-topics.sh --bootstrap-server $BOOTSTRAP_SERVER --command-config admin.properties \
+      --create --topic sasl-test --partitions 1
+    
+    # Set up SCRAM credentials for 'my-user'
+    kafka-configs.sh --bootstrap-server $BOOTSTRAP_SERVER --alter --add-config 'SCRAM-SHA-256=[iterations=8192,password=<your-sasl-password>]'  \
+      --entity-type users --entity-name my-user --command-config admin.properties
+    
     # Grant permissions to the regular user 'my-user'
-    kafka-acls.sh --bootstrap-server $BOOTSTRAP_SERVER --command-config superuser.properties \
+    kafka-acls.sh --bootstrap-server $BOOTSTRAP_SERVER --command-config admin.properties \
       --add --allow-principal User:my-user --operation All --topic-pattern-type literal --topic sasl-test
     ```
 
-3.  **Test as Regular User:**
+3.  **Create Admin Properties:**
+    - `client.properties`: For the regular user `my-user` to produce/consume.
+
+    ```bash
+    cat /path/to/user-key.pem /path/to/user-cert.pem > /path/to/user-keystore.pem
+    ```
+
+    ```properties
+    # client.properties
+    security.protocol=SASL_SSL
+    sasl.mechanism=SCRAM-SHA-256
+    sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="my-user" password="<your-sasl-password>";
+    ssl.keystore.type=PEM
+    ssl.truststore.location=/path/to/ca-cert.pem
+    ssl.truststore.type=PEM
+    ssl.keystore.location=/path/to/user-keystore.pem
+    ssl.endpoint.identification.algorithm=https
+    ```
+
+4.  **Test as Regular User:**
     ```bash
     # Test with my-user credentials
     kafka-console-producer.sh --bootstrap-server $BOOTSTRAP_SERVER \
@@ -207,7 +230,7 @@ helm upgrade --install automq-mtls oci://automq.azurecr.io/helm/automq-enterpris
 
 ### Step 2.4: Publish the bootstrap DNS record
 
-Same as Step 1.4: external access is only required for the controller Service, so reuse the automatic/manual options above and ensure each cluster uses a unique `bootstrapPrefix`.
+Same as Step 1.4: external access is only required for the controller Service, so reuse the automatic/manual options above.
 
 ### Step 2.5: Grant ACLs and Test Client
 
@@ -215,20 +238,32 @@ Same as Step 1.4: external access is only required for the controller Service, 
     - `admin.properties`: For the `_automq` superuser, using its certificate.
     - `client.properties`: For the `my-app` application user, using its certificate.
 
+    ```bash
+    cat /path/to/admin-key.pem /path/to/admin-cert.pem > /path/to/admin-keystore.pem
+    ```
+
     ```properties
     # admin.properties
     security.protocol=SSL
-    ssl.truststore.certificates=/path/to/ca.crt
-    ssl.keystore.key=/path/to/admin.key
-    ssl.keystore.certificate.chain=/path/to/admin.crt
+    ssl.truststore.type=PEM
+    ssl.truststore.location=/path/to/ca-cert.pem
+    ssl.keystore.type=PEM
+    ssl.keystore.location=/path/to/admin-keystore.pem
+    ssl.endpoint.identification.algorithm=https
+    ```
+
+    ```bash
+    cat /path/to/user-key.pem /path/to/user-cert.pem > /path/to/user-keystore.pem
     ```
 
     ```properties
     # client.properties
     security.protocol=SSL
-    ssl.truststore.certificates=/path/to/ca.crt
-    ssl.keystore.key=/path/to/myapp.key
-    ssl.keystore.certificate.chain=/path/to/myapp.crt
+    ssl.truststore.type=PEM
+    ssl.truststore.location=/path/to/ca-cert.pem
+    ssl.keystore.type=PEM
+    ssl.keystore.location=/path/to/user-keystore.pem
+    ssl.endpoint.identification.algorithm=https
     ```
 
 2.  **Grant ACLs as Superuser:**
