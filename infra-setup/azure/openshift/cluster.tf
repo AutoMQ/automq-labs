@@ -10,7 +10,7 @@ resource "azurerm_redhat_openshift_cluster" "aro" {
     fips_enabled = false
     pull_secret  = null # Optional: provide pull secret if needed
     # resource_group_id is automatically computed by Azure, cannot be set manually
-    version      = var.openshift_version != null ? var.openshift_version : "4.18.26" # Default to a recent stable version
+    version = var.openshift_version != null ? var.openshift_version : "4.18.26" # Default to a recent stable version
   }
 
   network_profile {
@@ -36,10 +36,10 @@ resource "azurerm_redhat_openshift_cluster" "aro" {
 
   # Default worker profile
   worker_profile {
-    vm_size     = var.worker_vm_size
+    vm_size      = var.worker_vm_size
     disk_size_gb = 128
-    subnet_id   = module.network.worker_subnet_id
-    node_count  = var.worker_node_count
+    subnet_id    = module.network.worker_subnet_id
+    node_count   = var.worker_node_count
   }
 
   service_principal {

@@ -51,13 +51,13 @@ variable "openshift_version" {
 variable "master_vm_size" {
   description = "VM size for OpenShift master nodes. Common options: Standard_D8s_v3 (recommended), Standard_D8s_v5, Standard_D4s_v3"
   type        = string
-  default     = "Standard_D8s_v3"  # v3 series typically has better availability
+  default     = "Standard_D8s_v3" # v3 series typically has better availability
 }
 
 variable "worker_vm_size" {
   description = "VM size for OpenShift worker nodes. Common options: Standard_D4s_v3 (recommended), Standard_D4s_v5, Standard_D8s_v3"
   type        = string
-  default     = "Standard_D4s_v3"  # v3 series typically has better availability
+  default     = "Standard_D4s_v3" # v3 series typically has better availability
 }
 
 variable "worker_node_count" {
@@ -88,7 +88,7 @@ variable "automq_node_pool_count" {
 variable "automq_node_pool_vm_size" {
   description = "VM size for AutoMQ dedicated node pool. Common options: Standard_D4s_v3 (recommended), Standard_D4s_v5"
   type        = string
-  default     = "Standard_D4s_v3"  # v3 series typically has better availability
+  default     = "Standard_D4s_v3" # v3 series typically has better availability
 }
 
 # Service Principal for OpenShift Cluster

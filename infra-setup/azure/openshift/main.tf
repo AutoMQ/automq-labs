@@ -38,11 +38,11 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  name_suffix = "${var.env_prefix}-${random_string.suffix.result}"
+  name_suffix          = "${var.env_prefix}-${random_string.suffix.result}"
   storage_account_name = "${var.env_prefix}${random_string.suffix.result}"
   ops_container_name   = "automq-ops-${local.name_suffix}"
-  data_container_name   = "automq-data-${local.name_suffix}"
-  
+  data_container_name  = "automq-data-${local.name_suffix}"
+
   # Service Principal credentials: Use provided or auto-created
   # Following official ARO demo pattern: use application.client_id and application_password.value
   service_principal_client_id = coalesce(
@@ -100,8 +100,8 @@ resource "azuread_application" "openshift" {
 # NOTE: Use azuread_application_password instead of azuread_service_principal_password
 #       This is the recommended approach per official ARO demo
 resource "azuread_application_password" "openshift" {
-  count         = var.create_openshift_cluster && var.service_principal_client_id == null ? 1 : 0
-  display_name  = "aro-${var.openshift_cluster_name != null ? var.openshift_cluster_name : local.name_suffix}"
+  count          = var.create_openshift_cluster && var.service_principal_client_id == null ? 1 : 0
+  display_name   = "aro-${var.openshift_cluster_name != null ? var.openshift_cluster_name : local.name_suffix}"
   application_id = azuread_application.openshift[0].id
 }
 
@@ -144,8 +144,8 @@ resource "azurerm_role_assignment" "aro_resource_provider_vnet" {
 module "storage" {
   source = "./modules/storage"
 
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.rg.name
   storage_account_name = local.storage_account_name
   ops_container_name   = local.ops_container_name
   data_container_name  = local.data_container_name
