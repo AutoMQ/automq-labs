@@ -14,6 +14,10 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# Terraform variable files (keep example files)
+*.tfvars
+!*.tfvars.example
+
 # Generic Build artifacts
 build/
 dist/
