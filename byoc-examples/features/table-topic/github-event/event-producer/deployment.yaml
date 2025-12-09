@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: github-event-producer
+  namespace: default
+  labels:
+    app: github-event-producer
+    component: producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: github-event-producer
+  template:
+    metadata:
+      labels:
+        app: github-event-producer
+        component: producer
+    spec:
+      # Use producer node group if available
+      nodeSelector:
+        node-type: producer
+      containers:
+      - name: event-producer
+        image: python:3.9
+        command:
+        - sh
+        - -c
+        - |
+          echo "Installing Python dependencies..."
+          pip install --no-cache-dir -r /app/requirements.txt
+          echo "Starting event producer..."
+          python /app/event_producer.py
+        env:
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "kf-pfiq444nipaz43tk.automqlab-k3f3.automq.private:9092"
+        - name: SCHEMA_REGISTRY_URL
+          value: "http://kf-pfiq444nipaz43tk.automqlab-k3f3.automq.private:8081"
+        - name: TOPIC_NAME
+          value: "github_events_iceberg"
+        - name: LOG_LEVEL
+          value: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
+        - name: KAFKA_DEBUG
+          value: ""  # Set to 'all' or 'broker,topic,msg' for debug logs
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+          readOnly: true
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "ps aux | grep -v grep | grep event_producer.py || exit 1"
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "ps aux | grep -v grep | grep event_producer.py || exit 1"
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: app-code
+        configMap:
+          name: github-event-producer-code
+      restartPolicy: Always
