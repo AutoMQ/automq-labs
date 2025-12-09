@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: github-event-notebook
+  namespace: default
+  labels:
+    app: github-event-notebook
+    component: notebook
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: github-event-notebook
+
