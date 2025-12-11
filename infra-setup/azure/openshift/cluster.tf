@@ -83,3 +83,32 @@ output "openshift_kubeadmin_credentials_note" {
   value       = var.create_openshift_cluster ? "Run: az aro list-credentials --resource-group ${azurerm_resource_group.rg.name} --name ${azurerm_redhat_openshift_cluster.aro[0].name}" : null
 }
 
+# AutoMQ Node Pool Module
+# Note: ARO doesn't support multiple worker profiles via Terraform
+# This module creates OpenShift Machine Sets to add AutoMQ dedicated nodes
+# Uses dedicated AutoMQ subnet (10.0.2.0/24) for network isolation
+module "automq_nodepool" {
+  source = "./modules/automq-set"
+  count  = var.create_openshift_cluster && var.create_automq_node_pool ? 1 : 0
+
+  cluster_name         = var.openshift_cluster_name != null ? var.openshift_cluster_name : "aro-${local.name_suffix}"
+  resource_group_name  = azurerm_resource_group.rg.name
+  subnet_id            = module.network.automq_subnet_id  # Uses dedicated AutoMQ subnet
+  vnet_name            = module.network.vnet_name          # VNet name from network module
+  subnet_name          = module.network.automq_subnet_name # Subnet name from network module
+  network_resource_group = azurerm_resource_group.rg.name  # Network resource group (same as cluster RG)
+  vm_size              = var.automq_node_pool_vm_size
+  node_count           = var.automq_node_pool_count
+  disk_size_gb         = 128
+  location             = var.location
+
+  depends_on = [
+    azurerm_redhat_openshift_cluster.aro
+  ]
+}
+
+output "automq_nodepool_instructions" {
+  description = "Instructions for AutoMQ node pool"
+  value       = var.create_openshift_cluster && var.create_automq_node_pool ? "AutoMQ Machine Sets will be created. Check nodes with: oc get nodes -l node-role.kubernetes.io/automq" : null
+}
+

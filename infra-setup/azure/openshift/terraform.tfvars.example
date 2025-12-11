@@ -12,3 +12,8 @@ master_vm_size          = "Standard_D8s_v3"
 worker_vm_size          = "Standard_D4s_v3"
 worker_node_count       = 3
 
+# AutoMQ Node Pool Configuration
+create_automq_node_pool = false  # Set to true to create dedicated AutoMQ node pool
+automq_node_pool_vm_size = "Standard_D4as_v5"  # VM size for AutoMQ nodes (same as nodepool-automq module default)
+automq_node_pool_count   = 4  # Number of AutoMQ nodes (distributed across 3 zones)
+
