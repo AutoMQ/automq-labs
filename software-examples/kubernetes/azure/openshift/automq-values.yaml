@@ -1,0 +1,69 @@
+global:
+  cloudProvider:
+    name: "noop"
+    # Use Storage Account Key for static authentication
+    # Storage Account: automqlabsezes
+    # Access Key and Secret Key are the same (Storage Account Key)
+    credentials: "static://?accessKey=<ak>&secretKey=<sk>&tenant=<tenant>"
+  config: |
+    s3.ops.buckets=1@azblob://automq-ops-automqlabs-ezes?region=eastus&endpoint=https%3A%2F%2Fautomqlabsezes.blob.core.windows.net&authType=static
+    s3.data.buckets=0@azblob://automq-data-automqlabs-ezes?region=eastus&endpoint=https%3A%2F%2Fautomqlabsezes.blob.core.windows.net&authType=static
+    s3.wal.path=0@azblob://automq-data-automqlabs-ezes?region=eastus&endpoint=https%3A%2F%2Fautomqlabsezes.blob.core.windows.net&authType=static
+
+controller:
+  replicas: 3
+  resources:
+    requests:
+      cpu: "2000m"
+      memory: "6Gi"
+    limits:
+      cpu: "4000m"
+      memory: "8Gi"
+  persistence:
+    metadata:
+      storageClass: "automq-disk-azure-premium-ssd"
+      size: "20Gi"
+    wal:
+      enabled: false
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx4g -Xms4g -XX:MaxDirectMemorySize=4g -XX:MetaspaceSize=96m"
+    - name: "KAFKA_S3_ACCESS_KEY"
+      value: "<ak>"
+    - name: "KAFKA_S3_SECRET_KEY"
+      value: "<sk>"
+    - name: "AZURE_TENANT_ID"
+      value: "<tenant>"
+
+broker:
+  replicas: 0
+  resources:
+    requests:
+      cpu: "2000m"
+      memory: "6Gi"
+    limits:
+      cpu: "4000m"
+      memory: "8Gi"
+  persistence:
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx4g -Xms4g -XX:MaxDirectMemorySize=4g -XX:MetaspaceSize=96m"
+    - name: "KAFKA_S3_ACCESS_KEY"
+      value: "<ak>"
+    - name: "KAFKA_S3_SECRET_KEY"
+      value: "<sk>"
+    - name: "AZURE_TENANT_ID"
+      value: "<tenant>"
+
+
