@@ -338,20 +338,17 @@ az storage container list \
   --account-key <storage-key>
 ```
 
-## Adding Node Groups
+## Node Configuration
 
-To add additional worker node groups (e.g., for AutoMQ dedicated nodes), see [NODE_GROUPS.md](./NODE_GROUPS.md) for detailed instructions.
+AutoMQ is deployed directly on the worker nodes created during cluster initialization. No additional node groups or Machine Sets are required.
 
-**Quick Summary**:
-- Terraform only supports **one worker_profile** during cluster creation
-- Additional node groups must be added **after** cluster creation using:
-  - Azure CLI: `az aro node-pool add`
-  - OpenShift Machine Sets (native OpenShift API)
+**Note**: If you need to add additional worker node groups in the future, you can use:
+- Azure CLI: `az aro node-pool add`
+- OpenShift Machine Sets (native OpenShift API)
 
 ## Related Documentation
 
 - [AutoMQ Enterprise Helm Chart](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart)
 - [Azure Red Hat OpenShift Documentation](https://learn.microsoft.com/azure/openshift/)
 - [Azure Blob Storage Documentation](https://learn.microsoft.com/azure/storage/blobs/)
-- [Adding Node Groups Guide](./NODE_GROUPS.md)
 

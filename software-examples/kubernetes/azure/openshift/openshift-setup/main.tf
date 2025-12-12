@@ -206,7 +206,3 @@ output "worker_subnet_id" {
   value       = module.network.worker_subnet_id
 }
 
-output "automq_subnet_id" {
-  description = "AutoMQ dedicated subnet ID for AutoMQ workloads"
-  value       = module.network.automq_subnet_id
-}

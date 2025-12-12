@@ -72,24 +72,6 @@ variable "create_openshift_cluster" {
   default     = true
 }
 
-# Additional Node Pool Configuration
-variable "create_automq_node_pool" {
-  description = "Whether to create a dedicated node pool for AutoMQ workloads"
-  type        = bool
-  default     = false
-}
-
-variable "automq_node_pool_count" {
-  description = "Number of nodes in the AutoMQ dedicated node pool"
-  type        = number
-  default     = 3
-}
-
-variable "automq_node_pool_vm_size" {
-  description = "VM size for AutoMQ dedicated node pool. Common options: Standard_D4s_v3 (recommended), Standard_D4s_v5"
-  type        = string
-  default     = "Standard_D4s_v3" # v3 series typically has better availability
-}
 
 # Service Principal for OpenShift Cluster
 # If not provided, Terraform will automatically create one

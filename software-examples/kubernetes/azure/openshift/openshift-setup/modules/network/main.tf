@@ -63,23 +63,6 @@ resource "azurerm_subnet" "worker" {
   service_endpoints = ["Microsoft.Storage", "Microsoft.ContainerRegistry"]
 }
 
-# AutoMQ dedicated subnet for AutoMQ workloads
-# ARO requirements: /27 minimum (32 IPs), no NSG, no UDR
-# Must disable private link service network policies for ARO
-resource "azurerm_subnet" "automq" {
-  name                 = "snet-automq-${var.name_suffix}"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.openshift.name
-  # Use /24 (256 IPs) for AutoMQ subnet: cidrsubnet(10.0.0.0/16, 8, 2) = 10.0.2.0/24
-  address_prefixes = [cidrsubnet(var.vnet_cidr, 8, 2)]
-
-  # ARO requirement: Disable private link service network policies
-  private_link_service_network_policies_enabled = false
-
-  # Service endpoints for Azure services
-  service_endpoints = ["Microsoft.Storage", "Microsoft.ContainerRegistry"]
-}
-
 output "vnet_id" {
   description = "Virtual Network ID for OpenShift cluster"
   value       = azurerm_virtual_network.openshift.id
@@ -100,13 +83,4 @@ output "worker_subnet_id" {
   value       = azurerm_subnet.worker.id
 }
 
-output "automq_subnet_id" {
-  description = "AutoMQ dedicated subnet ID for AutoMQ workloads"
-  value       = azurerm_subnet.automq.id
-}
-
-output "automq_subnet_name" {
-  description = "AutoMQ dedicated subnet name"
-  value       = azurerm_subnet.automq.name
-}
 
