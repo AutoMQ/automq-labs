@@ -10,6 +10,5 @@ openshift_cluster_name   = "your-cluster-name"  # Replace with your desired clus
 openshift_version        = null  # Use default version (4.18.26) or specify like "4.18.26"
 master_vm_size          = "Standard_D8s_v3"
 worker_vm_size          = "Standard_D4s_v3"
-worker_node_count       = 3
-
+worker_node_count       = 5
 

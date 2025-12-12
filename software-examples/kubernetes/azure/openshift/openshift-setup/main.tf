@@ -76,16 +76,6 @@ module "network" {
   vnet_cidr           = var.vnet_cidr
 }
 
-# IAM module for Managed Identity
-module "iam" {
-  source = "./modules/iam"
-
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  subscription_id     = var.subscription_id
-  name_suffix         = local.name_suffix
-}
-
 # Service Principal for OpenShift Cluster
 # Following official ARO demo pattern: https://github.com/rh-mobb/terraform-aro-permissions
 
@@ -174,16 +164,6 @@ output "automq_data_bucket" {
 output "automq_ops_bucket" {
   description = "The name of the automq-ops container"
   value       = local.ops_container_name
-}
-
-output "workload_identity_client_id" {
-  description = "Managed Identity Client ID for Service Principal authentication (use this for AutoMQ Enterprise deployment)"
-  value       = module.iam.workload_identity_client_id
-}
-
-output "workload_identity_id" {
-  description = "Managed Identity Resource ID"
-  value       = module.iam.workload_identity_id
 }
 
 output "vnet_id" {
