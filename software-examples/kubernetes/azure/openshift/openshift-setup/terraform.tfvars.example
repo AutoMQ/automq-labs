@@ -1,0 +1,14 @@
+location            = "YOUR_LOCATION"
+subscription_id     = "YOUR_SUBSCRIPTION_ID"  # Replace with your Azure subscription ID
+resource_group_name = "AutoMQ-lab-openshift"
+env_prefix          = "automqlab"
+vnet_cidr           = "10.0.0.0/16"
+
+# OpenShift Cluster Configuration
+create_openshift_cluster = true
+openshift_cluster_name   = "your-cluster-name"  # Replace with your desired cluster name
+openshift_version        = null  # Use default version (4.18.26) or specify like "4.18.26"
+master_vm_size          = "Standard_D8s_v3"
+worker_vm_size          = "Standard_D4s_v3"
+worker_node_count       = 5
+
