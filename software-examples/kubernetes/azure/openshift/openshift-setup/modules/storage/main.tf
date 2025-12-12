@@ -30,11 +30,11 @@ resource "azurerm_storage_account" "automq" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  account_kind              = "StorageV2"
+  account_kind             = "StorageV2"
 
   # Security settings
   min_tls_version                 = "TLS1_2"
-  allow_nested_items_to_be_public  = false
+  allow_nested_items_to_be_public = false
   shared_access_key_enabled       = true
 
   # Enable blob storage
@@ -51,14 +51,14 @@ resource "azurerm_storage_account" "automq" {
 
 # Container for AutoMQ operations data
 resource "azurerm_storage_container" "automq_ops" {
-  name                  = var.ops_container_name
-  storage_account_id    = azurerm_storage_account.automq.id
+  name               = var.ops_container_name
+  storage_account_id = azurerm_storage_account.automq.id
 }
 
 # Container for AutoMQ data
 resource "azurerm_storage_container" "automq_data" {
-  name                  = var.data_container_name
-  storage_account_id    = azurerm_storage_account.automq.id
+  name               = var.data_container_name
+  storage_account_id = azurerm_storage_account.automq.id
 }
 
 output "storage_account_name" {
