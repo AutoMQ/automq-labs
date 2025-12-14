@@ -174,7 +174,29 @@ helm install <release-name> oci://automq.azurecr.io/helm/automq-enterprise-chart
   --create-namespace
 ```
 
+#### 5.1. Configure Security Context Constraints (SCC)
 
+OpenShift introduces an additional security layer called **Security Context Constraints (SCC)** that restricts pod permissions beyond standard Kubernetes. SCC acts as an intermediate authorization layer that controls what security contexts pods can use, including user IDs, capabilities, and volume types.
+
+
+AutoMQ pods may require specific security contexts (such as running as a specific user ID or mounting certain volume types) that are restricted by OpenShift's default SCC policies. Without proper SCC permissions, AutoMQ pods may fail to start or encounter permission errors.
+
+
+1. First, identify the ServiceAccount used by AutoMQ pods. Wait for the pods to be created, then run:
+
+```bash
+oc get pod <pod-name> -n <namespace> -o jsonpath='{.spec.serviceAccountName}'
+```
+
+Replace `<pod-name>` with the actual name of an AutoMQ pod (e.g., `automq-controller-0`) and `<namespace>` with your namespace.
+
+2. Grant the `anyuid` SCC to the ServiceAccount. This allows pods to run as any user ID, which is often required for applications that need specific user permissions:
+
+```bash
+oc adm policy add-scc-to-user anyuid -z <serviceAccountName> -n <namespace>
+```
+
+Replace `<serviceAccountName>` with the ServiceAccount name obtained from step 1 (typically `automq-enterprise-controller` or similar), and `<namespace>` with your namespace.
 
 ### 6. Verify Deployment
 
