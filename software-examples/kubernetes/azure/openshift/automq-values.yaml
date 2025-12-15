@@ -1,0 +1,66 @@
+global:
+  cloudProvider:
+    name: "noop"
+    credentials: "static://?accessKey=<client-id>&secretKey=<secret-value>&tenant=<tenant-id>"
+  config: |
+    s3.ops.buckets=1@azblob://<your-ops-bucket>?region=<az-region>&endpoint=<endpoint-url>&authType=static
+    s3.data.buckets=0@azblob://<your-data-bucket>?region=<az-region>&endpoint=<endpoint-url>&authType=static
+    s3.wal.path=0@azblob://<your-data-bucket>?region=<az-region>&endpoint=<endpoint-url>&authType=static
+
+controller:
+  replicas: 3
+  resources:
+    requests:
+      cpu: "2000m"
+      memory: "12Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+  persistence:
+    metadata:
+      storageClass: "automq-disk-azure-premium-ssd"
+      size: "20Gi"
+    wal:
+      enabled: false
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+    - name: "KAFKA_S3_ACCESS_KEY"
+      value: "<client-id>"
+    - name: "KAFKA_S3_SECRET_KEY"
+      value: "<secret-value>"
+    - name: "AZURE_TENANT_ID"
+      value: "<tenant>"
+
+broker:
+  replicas: 1
+  resources:
+    requests:
+      cpu: "2000m"
+      memory: "12Gi"
+    limits:
+      cpu: "4000m"
+      memory: "16Gi"
+  persistence:
+    wal:
+      enabled: false
+
+  env:
+    - name: "KAFKA_JVM_PERFORMANCE_OPTS"
+      value: "-server -XX:+UseZGC -XX:ZCollectionInterval=5"
+    - name: "KAFKA_OPTS"
+      value: "-XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError"
+    - name: "KAFKA_HEAP_OPTS"
+      value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+    - name: "KAFKA_S3_ACCESS_KEY"
+      value: "<client-id>"
+    - name: "KAFKA_S3_SECRET_KEY"
+      value: "<secret-value>"
+    - name: "AZURE_TENANT_ID"
+      value: "<tenant-id>"
+
+
