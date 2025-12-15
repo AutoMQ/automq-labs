@@ -1,6 +1,6 @@
-# Deploy AutoMQ Enterprise on Azure Red Hat OpenShift
+# Deploy AutoMQ Software on Azure Red Hat OpenShift
 
-This guide provides instructions for deploying the enterprise version of [AutoMQ](https://www.automq.com/) on Azure Red Hat OpenShift (ARO) using the managed Helm chart. This example demonstrates deploying AutoMQ in **S3 WAL mode** using Azure Blob Storage as the backend storage.
+This guide provides instructions for deploying the software version of [AutoMQ](https://www.automq.com/) on Azure Red Hat OpenShift (ARO) using the managed Helm chart. This example demonstrates deploying AutoMQ in **S3 WAL mode** using Azure Blob Storage as the backend storage.
 
 AutoMQ is a  diskless Kafka® on S3 that is fully compatible with the Kafka protocol. This deployment leverages Azure Blob Storage for Write-Ahead Log (WAL) storage, providing scalable and cost-effective storage for your streaming workloads.
 
@@ -91,6 +91,22 @@ AutoMQ Controller requires persistent storage for metadata. Apply the provided S
 kubectl apply -f storage/storageclass-premium-ssd.yaml
 ```
 
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: automq-disk-azure-premium-ssd
+provisioner: disk.csi.azure.com
+parameters:
+  skuName: Premium_LRS
+  cachingMode: ReadWrite
+  storageAccountType: Premium_LRS
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+
+```
+
 ### 3. Create Service Principal for Azure Blob Storage Access
 
 AutoMQ requires a Service Principal to access Azure Blob Storage. Follow these steps to create and configure it:
@@ -105,7 +121,7 @@ AutoMQ requires a Service Principal to access Azure Blob Storage. Follow these s
 6. After creation, note down the following values from the **Overview** page:
    - **Application (client) ID**: This will be your `<client-id>`
    - **Directory (tenant) ID**: This will be your `<tenant-id>`
-   - **Secret Balue**: This will be your `<secret-value>`
+   - **Secret Value**: This will be your `<secret-value>`
 
 #### Step 2: Grant Storage Account Permissions
 
@@ -133,6 +149,7 @@ Edit the `automq-values.yaml` file and customize it for your environment. You ne
    ```
 
 2. **Service Principal Credentials** (Static Authentication):
+If special characters (such as /, +) are included, they need to be URL encoded, otherwise, URI parsing may fail.
    ```yaml
    global:
      credentials: "static://?accessKey=<client-id>&secretKey=<secret-value>&tenant=<tenant-id>"
@@ -158,11 +175,11 @@ Edit the `automq-values.yaml` file and customize it for your environment. You ne
 - `<tenant-id>`: Azure Tenant ID (Directory ID from App Registration)
 
 For more details on available parameters, refer to:
-- [AutoMQ Enterprise Helm Chart Values](https://www.automq.com/docs/automq-cloud/appendix/helm-chart-values-readme)
-- [AutoMQ Enterprise Installation Guide](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart#install-automq)
+- [AutoMQ Software Helm Chart Values](https://www.automq.com/docs/automq-cloud/appendix/helm-chart-values-readme)
+- [AutoMQ Software Installation Guide](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart#install-automq)
 - [AutoMQ Performance Tuning Guide](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker)
 
-### 5. Install AutoMQ Enterprise
+### 5. Install AutoMQ Software
 
 Once your `automq-values.yaml` file is configured, deploy AutoMQ using Helm. Replace `<namespace>` with your desired namespace name:
 
@@ -173,6 +190,12 @@ helm install <release-name> oci://automq.azurecr.io/helm/automq-enterprise-chart
   --namespace <namespace> \
   --create-namespace
 ```
+
+**⚠️ Important Note Regarding OpenShift Deployments:**
+
+After successfully executing the Helm install command, you may observe that the AutoMQ Broker pods eventually enter a CrashLoopBackOff or Error status. This is expected behavior on OpenShift. The default OpenShift security policies (SCC) prevent the container from writing to the /data directory using the image's default User ID.Please proceed immediately to Section 5.1 (Configuring SCC Permissions) to apply the necessary anyuid or custom SCC policies.  You can try manually restarting the pod. The pods will recover once the permissions are applied. 
+
+Note: This is a known configuration requirement for OpenShift environments, and native support is planned for future releases.
 
 #### 5.1. Configure Security Context Constraints (SCC)
 
@@ -311,7 +334,7 @@ If pods fail to start, check:
 
 ## Additional Resources
 
-- [AutoMQ Enterprise](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart)
+- [AutoMQ Software](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart)
 - [Azure Red Hat OpenShift Documentation](https://learn.microsoft.com/azure/openshift/)
 
 
