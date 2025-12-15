@@ -14,9 +14,9 @@ Before you begin, ensure you have the following:
    - Operations bucket (for AutoMQ operations data)
    - Data bucket (for AutoMQ data and WAL)
 
-3. **StorageClass**: AutoMQ Controller requires a PersistentVolumeClaim (PVC) to store metadata. Create the StorageClass using the provided configuration:
+3. **StorageClass**: AutoMQ Controller requires a PersistentVolumeClaim (PVC) to store metadata. Azure Red Hat OpenShift provides a default `managed-csi` StorageClass that can be used for this purpose. Verify it exists:
    ```bash
-   kubectl apply -f storage/storageclass-premium-ssd.yaml
+   oc get storageclass managed-csi
    ```
 
 4. **Helm (v3.6.0+)**: The package manager for Kubernetes. Verify your installation:
@@ -83,28 +83,12 @@ If you prefer to set up resources manually:
 1. **Create OpenShift Cluster**: Use Azure Portal or Azure CLI to create an ARO cluster
 2. **Create Storage Account and Containers**: Create an Azure Storage Account and two Blob containers (one for operations, one for data)
 
-### 2. Create StorageClass
+### 2. Verify StorageClass
 
-AutoMQ Controller requires persistent storage for metadata. Apply the provided StorageClass:
+AutoMQ Controller requires persistent storage for metadata. Azure Red Hat OpenShift provides a default `managed-csi` StorageClass that can be used. Verify it exists:
 
 ```bash
-kubectl apply -f storage/storageclass-premium-ssd.yaml
-```
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: automq-disk-azure-premium-ssd
-provisioner: disk.csi.azure.com
-parameters:
-  skuName: Premium_LRS
-  cachingMode: ReadWrite
-  storageAccountType: Premium_LRS
-volumeBindingMode: WaitForFirstConsumer
-allowVolumeExpansion: true
-reclaimPolicy: Delete
-
+oc get storageclass managed-csi
 ```
 
 ### 3. Create Service Principal for Azure Blob Storage Access
@@ -157,13 +141,14 @@ If special characters (such as /, +) are included, they need to be URL encoded, 
 
 3. **Resource Limits**: Adjust based on your node capacity (default uses Standard_D4s_v3 recommendations)
 
-4. **StorageClass**: Ensure it matches the StorageClass you created:
+4. **StorageClass**: The default configuration uses the `managed-csi` StorageClass provided by Azure Red Hat OpenShift:
    ```yaml
    controller:
      persistence:
        metadata:
-         storageClass: "automq-disk-azure-premium-ssd"
+         storageClass: "managed-csi"
    ```
+   If you need to use a different StorageClass, update this value accordingly.
 
 **Important**: Replace all placeholder values marked with `<...>`:
 - `<your-ops-bucket>`: Your Azure Blob Storage operations container name

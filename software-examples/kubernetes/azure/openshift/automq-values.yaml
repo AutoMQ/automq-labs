@@ -18,7 +18,7 @@ controller:
       memory: "16Gi"
   persistence:
     metadata:
-      storageClass: "automq-disk-azure-premium-ssd"
+      storageClass: "managed-csi"
       size: "20Gi"
     wal:
       enabled: false
