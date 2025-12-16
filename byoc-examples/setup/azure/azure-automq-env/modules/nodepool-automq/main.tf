@@ -88,17 +88,64 @@ resource "azurerm_kubernetes_cluster_node_pool" "automq" {
   }
 }
 
-# Assign user-assigned identity to the underlying VMSS after node pool creation (if provided)
-resource "null_resource" "vmss_identity" {
-  triggers = {
-    node_pool_id     = azurerm_kubernetes_cluster_node_pool.automq.id
-    cluster_identity = var.cluster_identity_id
+# Get AKS cluster info to retrieve node resource group
+data "azurerm_kubernetes_cluster" "aks" {
+  name                = regex("/managedClusters/([^/]+)$", var.kubernetes_cluster_id)[0]
+  resource_group_name = regex("/resourceGroups/([^/]+)/", var.kubernetes_cluster_id)[0]
+
+  depends_on = [azurerm_kubernetes_cluster_node_pool.automq]
+}
+
+# List all VMSS in the node resource group
+data "azapi_resource_list" "vmss_list" {
+  type      = "Microsoft.Compute/virtualMachineScaleSets@2023-09-01"
+  parent_id = "/subscriptions/${regex("/subscriptions/([^/]+)/", var.kubernetes_cluster_id)[0]}/resourceGroups/${data.azurerm_kubernetes_cluster.aks.node_resource_group}"
+
+  depends_on = [azurerm_kubernetes_cluster_node_pool.automq]
+}
+
+# Find the VMSS matching the node pool name by tag
+locals {
+  # output is already decoded as an object
+  vmss_list = data.azapi_resource_list.vmss_list.output
+  
+  # Filter VMSS by aks-managed-poolName tag
+  matched_vmss = [
+    for vmss in local.vmss_list.value : vmss
+    if try(vmss.tags["aks-managed-poolName"], "") == var.nodepool_name
+  ]
+  
+  vmss_id = length(local.matched_vmss) > 0 ? local.matched_vmss[0].id : ""
+}
+
+# Assign user-assigned identity to the VMSS using azapi_resource_action
+# Using PATCH method to avoid cross-subscription validation issues
+resource "azapi_resource_action" "vmss_identity" {
+  type        = "Microsoft.Compute/virtualMachineScaleSets@2023-09-01"
+  resource_id = local.vmss_id
+  action      = ""
+  method      = "PATCH"
+
+  body = {
+    identity = {
+      type = "UserAssigned"
+      userAssignedIdentities = {
+        (var.cluster_identity_id) = {}
+      }
+    }
   }
 
-  provisioner "local-exec" {
-    when        = create
-    command     = "${path.module}/attach_vmss_identity.sh ${azurerm_kubernetes_cluster_node_pool.automq.kubernetes_cluster_id} ${azurerm_kubernetes_cluster_node_pool.automq.name} ${var.cluster_identity_id}"
-    interpreter = ["bash", "-c"]
+  depends_on = [azurerm_kubernetes_cluster_node_pool.automq]
+  
+  lifecycle {
+    precondition {
+      condition     = local.vmss_id != ""
+      error_message = "VMSS not found for node pool ${var.nodepool_name}. Ensure the node pool is created and tagged correctly."
+    }
+    precondition {
+      condition     = var.cluster_identity_id != ""
+      error_message = "cluster_identity_id must be provided to assign identity to the VMSS."
+    }
   }
 }
 

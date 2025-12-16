@@ -11,9 +11,9 @@ This configuration creates the Azure stack for AutoMQ on AKS:
 
 ## Prerequisites
 - Terraform >= 1.3
-- Azure CLI logged in (`az login`)
-- Existing VNet with public and private subnets.
-- Custom image ID for the AutoMQ console VM (optional, has a default).
+- Azure subscription with appropriate permissions
+- Existing VNet with public and private subnets
+- Custom image ID for the AutoMQ console VM (optional, has a default)
 
 ## Directory layout
 ```
@@ -33,11 +33,7 @@ Optional network bootstrap example (standalone): `byoc-examples/setup/azure/netw
 - AKS control plane uses its own UAI created inside the AKS module; workload identity and OIDC issuer are enabled.
 - System node pool: single node, auto-scaling enabled, `only_critical_addons_enabled = true`, temporary name for rotation (default `tmp`).
 - User node pool `automq`: taint `dedicated=automq:NoSchedule`, supports spot/regular, subnet from input, UAI assigned to VMSS post-creation.
-- Nodepool VMSS identity: the module automatically invokes `modules/nodepool-automq/attach_vmss_identity.sh` to bind the provided `cluster_identity_id` to the VMSS corresponding to the node pool. This script can also be run standalone:
-  ```bash
-  bash modules/nodepool-automq/attach_vmss_identity.sh \
-    <AKS_CLUSTER_ID> <NODEPOOL_NAME> <UAI_ID>
-  ```
+- Nodepool VMSS identity: the module automatically uses Azure API (via `azapi` provider) to discover the VMSS corresponding to the node pool by matching the `aks-managed-poolName` tag, then assigns the provided `cluster_identity_id` to the VMSS. This is a pure Terraform implementation with no external script dependencies.
 - Network profile: Azure CNI/policy, LB Standard, outbound via load balancer; service CIDR and DNS service IP are configurable (defaults 10.2.0.0/16 and 10.2.0.10) to avoid overlap with VNet/subnets.
 - Kubeconfig: written locally to `kubeconfig_path` (default `~/.kube/automq-aks-config`), not output in plaintext.
 - Console SSH key: written to `~/.ssh/automq-console-ssh-key.pem` by Terraform.
