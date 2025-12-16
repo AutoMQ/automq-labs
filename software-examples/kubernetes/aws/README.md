@@ -56,7 +56,7 @@ Run the following command to install AutoMQ in a dedicated namespace:
 ```shell
 helm install automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart \
   -f static/demo-static-values.yaml \
-  --version 5.3.2 \
+  --version 5.3.3 \
   --namespace automq \
   --create-namespace
 ```
@@ -72,7 +72,7 @@ To apply changes to your deployment after updating `demo-values.yaml`, use the `
 ```shell
 helm upgrade automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart \
   -f demo-values.yaml \
-  --version 5.3.2 \
+  --version 5.3.3 \
   --namespace automq
 ```
 
