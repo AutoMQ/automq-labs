@@ -59,12 +59,13 @@ variable "dns_service_ip" {
 }
 
 resource "azurerm_kubernetes_cluster" "aks" {
-  name                = var.aks_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  dns_prefix          = var.dns_prefix
-  kubernetes_version  = var.kubernetes_version
-  sku_tier            = var.kubernetes_pricing_tier
+  name                    = var.aks_name
+  location                = var.location
+  resource_group_name     = var.resource_group_name
+  dns_prefix              = var.dns_prefix
+  kubernetes_version      = var.kubernetes_version
+  sku_tier                = var.kubernetes_pricing_tier
+  private_cluster_enabled = true
 
   identity {
     type         = "UserAssigned"
