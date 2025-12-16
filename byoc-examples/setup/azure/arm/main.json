@@ -152,7 +152,7 @@
   "variables": {
     "uniqueId": "[uniqueString(resourceGroup().id, deployment().name)]",
     "imageReference": {
-      "id": "/subscriptions/218357d0-eaaf-4e3e-9ffa-6b4ccb7e2df9/resourceGroups/automq-gallery-rg/providers/Microsoft.Compute/galleries/automqCommunityGallery/images/automq-control-center-gen1/versions/7.8.7"
+      "id": "/communityGalleries/automqimages-7a9bb1ec-7a2b-44cd-a3ae-a797cc8dd7eb/images/automq-control-center-gen1/versions/7.8.7"
     }
   },
   "resources": {
