@@ -108,13 +108,13 @@ data "azapi_resource_list" "vmss_list" {
 locals {
   # output is already decoded as an object
   vmss_list = data.azapi_resource_list.vmss_list.output
-  
+
   # Filter VMSS by aks-managed-poolName tag
   matched_vmss = [
     for vmss in local.vmss_list.value : vmss
     if try(vmss.tags["aks-managed-poolName"], "") == var.nodepool_name
   ]
-  
+
   vmss_id = length(local.matched_vmss) > 0 ? local.matched_vmss[0].id : ""
 }
 
@@ -136,7 +136,7 @@ resource "azapi_resource_action" "vmss_identity" {
   }
 
   depends_on = [azurerm_kubernetes_cluster_node_pool.automq]
-  
+
   lifecycle {
     precondition {
       condition     = local.vmss_id != ""
