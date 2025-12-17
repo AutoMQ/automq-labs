@@ -13,13 +13,13 @@ output "s3_table_bucket_arn" {
 }
 
 resource "aws_s3_bucket" "athena_results" {
-  bucket = "${local.resource_suffix}-athena-query-results"
+  bucket        = "${local.resource_suffix}-athena-query-results"
   force_destroy = true
 }
 
 
 resource "aws_athena_workgroup" "lab-athena-workgroup" {
-  name = "${local.resource_suffix}-primary" # 覆盖默认的 primary 工作组
+  name          = "${local.resource_suffix}-primary" # 覆盖默认的 primary 工作组
   force_destroy = true
 
   configuration {
