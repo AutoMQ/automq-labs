@@ -145,6 +145,8 @@ def process_hour(date_str, hour, producer, avro_serializer):
                     # Call poll every 100 messages to ensure timely delivery
                     if count % 100 == 0:
                         producer.poll(0)
+                        # Sleep to spread events evenly: every 100 events sleep 3.6s (100k events in 1 hour)
+                        time.sleep(3.6)
                     # Print progress every 2000 messages
                     if count % 2000 == 0:
                         logger.info(f"  ↳ Sent {count} events...")
