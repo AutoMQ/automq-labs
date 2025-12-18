@@ -13,9 +13,9 @@ variable "vnet_id" {
   description = "ID of the virtual network"
 }
 
-variable "public_subnet_id" {
+variable "private_subnet_id" {
   type        = string
-  description = "Subnet ID for the console VM (public)"
+  description = "Subnet ID for the console VM (private)"
 }
 
 variable "private_subnet_ids" {
@@ -130,13 +130,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "zone_link" {
 }
 
 # Public IP and NIC for console
-resource "azurerm_public_ip" "console" {
-  name                = "pip-${local.env_name}"
-  resource_group_name = var.resource_group_name
-  location            = var.location
-  allocation_method   = "Static"
-  sku                 = "Standard"
-}
+
 
 resource "azurerm_network_security_group" "console" {
   name                = "nsg-${local.env_name}"
@@ -175,9 +169,8 @@ resource "azurerm_network_interface" "console" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.public_subnet_id
+    subnet_id                     = var.private_subnet_id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.console.id
   }
 }
 
@@ -258,7 +251,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "data_disk_attachment" {
 
 
 output "console_endpoint" {
-  value = "http://${azurerm_public_ip.console.ip_address}:8080"
+  value = "http://${azurerm_network_interface.console.private_ip_address}:8080"
 }
 
 output "console_initial_username" {
