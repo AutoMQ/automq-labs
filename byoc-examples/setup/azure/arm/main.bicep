@@ -70,7 +70,7 @@ param opsStorageAccountKind string = 'StorageV2'
 param opsStorageAccountIsNew string = 'new'
 
 var imageReference object = {
-  id: '/subscriptions/218357d0-eaaf-4e3e-9ffa-6b4ccb7e2df9/resourceGroups/automq-image/providers/Microsoft.Compute/images/AutoMQ-control-center-Prod-7.8.7-x86_64'
+  id: '/communityGalleries/automqimages-7a9bb1ec-7a2b-44cd-a3ae-a797cc8dd7eb/images/automq-control-center-gen1/versions/7.8.7'
 }
 
 module network 'modules/network.bicep' = {
