@@ -65,11 +65,11 @@ resource "aws_eks_node_group" "automq-node-groups" {
   }
 
   # Node taints: Ensures only specific pods are scheduled to these nodes
-  taint {
-    key    = "dedicated"
-    value  = "automq"
-    effect = "NO_SCHEDULE"
-  }
+#   taint {
+#     key    = "dedicated"
+#     value  = "automq"
+#     effect = "NO_SCHEDULE"
+#   }
 
   labels = {}
 

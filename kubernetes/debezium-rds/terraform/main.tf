@@ -171,24 +171,56 @@ resource "aws_db_parameter_group" "postgresql" {
   name   = "debezium-postgres-${random_id.suffix.hex}"
   family = "postgres15"
 
+  # Enable logical replication for Debezium
   parameter {
-    name  = "rds.logical_replication"
-    value = "1"
+    name         = "rds.logical_replication"
+    value        = "1"
+    apply_method = "pending-reboot"
   }
 
+  # Enable shared_preload_libraries for logical decoding plugins
   parameter {
-    name  = "wal_level"
-    value = "logical"
+    name         = "shared_preload_libraries"
+    value        = "pg_stat_statements,pg_cron"
+    apply_method = "pending-reboot"
   }
 
+  # Set WAL level to logical (handled automatically by RDS when logical replication is enabled)
+  # wal_level is automatically set to 'logical' when rds.logical_replication = 1
+
+  # Increase replication slots for Debezium connectors
   parameter {
-    name  = "max_replication_slots"
-    value = "10"
+    name         = "max_replication_slots"
+    value        = "20"
+    apply_method = "pending-reboot"
   }
 
+  # Increase WAL senders for replication
   parameter {
-    name  = "max_wal_senders"
-    value = "10"
+    name         = "max_wal_senders"
+    value        = "20"
+    apply_method = "pending-reboot"
+  }
+
+  # Increase max_connections to handle Debezium connections
+  parameter {
+    name         = "max_connections"
+    value        = "200"
+    apply_method = "pending-reboot"
+  }
+
+  # Set appropriate checkpoint settings for better performance
+  parameter {
+    name         = "checkpoint_completion_target"
+    value        = "0.9"
+    apply_method = "immediate"
+  }
+
+  # Increase WAL buffers for better write performance
+  parameter {
+    name         = "wal_buffers"
+    value        = "16384"
+    apply_method = "pending-reboot"
   }
 
   tags = merge(local.tags, {
@@ -199,7 +231,7 @@ resource "aws_db_parameter_group" "postgresql" {
 resource "random_password" "db" {
   length           = 20
   special          = true
-  override_special = "!@#_-"
+  override_special = "!#$%&*+-=?^_|~"
 }
 
 resource "aws_db_instance" "main" {
@@ -209,7 +241,7 @@ resource "aws_db_instance" "main" {
   instance_class          = local.instance_class
   allocated_storage       = 20
   db_name                 = "testdb"
-  username                = "admin"
+  username                = var.database_type == "mysql" ? "admin" : "dbadmin"
   password                = random_password.db.result
   port                    = local.db_port
   publicly_accessible     = true

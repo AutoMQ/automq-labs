@@ -1,22 +1,22 @@
-output "console_endpoint" {
-  description = "Console endpoint for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_endpoint
-}
+# output "console_endpoint" {
+#   description = "Console endpoint for the AutoMQ BYOC environment"
+#   value       = module.automq-byoc.automq_byoc_endpoint
+# }
+# 
+# output "initial_username" {
+#   description = "Initial username for the AutoMQ BYOC environment"
+#   value       = module.automq-byoc.automq_byoc_initial_username
+# }
+# 
+# output "initial_password" {
+#   description = "Initial password for the AutoMQ BYOC environment"
+#   value       = module.automq-byoc.automq_byoc_initial_password
+# }
 
-output "initial_username" {
-  description = "Initial username for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_initial_username
-}
-
-output "initial_password" {
-  description = "Initial password for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_initial_password
-}
-
-output "dns_zone_id" {
-  description = "Route53 DNS Zone ID for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_vpc_route53_zone_id
-}
+# output "dns_zone_id" {
+#   description = "Route53 DNS Zone ID for the AutoMQ BYOC environment"
+#   value       = module.automq-byoc.automq_byoc_vpc_route53_zone_id
+# }
 
 output "cluster_name" {
   description = "EKS Cluster Name"
