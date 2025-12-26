@@ -39,3 +39,22 @@ node_group = {
 #   "subnet-bbbbbbbbbbbbbbbbb",
 #   "subnet-ccccccccccccccccc"
 # ]
+
+# ========================================
+# Option 3: Use Existing VPC + Create NAT Gateway
+# ========================================
+# If your existing VPC doesn't have NAT Gateway, you can create one:
+
+# use_existing_vpc = true
+# create_nat_gateway = true  # This will create a NAT Gateway in the existing VPC
+# existing_vpc_id = "vpc-xxxxxxxxxxxxxxxxx"
+# existing_private_subnet_ids = [
+#   "subnet-xxxxxxxxxxxxxxxxx",
+#   "subnet-yyyyyyyyyyyyyyyyy",
+#   "subnet-zzzzzzzzzzzzzzzzz"
+# ]
+# existing_public_subnet_ids = [  # Required when create_nat_gateway is true
+#   "subnet-aaaaaaaaaaaaaaaaaa",
+#   "subnet-bbbbbbbbbbbbbbbbb",
+#   "subnet-ccccccccccccccccc"
+# ]

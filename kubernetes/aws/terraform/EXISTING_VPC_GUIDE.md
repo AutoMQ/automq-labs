@@ -12,7 +12,7 @@ terraform plan
 terraform apply
 ```
 
-## 场景 2: 使用现有 VPC
+## 场景 2: 使用现有 VPC（已有 NAT Gateway）
 
 ### 步骤 1: 获取 VPC 和子网信息
 
@@ -82,6 +82,62 @@ terraform plan
 ### 步骤 4: 应用配置
 
 ```bash
+terraform apply
+```
+
+## 场景 3: 使用现有 VPC + 创建 NAT Gateway
+
+如果您的现有 VPC 没有配置 NAT Gateway，可以让 Terraform 自动创建：
+
+### 步骤 1: 创建配置文件
+
+创建 `terraform.tfvars` 文件：
+
+```hcl
+# 基本配置
+region = "ap-northeast-1"
+resource_suffix = "automqlab"
+
+# 使用现有 VPC 并创建 NAT Gateway
+use_existing_vpc   = true
+create_nat_gateway = true  # 启用 NAT Gateway 创建
+existing_vpc_id    = "vpc-0123456789abcdef0"
+
+# 私有子网（必需）
+existing_private_subnet_ids = [
+  "subnet-0123456789abcdef0",
+  "subnet-0123456789abcdef1",
+  "subnet-0123456789abcdef2"
+]
+
+# 公有子网（创建 NAT Gateway 时必需）
+existing_public_subnet_ids = [
+  "subnet-0123456789abcdef3",
+  "subnet-0123456789abcdef4",
+  "subnet-0123456789abcdef5"
+]
+```
+
+**注意**：
+- 当 `create_nat_gateway = true` 时，**必须**提供 `existing_public_subnet_ids`
+- NAT Gateway 将被创建在第一个公有子网中
+- 所有私有子网的路由表将自动添加到 NAT Gateway 的路由（0.0.0.0/0 -> NAT Gateway）
+
+### 步骤 2: 验证和应用
+
+```bash
+# 初始化 Terraform
+terraform init
+
+# 查看执行计划
+terraform plan
+
+# 验证以下内容将被创建：
+# ✓ 1 个 Elastic IP
+# ✓ 1 个 NAT Gateway
+# ✓ 针对每个私有子网的路由表路由
+
+# 应用配置
 terraform apply
 ```
 

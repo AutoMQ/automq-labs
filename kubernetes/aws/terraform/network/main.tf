@@ -38,6 +38,12 @@ data "aws_route_tables" "existing_vpc_route_tables" {
   vpc_id = var.existing_vpc_id
 }
 
+# Data source to get route table for each private subnet
+data "aws_route_table" "private_subnet_rt" {
+  count     = var.use_existing_vpc && var.create_nat_gateway ? length(var.existing_private_subnet_ids) : 0
+  subnet_id = var.existing_private_subnet_ids[count.index]
+}
+
 resource "random_string" "suffix" {
   length  = 5
   special = false
@@ -76,6 +82,41 @@ module "vpc" {
   single_nat_gateway = true
 
   tags = local.tags
+}
+
+
+# NAT Gateway resources for existing VPC
+# Create Elastic IP for NAT Gateway (only when using existing VPC and create_nat_gateway is true)
+resource "aws_eip" "nat_gateway_eip" {
+  count  = var.use_existing_vpc && var.create_nat_gateway ? 1 : 0
+  domain = "vpc"
+
+  tags = merge(local.tags, {
+    Name = "nat-eip-${local.name_suffix}"
+  })
+}
+
+# Create NAT Gateway in the first public subnet (only when using existing VPC and create_nat_gateway is true)
+resource "aws_nat_gateway" "nat_gateway" {
+  count         = var.use_existing_vpc && var.create_nat_gateway ? 1 : 0
+  allocation_id = aws_eip.nat_gateway_eip[0].id
+  subnet_id     = var.existing_public_subnet_ids[0]
+
+  tags = merge(local.tags, {
+    Name = "nat-gateway-${local.name_suffix}"
+  })
+
+  depends_on = [aws_eip.nat_gateway_eip]
+}
+
+# Update route tables for private subnets to use NAT Gateway
+resource "aws_route" "private_nat_gateway" {
+  count                  = var.use_existing_vpc && var.create_nat_gateway ? length(var.existing_private_subnet_ids) : 0
+  route_table_id         = data.aws_route_table.private_subnet_rt[count.index].id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat_gateway[0].id
+
+  depends_on = [aws_nat_gateway.nat_gateway]
 }
 
 

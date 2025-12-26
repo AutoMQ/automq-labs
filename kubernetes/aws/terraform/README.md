@@ -37,9 +37,22 @@ existing_private_subnet_ids = ["subnet-xxx", "subnet-yyy", "subnet-zzz"]
 existing_public_subnet_ids  = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]  # Optional
 ```
 
+### Option 3: Use Existing VPC + Create NAT Gateway
+
+If your existing VPC doesn't have a NAT Gateway configured, you can create one:
+
+```hcl
+use_existing_vpc            = true
+create_nat_gateway          = true
+existing_vpc_id             = "vpc-xxxxxxxxxxxxxxxxx"
+existing_private_subnet_ids = ["subnet-xxx", "subnet-yyy", "subnet-zzz"]
+existing_public_subnet_ids  = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]  # Required when create_nat_gateway is true
+```
+
 **Requirements for existing VPC:**
 - The VPC must have DNS hostnames and DNS support enabled
 - Private subnets must have internet access (via NAT Gateway or similar)
+- When `create_nat_gateway` is true, at least one public subnet is required
 - At least one private subnet is required for EKS node groups
 - Subnets should be in different Availability Zones for high availability
 

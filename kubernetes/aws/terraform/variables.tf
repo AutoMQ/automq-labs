@@ -54,3 +54,9 @@ variable "existing_public_subnet_ids" {
   type        = list(string)
   default     = []
 }
+
+variable "create_nat_gateway" {
+  description = "Whether to create NAT Gateway for existing VPC (only applicable when use_existing_vpc is true). Requires existing_public_subnet_ids to be provided."
+  type        = bool
+  default     = false
+}

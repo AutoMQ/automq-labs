@@ -6,6 +6,9 @@ provider "aws" {
 # Validation: If using existing VPC, ensure required variables are provided
 locals {
   validation_check = var.use_existing_vpc && (var.existing_vpc_id == "" || length(var.existing_private_subnet_ids) == 0) ? tobool("Error: When use_existing_vpc is true, existing_vpc_id and existing_private_subnet_ids must be provided") : true
+
+  # Validation: If creating NAT Gateway for existing VPC, public subnets must be provided
+  nat_gateway_validation = var.use_existing_vpc && var.create_nat_gateway && length(var.existing_public_subnet_ids) == 0 ? tobool("Error: When use_existing_vpc is true and create_nat_gateway is true, existing_public_subnet_ids must be provided") : true
 }
 
 # Define local variables for resource naming and node group configuration
@@ -27,6 +30,7 @@ module "network" {
   existing_vpc_id             = var.existing_vpc_id
   existing_private_subnet_ids = var.existing_private_subnet_ids
   existing_public_subnet_ids  = var.existing_public_subnet_ids
+  create_nat_gateway          = var.create_nat_gateway
 }
 
 # EKS module: Creates and configures the EKS cluster
