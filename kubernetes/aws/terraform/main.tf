@@ -3,6 +3,11 @@ provider "aws" {
   region = local.region
 }
 
+# Validation: If using existing VPC, ensure required variables are provided
+locals {
+  validation_check = var.use_existing_vpc && (var.existing_vpc_id == "" || length(var.existing_private_subnet_ids) == 0) ? tobool("Error: When use_existing_vpc is true, existing_vpc_id and existing_private_subnet_ids must be provided") : true
+}
+
 # Define local variables for resource naming and node group configuration
 locals {
   region          = var.region
@@ -16,8 +21,12 @@ locals {
 module "network" {
   source = "./network"
 
-  region          = local.region
-  resource_suffix = local.resource_suffix
+  region                      = local.region
+  resource_suffix             = local.resource_suffix
+  use_existing_vpc            = var.use_existing_vpc
+  existing_vpc_id             = var.existing_vpc_id
+  existing_private_subnet_ids = var.existing_private_subnet_ids
+  existing_public_subnet_ids  = var.existing_public_subnet_ids
 }
 
 # EKS module: Creates and configures the EKS cluster
@@ -65,11 +74,11 @@ resource "aws_eks_node_group" "automq-node-groups" {
   }
 
   # Node taints: Ensures only specific pods are scheduled to these nodes
-#   taint {
-#     key    = "dedicated"
-#     value  = "automq"
-#     effect = "NO_SCHEDULE"
-#   }
+  #   taint {
+  #     key    = "dedicated"
+  #     value  = "automq"
+  #     effect = "NO_SCHEDULE"
+  #   }
 
   labels = {}
 

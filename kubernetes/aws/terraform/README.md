@@ -15,10 +15,33 @@ The Terraform code is organized into several modules for clarity and reusability
 
 This Terraform setup will create the following main resources in your AWS account:
 
--   **VPC**: A dedicated Virtual Private Cloud (VPC) to isolate the network resources.
+-   **VPC**: A dedicated Virtual Private Cloud (VPC) to isolate the network resources (or use an existing VPC).
 -   **EKS Cluster**: A managed Kubernetes cluster control plane.
 -   **EKS Node Group**: A group of EC2 instances that will serve as the worker nodes for the Kubernetes cluster. The instance type and scaling options can be configured in `main.tf`.
 -   **IAM Roles and Policies**: The necessary permissions for the EKS control plane and worker nodes to function correctly and access resources like S3.
+
+## Configuration Options
+
+### Option 1: Create New VPC (Default)
+
+By default, this Terraform configuration will create a new VPC with the necessary subnets, NAT gateway, and endpoints.
+
+### Option 2: Use Existing VPC
+
+You can configure this setup to use an existing VPC by setting the following variables:
+
+```hcl
+use_existing_vpc            = true
+existing_vpc_id             = "vpc-xxxxxxxxxxxxxxxxx"
+existing_private_subnet_ids = ["subnet-xxx", "subnet-yyy", "subnet-zzz"]
+existing_public_subnet_ids  = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]  # Optional
+```
+
+**Requirements for existing VPC:**
+- The VPC must have DNS hostnames and DNS support enabled
+- Private subnets must have internet access (via NAT Gateway or similar)
+- At least one private subnet is required for EKS node groups
+- Subnets should be in different Availability Zones for high availability
 
 ## Usage
 
@@ -26,18 +49,58 @@ This Terraform setup will create the following main resources in your AWS accoun
 
 -   **AWS CLI**: Ensure you have the AWS CLI installed and configured with appropriate credentials.
 
+### Quick Start
 
 1.  **Initialize Terraform**:
     ```bash
     terraform init
     ```
-2.  **Review the plan**:
+
+2.  **Configure variables** (Optional):
+    
+    Copy the example variables file and customize as needed:
+    ```bash
+    cp terraform.tfvars.example terraform.tfvars
+    # Edit terraform.tfvars with your preferred settings
+    ```
+
+3.  **Review the plan**:
     ```bash
     terraform plan
     ```
-3.  **Apply the configuration**:
+
+4.  **Apply the configuration**:
     ```bash
     terraform apply
     ```
 
 After the apply is complete, Terraform will output the cluster name, VPC ID, and the AWS region.
+
+### Using Existing VPC
+
+To use an existing VPC, create a `terraform.tfvars` file with the following content:
+
+```hcl
+region = "ap-northeast-1"
+resource_suffix = "automqlab"
+
+use_existing_vpc = true
+existing_vpc_id = "vpc-0123456789abcdef0"
+existing_private_subnet_ids = [
+  "subnet-0123456789abcdef0",
+  "subnet-0123456789abcdef1",
+  "subnet-0123456789abcdef2"
+]
+existing_public_subnet_ids = [
+  "subnet-0123456789abcdef3",
+  "subnet-0123456789abcdef4",
+  "subnet-0123456789abcdef5"
+]
+```
+
+Then run:
+```bash
+terraform init
+terraform plan
+terraform apply
+```

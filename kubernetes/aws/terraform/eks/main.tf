@@ -27,7 +27,7 @@ resource "aws_eks_node_group" "system_nodes" {
 
   capacity_type  = "SPOT"
   instance_types = ["t3.medium", "c5.large"]
-  ami_type       = "AL2_x86_64"  # Amazon Linux 2 AMI
+  ami_type       = "AL2_x86_64" # Amazon Linux 2 AMI
 
   scaling_config {
     desired_size = 4

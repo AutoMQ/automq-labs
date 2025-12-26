@@ -1,0 +1,41 @@
+# Example Terraform variables configuration
+# Copy this file to terraform.tfvars and customize as needed
+
+# AWS Region
+region = "ap-northeast-1"
+
+# Resource naming suffix
+resource_suffix = "automqlab"
+
+# EKS Node Group Configuration
+node_group = {
+  name          = "automq-node-group"
+  desired_size  = 4
+  max_size      = 10
+  min_size      = 3
+  instance_type = "c6g.2xlarge"
+  ami_type      = "AL2_ARM_64"
+}
+
+# ========================================
+# Option 1: Create New VPC (Default)
+# ========================================
+# use_existing_vpc = false
+
+# ========================================
+# Option 2: Use Existing VPC
+# ========================================
+# Uncomment and configure the following to use an existing VPC:
+
+# use_existing_vpc = true
+# existing_vpc_id = "vpc-xxxxxxxxxxxxxxxxx"
+# existing_private_subnet_ids = [
+#   "subnet-xxxxxxxxxxxxxxxxx",
+#   "subnet-yyyyyyyyyyyyyyyyy",
+#   "subnet-zzzzzzzzzzzzzzzzz"
+# ]
+# existing_public_subnet_ids = [
+#   "subnet-aaaaaaaaaaaaaaaaaa",
+#   "subnet-bbbbbbbbbbbbbbbbb",
+#   "subnet-ccccccccccccccccc"
+# ]
