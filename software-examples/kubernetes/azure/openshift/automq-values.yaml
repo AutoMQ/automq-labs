@@ -34,7 +34,7 @@ controller:
     - name: "KAFKA_S3_SECRET_KEY"
       value: "<secret-value>"
     - name: "AZURE_TENANT_ID"
-      value: "<tenant>"
+      value: "<tenant-id>"
 
 broker:
   replicas: 1
