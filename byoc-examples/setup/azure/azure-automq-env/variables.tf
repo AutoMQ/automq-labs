@@ -86,11 +86,17 @@ variable "nodepool" {
 variable "automq_console_id" {
   description = "Image ID for AutoMQ console VM"
   type        = string
-  default     = "/communityGalleries/automqimages-7a9bb1ec-7a2b-44cd-a3ae-a797cc8dd7eb/images/automq-control-center-gen1/versions/7.8.7"
+  default     = "/communityGalleries/automqimages-7a9bb1ec-7a2b-44cd-a3ae-a797cc8dd7eb/images/automq-control-center-gen1/versions/7.8.11"
 }
 
 variable "automq_console_vm_size" {
   description = "VM size for AutoMQ console"
   type        = string
   default     = "Standard_D2s_v3"
+}
+
+variable "private_access_only" {
+  description = "If true, the AKS API server and AutoMQ console will not have public IPs. Access will be restricted to the VNet."
+  type        = bool
+  default     = false
 }
