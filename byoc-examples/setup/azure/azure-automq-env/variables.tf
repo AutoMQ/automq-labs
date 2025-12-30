@@ -94,3 +94,9 @@ variable "automq_console_vm_size" {
   type        = string
   default     = "Standard_D2s_v3"
 }
+
+variable "private_access_only" {
+  description = "If true, the AKS API server and AutoMQ console will not have public IPs. Access will be restricted to the VNet."
+  type        = bool
+  default     = false
+}

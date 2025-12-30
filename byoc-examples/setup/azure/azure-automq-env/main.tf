@@ -63,6 +63,7 @@ module "aks" {
   kubeconfig_path         = var.kubeconfig_path
   subscription_id         = var.subscription_id
   kubernetes_pricing_tier = var.kubernetes_pricing_tier
+  private_access_only     = var.private_access_only
 }
 
 module "iam" {
@@ -104,6 +105,7 @@ module "automq_console" {
   vm_size              = var.automq_console_vm_size
   cluster_identity_id  = module.iam.workload_identity_id
   subscription_id      = var.subscription_id
+  private_access_only  = var.private_access_only
 }
 
 output "resource_group_name" {

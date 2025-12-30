@@ -58,6 +58,12 @@ variable "dns_service_ip" {
   default     = "10.2.0.10"
 }
 
+variable "private_access_only" {
+  description = "If true, the AKS API server will not have a public IP."
+  type        = bool
+  default     = false
+}
+
 resource "azurerm_kubernetes_cluster" "aks" {
   name                    = var.aks_name
   location                = var.location
@@ -65,7 +71,8 @@ resource "azurerm_kubernetes_cluster" "aks" {
   dns_prefix              = var.dns_prefix
   kubernetes_version      = var.kubernetes_version
   sku_tier                = var.kubernetes_pricing_tier
-  private_cluster_enabled = true
+  private_cluster_enabled = var.private_access_only
+
 
   identity {
     type         = "UserAssigned"
