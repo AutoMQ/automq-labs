@@ -13,15 +13,12 @@ variable "vnet_id" {
   description = "ID of the virtual network"
 }
 
-variable "public_subnet_id" {
+variable "subnet_id" {
   type        = string
-  description = "Subnet ID for the console VM (public)"
+  description = "Subnet ID for the console VM (private)"
 }
 
-variable "private_subnet_ids" {
-  type        = list(string)
-  description = "Private subnet IDs associated with the VNet"
-}
+
 
 variable "ops_container_name" {
   type        = string
@@ -56,6 +53,12 @@ variable "subscription_id" {
 variable "storage_account_name" {
   type        = string
   description = "The name of the storage account."
+}
+
+variable "private_access_only" {
+  description = "If true, the console will not have a public IP."
+  type        = bool
+  default     = false
 }
 
 locals {
@@ -131,6 +134,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "zone_link" {
 
 # Public IP and NIC for console
 resource "azurerm_public_ip" "console" {
+  count               = var.private_access_only ? 0 : 1
   name                = "pip-${local.env_name}"
   resource_group_name = var.resource_group_name
   location            = var.location
@@ -175,9 +179,9 @@ resource "azurerm_network_interface" "console" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.public_subnet_id
+    subnet_id                     = var.subnet_id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.console.id
+    public_ip_address_id          = var.private_access_only ? null : azurerm_public_ip.console[0].id
   }
 }
 
@@ -258,7 +262,7 @@ resource "azurerm_virtual_machine_data_disk_attachment" "data_disk_attachment" {
 
 
 output "console_endpoint" {
-  value = "http://${azurerm_public_ip.console.ip_address}:8080"
+  value = var.private_access_only ? "http://${azurerm_network_interface.console.private_ip_address}:8080" : "http://${azurerm_public_ip.console[0].ip_address}:8080"
 }
 
 output "console_initial_username" {
