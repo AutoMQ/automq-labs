@@ -96,8 +96,7 @@ module "automq_console" {
   location             = var.location
   resource_group_name  = azurerm_resource_group.rg.name
   vnet_id              = var.vnet_id
-  private_subnet_id    = var.public_subnet_id
-  private_subnet_ids   = [var.private_subnet_id]
+  subnet_id            = var.public_subnet_id
   storage_account_name = local.storage_account_name
   ops_container_name   = local.ops_container_name
   data_container_name  = local.data_container_name

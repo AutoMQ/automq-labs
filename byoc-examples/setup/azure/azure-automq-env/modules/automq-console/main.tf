@@ -13,15 +13,12 @@ variable "vnet_id" {
   description = "ID of the virtual network"
 }
 
-variable "private_subnet_id" {
+variable "subnet_id" {
   type        = string
   description = "Subnet ID for the console VM (private)"
 }
 
-variable "private_subnet_ids" {
-  type        = list(string)
-  description = "Private subnet IDs associated with the VNet"
-}
+
 
 variable "ops_container_name" {
   type        = string
@@ -182,7 +179,7 @@ resource "azurerm_network_interface" "console" {
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = var.private_subnet_id
+    subnet_id                     = var.subnet_id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = var.private_access_only ? null : azurerm_public_ip.console[0].id
   }
