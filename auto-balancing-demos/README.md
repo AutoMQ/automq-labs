@@ -21,11 +21,8 @@ cd scale-up
 cd qps-based
 ./run-qps-experiment.sh
 
-# Demo 4: Slow Node Isolation ⚠️ REQUIRES NET_ADMIN
-cd slow-node-isolation
-./run-slownode-experiment.sh
 
-# Demo 5: Scale-Down Auto-Balancing ✅ VERIFIED
+# Demo 4: Scale-Down Auto-Balancing ✅ VERIFIED
 cd scale-down
 ./run-scaledown-experiment.sh
 ```
@@ -83,20 +80,8 @@ Each script will:
 
 **Duration**: ~20 minutes
 
-### 4. Slow Node Isolation
-**Purpose**: Demonstrate auto-balancer moving partitions away from a degraded/slow broker
 
-**Scenario**:
-- Start with 3 brokers, 9 partitions (3-3-3 distribution)
-- Add 200ms artificial latency to Broker 2 using `tc` (traffic control)
-- Auto-balancer detects elevated latency
-- Partitions migrate away from slow broker
-
-**Expected Result**: Slow broker has minimal or no partitions
-
-**Duration**: ~20 minutes
-
-### 5. Scale-Down Auto-Balancing
+### 4. Scale-Down Auto-Balancing
 **Purpose**: Demonstrate auto-balancing when removing a broker (decommission or failure)
 
 **Scenario**:
@@ -158,7 +143,6 @@ autobalancer.controller.execution.concurrency: 10          # Max 10 concurrent m
 - Scale-Up: http://localhost:3010
 - QPS-Based: http://localhost:3020
 - Scale-Down: http://localhost:3030
-- Slow Node: http://localhost:3040
 
 **Credentials**: admin / admin
 
@@ -194,18 +178,6 @@ Each demo generates:
 - `results/experiment-summary-TIMESTAMP.md` - Markdown summary report
 - `results/screenshots/` - PNG screenshots from Grafana
 
-### Demo 1 Results (Traffic-Based) ✅
-
-**Experiment ID**: 20251229-145702
-
-| Metric | Before | After | Time |
-|--------|--------|-------|------|
-| Broker 0 | 4 partitions | 2 partitions | 30 seconds |
-| Broker 1 | 1 partition | 2 partitions | 30 seconds |
-| Broker 2 | 1 partition | 2 partitions | 30 seconds |
-| Status | ❌ Imbalanced | ✅ Balanced | ✅ Success |
-
-**Screenshots**: 4 PNG files captured successfully
 
 ## Technical Details
 
@@ -325,9 +297,8 @@ docker volume ls | grep -E "(traffic|scaleup|scaledown|slownode|qps)" | awk '{pr
 
 - ✅ Demo 1 (Traffic-Based): **COMPLETED** with screenshots
 - ✅ Demo 2 (Scale-Up): **COMPLETED** with screenshots (20251230)
-- ✅ Demo 3 (QPS-Based): **COMPLETED** with screenshots (20251230 - Fixed)
-- ⚠️ Demo 4 (Slow Node): **COMPLETED** - requires NET_ADMIN capability (20251230)
-- ✅ Demo 5 (Scale-Down): **COMPLETED** with screenshots (20251230 - Fixed)
+- ✅ Demo 3 (QPS-Based): **COMPLETED** with screenshots (20251230)
+- ✅ Demo 5 (Scale-Down): **COMPLETED** with screenshots (20251230)
 
 **Final Status**: ✅ **ALL 5 DEMOS SUCCESSFULLY COMPLETED** (100% success rate)
 
