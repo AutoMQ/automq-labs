@@ -7,5 +7,6 @@ This directory contains scripts and configurations for provisioning Kubernetes c
 - [AWS](./aws/)
 - [Azure](./azure/)
 - [GCP](./gcp/)
+- [OCI](./oci/)
 
 Please refer to the respective subdirectories for detailed instructions on provisioning a cluster for each cloud provider.
