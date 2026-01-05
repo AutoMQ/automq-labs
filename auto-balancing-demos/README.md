@@ -4,14 +4,6 @@ This directory contains 5 comprehensive demonstrations of AutoMQ's auto-balancin
 
 ## Quick Start
 
-### Run All Demos (Recommended)
-```bash
-cd auto-balancing-demos
-./run-all-demos.sh
-```
-
-This will run all 5 demos sequentially (~2 hours total) with automatic cleanup between each.
-
 ### Run Individual Demos
 
 **✅ Recommended: Use the complete demo scripts**
