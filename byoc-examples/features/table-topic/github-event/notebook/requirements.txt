@@ -1,0 +1,3 @@
+marimo
+awswrangler
+pandas
