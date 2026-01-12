@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'automq-traffic-demo'
+
+scrape_configs:
+  - job_name: 'automq-broker1'
+    static_configs:
+      - targets: ['server1:5556']
+        labels:
+          broker: 'server1'
+          broker_id: '0'
+  
+  - job_name: 'automq-broker2'
+    static_configs:
+      - targets: ['server2:5556']
+        labels:
+          broker: 'server2'
+          broker_id: '1'
+  
+  - job_name: 'automq-broker3'
+    static_configs:
+      - targets: ['server3:5556']
+        labels:
+          broker: 'server3'
+          broker_id: '2'
