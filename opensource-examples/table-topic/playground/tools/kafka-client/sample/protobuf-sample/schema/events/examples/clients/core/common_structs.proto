@@ -1,0 +1,34 @@
+syntax = "proto3";
+package examples.clients.core;
+
+option go_package = "examples/clients/core";
+
+message DataValue {
+  oneof kind {
+    bool bool_value = 1;
+    int64 int_value = 2;
+    double float_value = 3;
+    string string_value = 4;
+    BooleanArray bool_array = 5;
+    IntegerArray int_array = 6;
+    FloatArray float_array = 7;
+    StringArray string_array = 8;
+  }
+}
+
+message BooleanArray {
+  repeated bool values = 1;
+}
+
+message IntegerArray {
+  repeated int64 values = 1;
+}
+
+message FloatArray {
+  repeated double values = 1;
+}
+
+message StringArray {
+  repeated string values = 1;
+}
+

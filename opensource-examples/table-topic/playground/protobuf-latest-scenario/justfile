@@ -9,15 +9,18 @@ help:
     @echo "  show-schemas                            Show registered schemas in Schema Registry"
     @echo "  create-product-topic [topic]            default: product (messageFullName)"
     @echo "  create-user-topic [topic]               default: user    (messageFullName)"
+    @echo "  create-event-topic [topic]              default: event   (messageFullName)"
     @echo "  send-product-raw [topic]                default: product"
     @echo "  send-user-raw [topic]                   default: user"
-    @echo "  show-ddl [table]                        Show CREATE TABLE (product/user)"
+    @echo "  send-event-raw [topic]                  default: event"
+    @echo "  show-ddl [table]                        Show CREATE TABLE (product/user/event)"
     @echo "  show-snapshots [table]                  Show snapshots"
     @echo "  show-history [table]                    Show history"
     @echo "  show-files [table]                      Show data files"
     @echo "  show-manifests [table]                  Show manifests"
     @echo "  query-product                           Query product table"
     @echo "  query-user                              Query user table"
+    @echo "  query-event                             Query event table"
     @echo "  test                                    run full scenario test"
 
 register:
@@ -55,6 +58,16 @@ create-user-topic topic='user' message_full_name='examples.clients.proto.UserDat
       --config automq.table.topic.namespace=default \
       --config automq.table.topic.convert.value.by_latest_schema.message.full.name={{message_full_name}} || true
 
+create-event-topic topic='event' message_full_name='examples.clients.proto.Event':
+    docker exec automq /opt/automq/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 \
+      --create --topic {{topic}} --partitions 16 \
+      --config automq.table.topic.enable=true \
+      --config automq.table.topic.commit.interval.ms=1000 \
+      --config automq.table.topic.convert.value.type=by_latest_schema \
+      --config automq.table.topic.transform.value.type=flatten \
+      --config automq.table.topic.namespace=default \
+      --config automq.table.topic.convert.value.by_latest_schema.message.full.name={{message_full_name}} || true
+
 send-product-raw topic='product':
     @echo "Producing Protobuf raw (product) to {{topic}}"
     bash protobuf-latest-scenario/scripts/produce-protobuf-raw.sh {{topic}} product
@@ -63,12 +76,19 @@ send-user-raw topic='user':
     @echo "Producing Protobuf raw (user) to {{topic}}"
     bash protobuf-latest-scenario/scripts/produce-protobuf-raw.sh {{topic}} user
 
+send-event-raw topic='event':
+    @echo "Producing Protobuf raw (event) to {{topic}}"
+    bash protobuf-latest-scenario/scripts/produce-protobuf-raw.sh {{topic}} event
+
 
 query-product:
     @just trino-sql 'SELECT * FROM iceberg.default.product LIMIT 20'
 
 query-user:
     @just trino-sql 'SELECT * FROM iceberg.default."user" LIMIT 20'
+
+query-event:
+    @just trino-sql 'SELECT * FROM iceberg.default.event LIMIT 20'
 
 show-ddl table='product':
     @just trino-sql 'SHOW CREATE TABLE iceberg.default."{{table}}"'
@@ -97,6 +117,7 @@ test:
     @echo "Step 2: Create Table Topics"
     @just -f protobuf-latest-scenario/justfile create-product-topic
     @just -f protobuf-latest-scenario/justfile create-user-topic
+    @just -f protobuf-latest-scenario/justfile create-event-topic
 
     @echo "Step 3: Produce Raw Protobuf Data"
     @just -f protobuf-latest-scenario/justfile send-product-raw
@@ -105,16 +126,21 @@ test:
     @just -f protobuf-latest-scenario/justfile send-user-raw
     @just -f protobuf-latest-scenario/justfile send-user-raw
     @just -f protobuf-latest-scenario/justfile send-user-raw
+    @just -f protobuf-latest-scenario/justfile send-event-raw
+    @just -f protobuf-latest-scenario/justfile send-event-raw
+    @just -f protobuf-latest-scenario/justfile send-event-raw
     @sleep 25
 
     @echo "Step 4: View Table DDL"
     @just -f protobuf-latest-scenario/justfile show-ddl product
     @just -f protobuf-latest-scenario/justfile show-ddl user
+    @just -f protobuf-latest-scenario/justfile show-ddl event
     @sleep 5
 
     @echo "Step 5: Query Iceberg Data"
     @just -f protobuf-latest-scenario/justfile query-product
     @just -f protobuf-latest-scenario/justfile query-user
+    @just -f protobuf-latest-scenario/justfile query-event
 
     @echo "✅ Protobuf Latest Scenario Test Completed Successfully"
     @just down

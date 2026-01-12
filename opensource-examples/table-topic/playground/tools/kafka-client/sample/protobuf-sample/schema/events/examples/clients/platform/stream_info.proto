@@ -1,0 +1,9 @@
+syntax = "proto3";
+package examples.clients.platform;
+
+option go_package = "examples/clients/platform";
+
+message StreamInfo {
+  int64 streamPartitionID = 1;
+  int64 streamTime = 2;
+}
