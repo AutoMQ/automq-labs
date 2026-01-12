@@ -1,0 +1,24 @@
+syntax = "proto3";
+package examples.clients.proto;
+
+import "examples/clients/platform/stream_info.proto";
+import "examples/clients/core/common_structs.proto";
+
+option go_package = "examples/clients/proto";
+
+message Event {
+  string event_id = 1;
+  string event_name = 2;
+  uint64 event_time = 3;
+  repeated Entity entities = 4;
+  map<string, examples.clients.core.DataValue> system_params_map = 5;
+  map<string, examples.clients.core.DataValue> user_params_map = 6;
+  examples.clients.platform.StreamInfo stream_metadata = 7;
+}
+
+message Entity {
+  string entity = 1;
+  string version = 2;
+  string alias = 3;
+  bytes data = 4;
+}
