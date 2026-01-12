@@ -1,0 +1,86 @@
+set working-directory := ".."
+
+default: help
+
+help:
+    @echo "Metrics Monitoring Scenario (VictoriaMetrics + Grafana)"
+    @echo ""
+    @echo "Commands:"
+    @echo "  up                    Start monitoring stack (VictoriaMetrics + Grafana)"
+    @echo "  down                  Stop monitoring stack"
+    @echo "  status                Show status of monitoring services"
+    @echo "  check-metrics         Check if AutoMQ metrics endpoint is accessible"
+    @echo "  query [metric]        Query a specific metric from VictoriaMetrics"
+    @echo "  list-metrics          List all available metrics"
+    @echo ""
+    @echo "Access:"
+    @echo "  Grafana:              http://localhost:3000 (admin/admin)"
+    @echo "  VictoriaMetrics:      http://localhost:8428"
+    @echo "  AutoMQ Metrics:       http://localhost:9090/metrics"
+
+# Start monitoring stack
+up:
+    @echo "Starting monitoring stack..."
+    docker compose -f docker-compose.yml -f metrics-scenario/docker-compose.yml up -d victoriametrics grafana
+    @echo ""
+    @echo "Monitoring stack started!"
+    @echo ""
+    @echo "Access:"
+    @echo "  Grafana:         http://localhost:3000 (admin/admin)"
+    @echo "  VictoriaMetrics: http://localhost:8428"
+
+# Stop monitoring stack
+down:
+    @echo "Stopping monitoring stack..."
+    docker compose -f docker-compose.yml -f metrics-scenario/docker-compose.yml stop victoriametrics grafana
+    docker compose -f docker-compose.yml -f metrics-scenario/docker-compose.yml rm -f victoriametrics grafana
+
+# Show status
+status:
+    @echo "=== Monitoring Services Status ==="
+    @docker compose -f docker-compose.yml -f metrics-scenario/docker-compose.yml ps victoriametrics grafana 2>/dev/null || echo "Services not running"
+    @echo ""
+    @echo "=== AutoMQ Metrics Endpoint ==="
+    @curl -s http://localhost:9090/metrics > /dev/null 2>&1 && echo "AutoMQ metrics: http://localhost:9090/metrics" || echo "AutoMQ metrics endpoint not accessible"
+    @echo ""
+    @echo "=== VictoriaMetrics Targets ==="
+    @curl -s http://localhost:8428/api/v1/targets 2>/dev/null | jq -r '.data.activeTargets[] | "\(.labels.job): \(.health)"' 2>/dev/null || echo "VictoriaMetrics not accessible"
+
+# Check AutoMQ metrics endpoint
+check-metrics:
+    @echo "Checking AutoMQ metrics endpoint..."
+    @curl -s http://localhost:9090/metrics | head -50
+
+# Query specific metric
+query metric='kafka_message_count_total':
+    @echo "Querying metric: {{metric}}"
+    @curl -s "http://localhost:8428/api/v1/query?query={{metric}}" | jq .
+
+# List all available metrics
+list-metrics:
+    @echo "Available metrics from AutoMQ:"
+    @curl -s "http://localhost:8428/api/v1/label/__name__/values" | jq -r '.data[]' | grep -E '^kafka_' | sort
+
+# Test scenario
+test:
+    #!/usr/bin/env bash
+    set -e
+    echo "=== Metrics Monitoring Scenario Test ==="
+    
+    echo "Step 1: Start monitoring stack..."
+    just -f metrics-scenario/justfile up
+    sleep 5
+    
+    echo "Step 2: Check AutoMQ metrics endpoint..."
+    curl -s http://localhost:9090/metrics | head -10
+    
+    echo "Step 3: Check VictoriaMetrics targets..."
+    curl -s http://localhost:8428/api/v1/targets | jq -r '.data.activeTargets[] | "\(.labels.job): \(.health)"'
+    
+    echo "Step 4: Verify Grafana is running..."
+    curl -s http://localhost:3000/api/health | jq -r '.database'
+    
+    echo "Step 5: Stop monitoring stack..."
+    just -f metrics-scenario/justfile down
+    
+    echo "=== Metrics Scenario Test Completed ==="
