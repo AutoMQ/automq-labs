@@ -24,9 +24,7 @@ This will start:
 
 ### Step 2: Access Grafana Dashboard
 
-Open Grafana: http://localhost:3000
-
-The Table Topic Dashboard is pre-configured as the home dashboard.
+Open Grafana: http://localhost:3000/d/table-topic-dashboard/
 
 ### Step 3: Explore Metrics
 
