@@ -107,7 +107,7 @@ module "eks_addons" {
   enable_vpc_cni                = true
   enable_coredns                = true
   enable_kube_proxy             = true
-  enable_pod_identity_agent     = false
+  enable_pod_identity_agent     = true
   enable_autoscaler             = true
   enable_alb_ingress_controller = true
   enable_ebs_csi_driver         = true
