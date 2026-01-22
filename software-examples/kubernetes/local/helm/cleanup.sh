@@ -8,11 +8,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    printf "${GREEN}[INFO]${NC} %s\n" "$1"
 }
 
 print_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+    printf "${YELLOW}[WARN]${NC} %s\n" "$1"
 }
 
 print_header() {
@@ -35,7 +35,8 @@ cleanup_automq() {
     fi
     
     # Clean up PVCs
-    local pvc_count=$(kubectl get pvc -l app.kubernetes.io/name=automq-enterprise --no-headers 2>/dev/null | wc -l | tr -d ' ')
+    local pvc_count
+    pvc_count=$(kubectl get pvc -l app.kubernetes.io/name=automq-enterprise --no-headers 2>/dev/null | wc -l | tr -d ' ')
     if [ "$pvc_count" -gt 0 ]; then
         kubectl delete pvc -l app.kubernetes.io/name=automq-enterprise
         print_info "✓ AutoMQ PVCs removed"
@@ -54,7 +55,8 @@ cleanup_minio() {
     fi
     
     # Clean up PVCs
-    local pvc_count=$(kubectl get pvc -l app=minio --no-headers 2>/dev/null | wc -l | tr -d ' ')
+    local pvc_count
+    pvc_count=$(kubectl get pvc -l app=minio --no-headers 2>/dev/null | wc -l | tr -d ' ')
     if [ "$pvc_count" -gt 0 ]; then
         kubectl delete pvc -l app=minio
         print_info "✓ MinIO PVCs removed"
@@ -87,13 +89,17 @@ main() {
     print_header
     
     # Confirm cleanup
-    read -p "This will remove AutoMQ and MinIO from your cluster. Continue? [y/N] " -n 1 -r
-    echo ""
+    printf "This will remove AutoMQ and MinIO from your cluster. Continue? [y/N] "
+    read -r REPLY
     
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Cleanup cancelled."
-        exit 0
-    fi
+    case "$REPLY" in
+        [Yy]|[Yy][Ee][Ss])
+            ;;
+        *)
+            print_info "Cleanup cancelled."
+            exit 0
+            ;;
+    esac
     
     echo ""
     cleanup_automq

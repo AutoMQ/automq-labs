@@ -8,11 +8,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    printf "${GREEN}[INFO]${NC} %s\n" "$1"
 }
 
 print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+    printf "${RED}[ERROR]${NC} %s\n" "$1"
 }
 
 print_header() {
@@ -27,8 +27,10 @@ print_header() {
 check_pods() {
     print_info "Checking AutoMQ pods status..."
     
-    local ready_pods=$(kubectl get pods -l app.kubernetes.io/name=automq-enterprise --no-headers 2>/dev/null | grep -c "Running" || echo "0")
-    local total_pods=$(kubectl get pods -l app.kubernetes.io/name=automq-enterprise --no-headers 2>/dev/null | wc -l | tr -d ' ')
+    local ready_pods
+    local total_pods
+    ready_pods=$(kubectl get pods -l app.kubernetes.io/name=automq-enterprise --no-headers 2>/dev/null | grep -c "Running" || echo "0")
+    total_pods=$(kubectl get pods -l app.kubernetes.io/name=automq-enterprise --no-headers 2>/dev/null | wc -l | tr -d ' ')
     
     if [ "$total_pods" -eq 0 ]; then
         print_error "No AutoMQ pods found. Please ensure AutoMQ is installed."

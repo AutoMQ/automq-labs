@@ -1,6 +1,8 @@
-# AutoMQ Local Deployment with MinIO
+# AutoMQ Local Deployment with MinIO (Kubernetes)
 
 This guide provides step-by-step instructions for deploying AutoMQ on a local Kubernetes cluster using MinIO as the object storage backend.
+
+> **Platform Support**: These scripts are tested on macOS and Linux. Windows users should use WSL2 or a Linux VM.
 
 ## Prerequisites
 
@@ -66,18 +68,23 @@ helm install automq oci://automq.azurecr.io/helm/automq-enterprise-chart \
 Wait for all pods to be ready:
 
 ```bash
-kubectl get pods -l app.kubernetes.io/instance=automq
+kubectl get pods -l app.kubernetes.io/name=automq-enterprise
 ```
 
 ### Step 4: Verify Installation
 
-Test the cluster by creating a topic:
+Run the verification script:
 
 ```bash
 ./verify.sh
 ```
 
-Or manually:
+This script will:
+- Check AutoMQ pods status
+- Create a test topic
+- List all topics
+
+Or manually test:
 
 ```bash
 kubectl run kafka-client --rm -it --restart=Never --image=confluentinc/cp-kafka:latest -- \
@@ -87,7 +94,7 @@ kubectl run kafka-client --rm -it --restart=Never --image=confluentinc/cp-kafka:
 
 ## Cleanup
 
-To remove AutoMQ and MinIO from your cluster:
+Run the cleanup script:
 
 ```bash
 ./cleanup.sh
@@ -98,7 +105,7 @@ Or manually:
 ```bash
 # Remove AutoMQ
 helm uninstall automq
-kubectl delete pvc -l app.kubernetes.io/instance=automq
+kubectl delete pvc -l app.kubernetes.io/name=automq-enterprise
 
 # Remove MinIO
 helm uninstall minio
@@ -143,4 +150,17 @@ Verify MinIO service is accessible:
 ```bash
 kubectl get svc minio
 kubectl run test-minio --rm -it --restart=Never --image=busybox -- \
-  wget -qO- http://minio.
+  wget -qO- http://minio.default.svc.cluster.local:9000/minio/health/live
+```
+
+### Insufficient resources
+
+For local development, ensure your Kubernetes cluster has adequate resources:
+- Minimum 4 CPU cores
+- Minimum 8GB RAM
+
+## Support
+
+For issues and questions, please visit:
+- [AutoMQ Documentation](https://docs.automq.com)
+- [GitHub Issues](https://github.com/AutoMQ/automq/issues)

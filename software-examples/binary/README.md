@@ -2,6 +2,8 @@
 
 This guide provides step-by-step instructions for deploying a 3-node AutoMQ cluster using the binary installation package with MinIO as the object storage backend.
 
+> **Platform Support**: These scripts are tested on macOS and Linux. Windows users should use WSL2 or a Linux VM.
+
 > **Note**: This is a quick start guide for local development and testing. For production deployments:
 > - Deploy each node on a separate machine with at least 2 CPU cores and 16GB RAM
 > - Replace MinIO with a production-grade object storage service (AWS S3, Azure Blob Storage, etc.)
@@ -96,6 +98,7 @@ Simply execute the generated commands on each respective host without port modif
 Run the verification script:
 
 ```bash
+cd ..
 ./verify.sh
 ```
 
