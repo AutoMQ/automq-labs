@@ -1,10 +1,11 @@
 #!/bin/bash
 # AutoMQ Software Docker Compose Installation Script
+# Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-labs/main/software-examples/docker-compose/install.sh | bash
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+# GitHub raw URL base
+GITHUB_RAW_BASE="https://raw.githubusercontent.com/AutoMQ/automq-labs/main/software-examples/docker-compose"
 
 # Colors for output
 RED='\033[0;31m'
@@ -31,12 +32,12 @@ print_error() {
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║         AutoMQ Software - Docker Compose Setup             ║"
+echo "║         AutoMQ Software - Docker Compose Setup               ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
 # Step 1: Prerequisites Check
-print_step "Step 1/4: Checking prerequisites..."
+print_step "Step 1/5: Checking prerequisites..."
 
 if ! command -v docker &> /dev/null; then
     print_error "Docker is not installed. Please install Docker first."
@@ -56,10 +57,32 @@ if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/
 fi
 print_success "Docker Compose is available"
 
+if ! command -v curl &> /dev/null; then
+    print_error "curl is not installed. Please install curl first."
+    exit 1
+fi
+print_success "curl is available"
+
 echo ""
 
-# Step 2: Pull Images
-print_step "Step 2/4: Pulling container images..."
+# Step 2: Download required files
+print_step "Step 2/5: Downloading configuration files..."
+
+curl -sSL -o docker-compose.yaml "${GITHUB_RAW_BASE}/docker-compose.yaml"
+print_success "Downloaded docker-compose.yaml"
+
+curl -sSL -o verify.sh "${GITHUB_RAW_BASE}/verify.sh"
+chmod +x verify.sh
+print_success "Downloaded verify.sh"
+
+curl -sSL -o cleanup.sh "${GITHUB_RAW_BASE}/cleanup.sh"
+chmod +x cleanup.sh
+print_success "Downloaded cleanup.sh"
+
+echo ""
+
+# Step 3: Pull Images
+print_step "Step 3/5: Pulling container images..."
 print_warning "This may take a few minutes on first run..."
 
 docker compose pull 2>/dev/null || docker-compose pull
@@ -67,16 +90,16 @@ print_success "Images pulled successfully"
 
 echo ""
 
-# Step 3: Start Services
-print_step "Step 3/4: Starting AutoMQ cluster..."
+# Step 4: Start Services
+print_step "Step 4/5: Starting AutoMQ cluster..."
 
 docker compose up -d 2>/dev/null || docker-compose up -d
 print_success "Services started"
 
 echo ""
 
-# Step 4: Wait for cluster to be ready
-print_step "Step 4/4: Waiting for cluster to be ready..."
+# Step 5: Wait for cluster to be ready
+print_step "Step 5/5: Waiting for cluster to be ready..."
 
 MAX_RETRIES=60
 RETRY_COUNT=0

@@ -1,11 +1,11 @@
 #!/bin/bash
 # AutoMQ Software Kubernetes Helm Installation Script
-# Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/kubernetes/local/helm/install.sh | bash
+# Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-labs/main/software-examples/kubernetes/local/helm/install.sh | bash
 
 set -e
 
 # GitHub raw URL base
-GITHUB_RAW_BASE="https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/kubernetes/local/helm"
+GITHUB_RAW_BASE="https://raw.githubusercontent.com/AutoMQ/automq-labs/main/software-examples/kubernetes/local/helm"
 
 # Configuration
 AUTOMQ_VERSION="5.3.4"

@@ -1,11 +1,11 @@
 #!/bin/bash
 # AutoMQ Software Binary Deployment Setup Script
-# Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/binary/setup.sh | bash
+# Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-labs/main/software-examples/binary/setup.sh | bash
 
 set -e
 
 # GitHub raw URL base
-GITHUB_RAW_BASE="https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/binary"
+GITHUB_RAW_BASE="https://raw.githubusercontent.com/AutoMQ/automq-labs/main/software-examples/binary"
 
 # Configuration
 AUTOMQ_VERSION="5.3.4"
