@@ -1,11 +1,11 @@
 #!/bin/bash
+# AutoMQ Enterprise Binary Deployment Setup Script
+# Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/binary/setup.sh | bash
+
 set -e
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+# GitHub raw URL base
+GITHUB_RAW_BASE="https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/binary"
 
 # Configuration
 AUTOMQ_VERSION="5.3.4"
@@ -15,7 +15,12 @@ AUTOMQ_DIR_NAME="automq-kafka-enterprise_${AUTOMQ_VERSION}"
 MINIO_USER="admin"
 MINIO_PASSWORD="automq_demo_secret"
 MINIO_ENDPOINT="http://127.0.0.1:9000"
-CLUSTER_NAME="local-demo"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
 print_info() {
     printf "${GREEN}[INFO]${NC} %s\n" "$1"
@@ -37,15 +42,21 @@ print_header() {
     echo ""
 }
 
-# Pre-flight checks
 check_prerequisites() {
     print_info "Checking prerequisites..."
     local has_error=0
 
+    # Check curl
+    if ! command -v curl &> /dev/null; then
+        print_error "curl is not installed."
+        has_error=1
+    else
+        print_info "✓ curl found"
+    fi
+
     # Check Java
     if ! command -v java &> /dev/null; then
         print_error "Java is not installed. Please install Java 17 or later."
-        print_info "  Installation guide: https://adoptium.net/"
         has_error=1
     else
         local java_version
@@ -60,12 +71,11 @@ check_prerequisites() {
 
     # Check Docker
     if ! command -v docker &> /dev/null; then
-        print_error "Docker is not installed. Please install Docker first."
-        print_info "  Installation guide: https://docs.docker.com/get-docker/"
+        print_error "Docker is not installed."
         has_error=1
     else
         if ! docker info &> /dev/null; then
-            print_error "Docker daemon is not running. Please start Docker."
+            print_error "Docker daemon is not running."
             has_error=1
         else
             print_info "✓ Docker found: $(docker --version)"
@@ -82,17 +92,9 @@ check_prerequisites() {
         has_error=1
     fi
 
-    # Check curl
-    if ! command -v curl &> /dev/null; then
-        print_error "curl is not installed. Please install curl first."
-        has_error=1
-    else
-        print_info "✓ curl found"
-    fi
-
     if [ $has_error -eq 1 ]; then
         echo ""
-        print_error "Prerequisites check failed. Please resolve the issues above and try again."
+        print_error "Prerequisites check failed."
         exit 1
     fi
 
@@ -100,7 +102,24 @@ check_prerequisites() {
     echo ""
 }
 
-# Download AutoMQ package
+download_helper_scripts() {
+    print_info "Downloading helper scripts..."
+    
+    curl -sSL -o format-storage.sh "${GITHUB_RAW_BASE}/format-storage.sh"
+    chmod +x format-storage.sh
+    print_info "✓ Downloaded format-storage.sh"
+
+    curl -sSL -o verify.sh "${GITHUB_RAW_BASE}/verify.sh"
+    chmod +x verify.sh
+    print_info "✓ Downloaded verify.sh"
+
+    curl -sSL -o cleanup.sh "${GITHUB_RAW_BASE}/cleanup.sh"
+    chmod +x cleanup.sh
+    print_info "✓ Downloaded cleanup.sh"
+    
+    echo ""
+}
+
 download_automq() {
     if [ -f "$AUTOMQ_PACKAGE_NAME" ]; then
         print_info "Package $AUTOMQ_PACKAGE_NAME already exists, skipping download."
@@ -110,7 +129,6 @@ download_automq() {
         print_info "✓ Downloaded $AUTOMQ_PACKAGE_NAME"
     fi
     
-    # Extract if not already extracted
     if [ ! -d "$AUTOMQ_DIR_NAME" ]; then
         print_info "Extracting $AUTOMQ_PACKAGE_NAME..."
         tar -xzf "$AUTOMQ_PACKAGE_NAME"
@@ -120,7 +138,6 @@ download_automq() {
     fi
 }
 
-# Create MinIO docker-compose file
 create_minio_compose() {
     print_info "Creating MinIO configuration..."
     
@@ -167,58 +184,95 @@ EOF
     print_info "✓ Created minio/docker-compose.yml"
 }
 
-# Create cluster project using automq-cli
-create_cluster_project() {
-    print_info "Creating AutoMQ cluster project..."
+generate_node_configs() {
+    print_info "Generating node configuration files..."
     
-    pushd "$AUTOMQ_DIR_NAME" > /dev/null
+    local config_dir="$AUTOMQ_DIR_NAME/config/kraft"
+    mkdir -p "$config_dir"
     
-    # Create cluster project
-    bin/automq-cli.sh cluster create "$CLUSTER_NAME"
-    
-    popd > /dev/null
-    
-    print_info "✓ Created cluster project: $CLUSTER_NAME"
-}
+    # S3 common config
+    local s3_config="s3.data.buckets=0@s3://automq-data?region=us-east-1&endpoint=${MINIO_ENDPOINT}&pathStyle=true
+s3.ops.buckets=0@s3://automq-ops?region=us-east-1&endpoint=${MINIO_ENDPOINT}&pathStyle=true
+s3.wal.path=0@s3://automq-data?region=us-east-1&endpoint=${MINIO_ENDPOINT}&pathStyle=true"
 
-# Generate topo.yaml for local 3-node cluster
-generate_topo_yaml() {
-    print_info "Generating cluster topology configuration..."
-    
-    local topo_file="$AUTOMQ_DIR_NAME/clusters/$CLUSTER_NAME/topo.yaml"
-    
-    cat <<EOF > "$topo_file"
-global:
-  clusterId: ''
-  # Local MinIO configuration for quick start
-  # For production, replace with your cloud object storage (AWS S3, Azure Blob, etc.)
-  config: |
-    s3.data.buckets=0@s3://automq-data?region=us-east-1&endpoint=${MINIO_ENDPOINT}&pathStyle=true
-    s3.ops.buckets=0@s3://automq-ops?region=us-east-1&endpoint=${MINIO_ENDPOINT}&pathStyle=true
-    s3.wal.path=0@s3://automq-data?region=us-east-1&endpoint=${MINIO_ENDPOINT}&pathStyle=true
-  envs:
-    - name: KAFKA_S3_ACCESS_KEY
-      value: '${MINIO_USER}'
-    - name: KAFKA_S3_SECRET_KEY
-      value: '${MINIO_PASSWORD}'
-    - name: KAFKA_HEAP_OPTS
-      value: '-Xmx2g -Xms2g'
-controllers:
-  # 3-node cluster configuration
-  # For local pseudo-cluster: change hosts to 127.0.0.1 and manually modify ports in startup commands
-  - host: 127.0.0.1
-    nodeId: 0
-  - host: 127.0.0.1
-    nodeId: 1
-  - host: 127.0.0.1
-    nodeId: 2
-brokers: []
+    # Node 0 config
+    cat <<EOF > "$config_dir/node0.properties"
+# Node 0 Configuration
+node.id=0
+process.roles=broker,controller
+listeners=PLAINTEXT://127.0.0.1:9092,CONTROLLER://127.0.0.1:19092
+advertised.listeners=PLAINTEXT://127.0.0.1:9092
+controller.listener.names=CONTROLLER
+controller.quorum.voters=0@127.0.0.1:19092,1@127.0.0.1:19093,2@127.0.0.1:19094
+inter.broker.listener.name=PLAINTEXT
+
+# Log directories
+log.dirs=/tmp/automq-data-0
+
+# S3 Configuration
+${s3_config}
+
+# Default settings
+num.partitions=1
+default.replication.factor=1
+offsets.topic.replication.factor=1
+transaction.state.log.replication.factor=1
+transaction.state.log.min.isr=1
 EOF
 
-    print_info "✓ Generated $topo_file"
+    # Node 1 config
+    cat <<EOF > "$config_dir/node1.properties"
+# Node 1 Configuration
+node.id=1
+process.roles=broker,controller
+listeners=PLAINTEXT://127.0.0.1:9093,CONTROLLER://127.0.0.1:19093
+advertised.listeners=PLAINTEXT://127.0.0.1:9093
+controller.listener.names=CONTROLLER
+controller.quorum.voters=0@127.0.0.1:19092,1@127.0.0.1:19093,2@127.0.0.1:19094
+inter.broker.listener.name=PLAINTEXT
+
+# Log directories
+log.dirs=/tmp/automq-data-1
+
+# S3 Configuration
+${s3_config}
+
+# Default settings
+num.partitions=1
+default.replication.factor=1
+offsets.topic.replication.factor=1
+transaction.state.log.replication.factor=1
+transaction.state.log.min.isr=1
+EOF
+
+    # Node 2 config
+    cat <<EOF > "$config_dir/node2.properties"
+# Node 2 Configuration
+node.id=2
+process.roles=broker,controller
+listeners=PLAINTEXT://127.0.0.1:9094,CONTROLLER://127.0.0.1:19094
+advertised.listeners=PLAINTEXT://127.0.0.1:9094
+controller.listener.names=CONTROLLER
+controller.quorum.voters=0@127.0.0.1:19092,1@127.0.0.1:19093,2@127.0.0.1:19094
+inter.broker.listener.name=PLAINTEXT
+
+# Log directories
+log.dirs=/tmp/automq-data-2
+
+# S3 Configuration
+${s3_config}
+
+# Default settings
+num.partitions=1
+default.replication.factor=1
+offsets.topic.replication.factor=1
+transaction.state.log.replication.factor=1
+transaction.state.log.min.isr=1
+EOF
+
+    print_info "✓ Generated node0.properties, node1.properties, node2.properties"
 }
 
-# Print next steps
 print_next_steps() {
     echo ""
     echo "=============================================="
@@ -230,31 +284,37 @@ print_next_steps() {
     echo "1. Start MinIO:"
     echo "   docker compose -f minio/docker-compose.yml up -d"
     echo ""
-    echo "2. Generate startup commands:"
+    echo "2. Format storage (run once):"
+    echo "   ./format-storage.sh"
+    echo ""
+    echo "3. Start AutoMQ nodes (in 3 separate terminals):"
+    echo ""
+    echo "   # Terminal 1 - Node 0"
     echo "   cd ${AUTOMQ_DIR_NAME}"
-    echo "   bin/automq-cli.sh cluster deploy --dry-run clusters/${CLUSTER_NAME}"
+    echo "   export KAFKA_S3_ACCESS_KEY=admin"
+    echo "   export KAFKA_S3_SECRET_KEY=automq_demo_secret"
+    echo "   export KAFKA_HEAP_OPTS=\"-Xmx2g -Xms2g\""
+    echo "   bin/kafka-server-start.sh config/kraft/node0.properties"
     echo ""
-    echo "3. Start AutoMQ nodes:"
-    echo "   The above command outputs startup commands for each node."
+    echo "   # Terminal 2 - Node 1"
+    echo "   cd ${AUTOMQ_DIR_NAME}"
+    echo "   export KAFKA_S3_ACCESS_KEY=admin"
+    echo "   export KAFKA_S3_SECRET_KEY=automq_demo_secret"
+    echo "   export KAFKA_HEAP_OPTS=\"-Xmx2g -Xms2g\""
+    echo "   bin/kafka-server-start.sh config/kraft/node1.properties"
     echo ""
-    echo "   IMPORTANT: For local pseudo-cluster (all nodes on same machine),"
-    echo "   you need to manually modify the ports in each command:"
-    echo "   - Node 0: broker port 9092, controller port 19092"
-    echo "   - Node 1: broker port 9093, controller port 19093"
-    echo "   - Node 2: broker port 9094, controller port 19094"
-    echo ""
-    echo "   Modify these parameters in each startup command:"
-    echo "   --override listeners=PLAINTEXT://127.0.0.1:<broker_port>,CONTROLLER://127.0.0.1:<controller_port>"
-    echo "   --override advertised.listeners=PLAINTEXT://127.0.0.1:<broker_port>"
-    echo "   --override controller.quorum.voters=0@127.0.0.1:19092,1@127.0.0.1:19093,2@127.0.0.1:19094"
-    echo ""
-    echo "   Run each modified command in a separate terminal."
+    echo "   # Terminal 3 - Node 2"
+    echo "   cd ${AUTOMQ_DIR_NAME}"
+    echo "   export KAFKA_S3_ACCESS_KEY=admin"
+    echo "   export KAFKA_S3_SECRET_KEY=automq_demo_secret"
+    echo "   export KAFKA_HEAP_OPTS=\"-Xmx2g -Xms2g\""
+    echo "   bin/kafka-server-start.sh config/kraft/node2.properties"
     echo ""
     echo "4. Verify installation:"
-    echo "   cd .. && ./verify.sh"
+    echo "   ./verify.sh"
     echo ""
-    echo "5. Cleanup:"
-    echo "   cd .. && ./cleanup.sh"
+    echo "5. Stop cluster:"
+    echo "   cd ${AUTOMQ_DIR_NAME} && bin/kafka-server-stop.sh"
     echo ""
     echo "MinIO Console: http://localhost:9001"
     echo "  Username: ${MINIO_USER}"
@@ -262,14 +322,13 @@ print_next_steps() {
     echo ""
 }
 
-# Main
 main() {
     print_header
     check_prerequisites
+    download_helper_scripts
     download_automq
     create_minio_compose
-    create_cluster_project
-    generate_topo_yaml
+    generate_node_configs
     print_next_steps
 }
 

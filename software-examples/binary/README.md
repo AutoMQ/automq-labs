@@ -1,42 +1,35 @@
 # AutoMQ Binary Deployment Quick Start
 
-This guide provides step-by-step instructions for deploying a 3-node AutoMQ cluster using the binary installation package with MinIO as the object storage backend.
+This guide explains how to deploy a 3-node AutoMQ cluster using the binary installation package with MinIO as the object storage backend.
 
-> **Platform Support**: These scripts are tested on macOS and Linux. Windows users should use WSL2 or a Linux VM.
+> **Platform Support**: Scripts are tested on macOS and Linux. Windows users should use WSL2 or a Linux VM.
 
-> **Note**: This is a quick start guide for local development and testing. For production deployments:
-> - Deploy each node on a separate machine with at least 2 CPU cores and 16GB RAM
-> - Replace MinIO with a production-grade object storage service (AWS S3, Azure Blob Storage, etc.)
-> - Adjust heap size based on workload requirements (default: 2GB per node for testing)
+> **Note**: This is a quick start guide for local development and testing. For production deployments, refer to the official documentation.
 
 ## Prerequisites
 
 - Linux or macOS operating system
-- Docker and Docker Compose installed
+- Docker and Docker Compose
 - Java 17 or later
-- At least 8GB available RAM (for running 3 nodes locally)
-- Internet access for downloading packages
+- At least 8GB available RAM
 
 ## Quick Start
 
 ### Step 1: Environment Setup
 
-Run the setup script to verify prerequisites, download the installation package, and generate configuration:
+Run the setup script to download the installation package and generate configuration files:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/binary/setup.sh | bash
+./setup.sh
 ```
 
 This script will:
-- Verify that Java, Docker, and Docker Compose are properly installed
+- Check Java, Docker, and other dependencies
 - Download and extract the AutoMQ installation package
 - Create MinIO docker-compose configuration
-- Create cluster project using `automq-cli.sh`
-- Generate `topo.yaml` for a 3-node cluster
+- Generate configuration files for 3 nodes
 
 ### Step 2: Start MinIO
-
-Start MinIO using Docker Compose:
 
 ```bash
 docker compose -f minio/docker-compose.yml up -d
@@ -48,91 +41,107 @@ Verify MinIO is running:
 docker compose -f minio/docker-compose.yml ps
 ```
 
-MinIO Console is available at: http://localhost:9001
+MinIO Console: http://localhost:9001
 - Username: `admin`
 - Password: `automq_demo_secret`
 
-### Step 3: Generate Startup Commands
+### Step 3: Format Storage
 
-Navigate to the AutoMQ directory and generate the startup commands:
+Format storage directories before first startup (only needed once):
 
 ```bash
 cd automq-kafka-enterprise_5.3.4
-bin/automq-cli.sh cluster deploy --dry-run clusters/local-demo
+
+# Format Node 0
+bin/kafka-storage.sh format -t $(bin/kafka-storage.sh random-uuid) -c config/kraft/node0.properties
+
+# Format Node 1 (use the same cluster-id from previous step)
+bin/kafka-storage.sh format -t <cluster-id-from-previous-step> -c config/kraft/node1.properties
+
+# Format Node 2 (use the same cluster-id)
+bin/kafka-storage.sh format -t <cluster-id-from-previous-step> -c config/kraft/node2.properties
 ```
 
-This command will:
-- Verify the S3/MinIO configuration
-- Output the startup commands for each node
-
-### Step 4: Start AutoMQ Cluster
-
-Execute the startup commands output from Step 3.
-
-**For Local Pseudo-Cluster (all nodes on same machine):**
-
-Since `automq-cli.sh` generates commands with default ports, you need to manually modify the ports for each node to avoid conflicts:
-
-| Node | Broker Port | Controller Port |
-|------|-------------|-----------------|
-| 0    | 9092        | 19092           |
-| 1    | 9093        | 19093           |
-| 2    | 9094        | 19094           |
-
-Modify these parameters in each startup command:
-
-```bash
---override listeners=PLAINTEXT://127.0.0.1:<broker_port>,CONTROLLER://127.0.0.1:<controller_port>
---override advertised.listeners=PLAINTEXT://127.0.0.1:<broker_port>
---override controller.quorum.voters=0@127.0.0.1:19092,1@127.0.0.1:19093,2@127.0.0.1:19094
-```
-
-Run each modified command in a separate terminal.
-
-**For Production (each node on separate machine):**
-
-Simply execute the generated commands on each respective host without port modifications.
-
-### Step 5: Verify Installation
-
-Run the verification script:
+Or use the script to format all nodes at once:
 
 ```bash
 cd ..
+./format-storage.sh
+```
+
+### Step 4: Start AutoMQ Cluster
+
+Run the following commands in 3 separate terminal windows:
+
+**Terminal 1 - Start Node 0:**
+
+```bash
+cd automq-kafka-enterprise_5.3.4
+export KAFKA_S3_ACCESS_KEY=admin
+export KAFKA_S3_SECRET_KEY=automq_demo_secret
+export KAFKA_HEAP_OPTS="-Xmx2g -Xms2g"
+bin/kafka-server-start.sh config/kraft/node0.properties
+```
+
+**Terminal 2 - Start Node 1:**
+
+```bash
+cd automq-kafka-enterprise_5.3.4
+export KAFKA_S3_ACCESS_KEY=admin
+export KAFKA_S3_SECRET_KEY=automq_demo_secret
+export KAFKA_HEAP_OPTS="-Xmx2g -Xms2g"
+bin/kafka-server-start.sh config/kraft/node1.properties
+```
+
+**Terminal 3 - Start Node 2:**
+
+```bash
+cd automq-kafka-enterprise_5.3.4
+export KAFKA_S3_ACCESS_KEY=admin
+export KAFKA_S3_SECRET_KEY=automq_demo_secret
+export KAFKA_HEAP_OPTS="-Xmx2g -Xms2g"
+bin/kafka-server-start.sh config/kraft/node2.properties
+```
+
+### Step 5: Verify Installation
+
+```bash
 ./verify.sh
 ```
 
-This script will:
-- Check broker connectivity
-- Create a test topic
-- List all topics
-- Test produce/consume
-- Clean up the test topic
-
-Or manually test with kafka commands:
-
-Create a test topic:
+Or test manually:
 
 ```bash
+cd automq-kafka-enterprise_5.3.4
+
+# Create a test topic
 bin/kafka-topics.sh --create --topic test-topic --bootstrap-server localhost:9092
-```
 
-List topics:
-
-```bash
+# List topics
 bin/kafka-topics.sh --list --bootstrap-server localhost:9092
-```
 
-Produce test messages:
-
-```bash
+# Produce messages
 bin/kafka-console-producer.sh --topic test-topic --bootstrap-server localhost:9092
+
+# Consume messages
+bin/kafka-console-consumer.sh --topic test-topic --from-beginning --bootstrap-server localhost:9092
 ```
 
-Consume test messages:
+## Stop Cluster
+
+### Option 1: Use Kafka built-in command
 
 ```bash
-bin/kafka-console-consumer.sh --topic test-topic --from-beginning --bootstrap-server localhost:9092
+cd automq-kafka-enterprise_5.3.4
+bin/kafka-server-stop.sh
+```
+
+### Option 2: Press Ctrl+C in each terminal window
+
+### Stop MinIO
+
+```bash
+docker compose -f minio/docker-compose.yml down
 ```
 
 ## Cleanup
@@ -143,89 +152,32 @@ Run the cleanup script:
 ./cleanup.sh
 ```
 
-This script will:
-- Stop all AutoMQ nodes
-- Stop MinIO and remove volumes
-- Remove data directories (`/tmp/automq-data-*`)
-
-To also remove downloaded packages and generated files:
+Full cleanup (including downloaded packages):
 
 ```bash
 ./cleanup.sh --all
 ```
 
-Or manually clean up:
-
-Stop AutoMQ nodes:
-
-```bash
-cd automq-kafka-enterprise_5.3.4
-bin/kafka-server-stop.sh
-```
-
-Stop MinIO:
-
-```bash
-cd ..
-docker compose -f minio/docker-compose.yml down -v
-```
-
-Remove data:
-
-```bash
-rm -rf /tmp/automq-data-*
-```
-
 ## Configuration Details
 
-### Default Settings
+### Cluster Port Configuration
 
-| Component | Setting | Value |
-|-----------|---------|-------|
-| MinIO | Root User | admin |
-| MinIO | Root Password | automq_demo_secret |
-| MinIO | API Port | 9000 |
-| MinIO | Console Port | 9001 |
-| MinIO | Data Bucket | automq-data |
-| MinIO | Ops Bucket | automq-ops |
-| AutoMQ | Heap Size | 2GB per node |
+| Node | Broker Port | Controller Port |
+|------|-------------|-----------------|
+| Node 0 | 9092 | 19092 |
+| Node 1 | 9093 | 19093 |
+| Node 2 | 9094 | 19094 |
 
-### Cluster Topology (topo.yaml)
+### MinIO Configuration
 
-The `topo.yaml` file defines the cluster topology:
-
-```yaml
-global:
-  config: |
-    s3.data.buckets=0@s3://automq-data?region=us-east-1&endpoint=http://127.0.0.1:9000&pathStyle=true
-    s3.ops.buckets=0@s3://automq-ops?region=us-east-1&endpoint=http://127.0.0.1:9000&pathStyle=true
-    s3.wal.path=0@s3://automq-data?region=us-east-1&endpoint=http://127.0.0.1:9000&pathStyle=true
-  envs:
-    - name: KAFKA_S3_ACCESS_KEY
-      value: 'admin'
-    - name: KAFKA_S3_SECRET_KEY
-      value: 'automq_demo_secret'
-    - name: KAFKA_HEAP_OPTS
-      value: '-Xmx2g -Xms2g'
-controllers:
-  - host: 127.0.0.1
-    nodeId: 0
-  - host: 127.0.0.1
-    nodeId: 1
-  - host: 127.0.0.1
-    nodeId: 2
-brokers: []
-```
-
-### Production Recommendations
-
-For production deployments:
-
-1. **Hardware**: Each node should have at least 2 CPU cores and 16GB RAM
-2. **Storage**: Replace MinIO with a production object storage service (AWS S3, Azure Blob, etc.)
-3. **Network**: Deploy nodes on separate machines with low-latency network
-4. **Heap Size**: Increase JVM heap to 8GB or more based on workload
-5. **Topology**: Update `topo.yaml` with actual host IPs
+| Setting | Value |
+|---------|-------|
+| Root User | admin |
+| Root Password | automq_demo_secret |
+| API Port | 9000 |
+| Console Port | 9001 |
+| Data Bucket | automq-data |
+| Ops Bucket | automq-ops |
 
 ## Troubleshooting
 
@@ -238,35 +190,26 @@ java -version
 export JAVA_HOME=/path/to/java
 ```
 
-### MinIO connection refused
+### MinIO connection failed
 
 Check if MinIO is running:
 
 ```bash
 docker compose -f minio/docker-compose.yml logs
-```
-
-### S3 connection error during deploy
-
-Ensure MinIO is running and accessible:
-
-```bash
 curl http://localhost:9000/minio/health/live
 ```
 
 ### Port already in use
 
-For local pseudo-cluster, ensure you've modified the ports correctly for each node.
+Check port usage:
 
-### Cluster not forming
-
-Ensure all nodes can communicate:
-- All nodes must use the same `cluster.id`
-- Controller quorum voters must be correctly configured
-- Check firewall rules for the configured ports
+```bash
+lsof -i :9092
+lsof -i :9093
+lsof -i :9094
+```
 
 ## Reference
 
 - [AutoMQ Documentation](https://docs.automq.com)
 - [Deploy Multi-Nodes Cluster on Linux](https://www.automq.com/docs/automq/deployment/deploy-multi-nodes-cluster-on-linux)
-- [Object Storage Configuration](https://www.automq.com/docs/automq/configuration/object-storage-configuration)

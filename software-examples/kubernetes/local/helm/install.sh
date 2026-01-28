@@ -1,5 +1,16 @@
 #!/bin/bash
+# AutoMQ Enterprise Kubernetes Helm Installation Script
+# Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/kubernetes/local/helm/install.sh | bash
+
 set -e
+
+# GitHub raw URL base
+GITHUB_RAW_BASE="https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/kubernetes/local/helm"
+
+# Configuration
+AUTOMQ_VERSION="5.3.4"
+MINIO_USER="admin"
+MINIO_PASSWORD="automq_demo_secret"
 
 # Colors for output
 RED='\033[0;31m'
@@ -8,11 +19,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
-
-# Configuration
-AUTOMQ_VERSION="5.3.4"
-MINIO_USER="admin"
-MINIO_PASSWORD="automq_demo_secret"
 
 print_info() {
     printf "${GREEN}[INFO]${NC} %s\n" "$1"
@@ -52,9 +58,19 @@ print_summary() {
 
 # Step 1: Check prerequisites
 check_prerequisites() {
-    print_step "1/5" "Checking Prerequisites"
+    print_step "1/6" "Checking Prerequisites"
     
     local has_error=0
+
+    # Check curl
+    printf "  Checking curl... "
+    if ! command -v curl &> /dev/null; then
+        printf "${RED}NOT FOUND${NC}\n"
+        print_error "curl is not installed."
+        has_error=1
+    else
+        printf "${GREEN}OK${NC}\n"
+    fi
 
     # Check kubectl
     printf "  Checking kubectl... "
@@ -99,9 +115,22 @@ check_prerequisites() {
     print_info "All prerequisites satisfied!"
 }
 
-# Step 2: Detect architecture and generate values
+# Step 2: Download helper scripts
+download_scripts() {
+    print_step "2/6" "Downloading Helper Scripts"
+    
+    curl -sSL -o verify.sh "${GITHUB_RAW_BASE}/verify.sh"
+    chmod +x verify.sh
+    print_info "✓ Downloaded verify.sh"
+
+    curl -sSL -o cleanup.sh "${GITHUB_RAW_BASE}/cleanup.sh"
+    chmod +x cleanup.sh
+    print_info "✓ Downloaded cleanup.sh"
+}
+
+# Step 3: Detect architecture and generate values
 generate_values() {
-    print_step "2/5" "Generating Configuration"
+    print_step "3/6" "Generating Configuration"
     
     # Detect CPU architecture
     local arch
@@ -181,9 +210,9 @@ EOF
     print_config "Heap Size" "2GB"
 }
 
-# Step 3: Install MinIO
+# Step 4: Install MinIO
 install_minio() {
-    print_step "3/5" "Installing MinIO (Object Storage)"
+    print_step "4/6" "Installing MinIO (Object Storage)"
     
     # Add helm repo
     print_info "Adding MinIO helm repository..."
@@ -226,9 +255,9 @@ install_minio() {
     print_info "✓ MinIO installed successfully"
 }
 
-# Step 4: Install AutoMQ
+# Step 5: Install AutoMQ
 install_automq() {
-    print_step "4/5" "Installing AutoMQ"
+    print_step "5/6" "Installing AutoMQ"
     
     # Check if already installed
     if helm status automq &> /dev/null; then
@@ -254,9 +283,9 @@ install_automq() {
     print_info "✓ AutoMQ installed successfully"
 }
 
-# Step 5: Verify installation
+# Step 6: Verify installation
 verify_installation() {
-    print_step "5/5" "Verifying Installation"
+    print_step "6/6" "Verifying Installation"
     
     print_info "Checking pod status..."
     echo ""
@@ -311,6 +340,7 @@ print_final_summary() {
 main() {
     print_header
     check_prerequisites
+    download_scripts
     generate_values
     install_minio
     install_automq

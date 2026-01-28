@@ -26,7 +26,6 @@ print_header() {
     echo ""
 }
 
-# Check if AutoMQ directory exists
 check_automq_dir() {
     if [ ! -d "$AUTOMQ_DIR" ]; then
         print_error "AutoMQ directory not found. Please run setup.sh first."
@@ -34,7 +33,6 @@ check_automq_dir() {
     fi
 }
 
-# Check broker connectivity
 check_broker() {
     print_info "Checking broker connectivity..."
     
@@ -47,7 +45,6 @@ check_broker() {
     print_info "✓ Broker is accessible at $BOOTSTRAP_SERVER"
 }
 
-# Create test topic
 create_test_topic() {
     local topic_name="verify-test-topic-$$"
     
@@ -65,7 +62,6 @@ create_test_topic() {
     echo "$topic_name"
 }
 
-# List topics
 list_topics() {
     print_info "Listing topics..."
     echo ""
@@ -78,7 +74,6 @@ list_topics() {
     print_info "✓ Topics listed successfully"
 }
 
-# Describe topic
 describe_topic() {
     local topic_name="$1"
     print_info "Describing topic: $topic_name"
@@ -92,21 +87,18 @@ describe_topic() {
     echo ""
 }
 
-# Produce and consume test message
 test_produce_consume() {
     local topic_name="$1"
     local test_message="Hello AutoMQ $(date +%s)"
     
     print_info "Testing produce/consume..."
     
-    # Produce message
     echo "$test_message" | "$AUTOMQ_DIR/bin/kafka-console-producer.sh" \
         --topic "$topic_name" \
         --bootstrap-server "$BOOTSTRAP_SERVER" 2>/dev/null
     
     print_info "✓ Message produced: $test_message"
     
-    # Consume message with timeout
     local consumed
     consumed=$("$AUTOMQ_DIR/bin/kafka-console-consumer.sh" \
         --topic "$topic_name" \
@@ -122,7 +114,6 @@ test_produce_consume() {
     fi
 }
 
-# Cleanup test topic
 cleanup_test_topic() {
     local topic_name="$1"
     print_info "Cleaning up test topic..."
@@ -135,7 +126,6 @@ cleanup_test_topic() {
     print_info "✓ Test topic deleted"
 }
 
-# Print success message
 print_success() {
     echo ""
     echo "=============================================="
@@ -160,9 +150,11 @@ print_success() {
     echo "  # Consume messages"
     echo "  $AUTOMQ_DIR/bin/kafka-console-consumer.sh --topic my-topic --from-beginning --bootstrap-server localhost:9092"
     echo ""
+    echo "  # Stop cluster"
+    echo "  $AUTOMQ_DIR/bin/kafka-server-stop.sh"
+    echo ""
 }
 
-# Main
 main() {
     print_header
     check_automq_dir

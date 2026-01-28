@@ -1,0 +1,201 @@
+# AutoMQ Enterprise Cluster with MinIO
+# Quick start deployment for local development and testing
+version: "3.8"
+
+x-common-variables: &common-env
+  KAFKA_S3_ACCESS_KEY: admin
+  KAFKA_S3_SECRET_KEY: automq_demo_secret
+  KAFKA_HEAP_OPTS: -Xms1g -Xmx4g -XX:MetaspaceSize=96m -XX:MaxDirectMemorySize=1G
+  CLUSTER_ID: rqbCPLBqQa2r9n0JMfFCzQ
+
+services:
+  # MinIO - S3-compatible object storage
+  minio:
+    container_name: "minio"
+    image: minio/minio:RELEASE.2025-05-24T17-08-30Z
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: automq_demo_secret
+      MINIO_DOMAIN: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: ["server", "/data", "--console-address", ":9001"]
+    networks:
+      automq_net:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  # MinIO Client - Initialize buckets
+  mc:
+    container_name: "mc"
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set minio http://minio:9000 admin automq_demo_secret) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc rm -r --force minio/automq-data 2>/dev/null || true;
+      /usr/bin/mc rm -r --force minio/automq-ops 2>/dev/null || true;
+      /usr/bin/mc mb minio/automq-data;
+      /usr/bin/mc mb minio/automq-ops;
+      /usr/bin/mc anonymous set public minio/automq-data;
+      /usr/bin/mc anonymous set public minio/automq-ops;
+      echo 'Buckets created successfully';
+      tail -f /dev/null
+      "
+    networks:
+      - automq_net
+
+  # AutoMQ Controller Node 1
+  controller1:
+    container_name: "automq-controller1"
+    image: automq.azurecr.io/automq/automq-enterprise:5.3.7
+    stop_grace_period: 1m
+    environment:
+      <<: *common-env
+    command:
+      - bash
+      - -c
+      - |
+        # Create config file with node-specific settings
+        cat > /tmp/server.properties << EOF
+        process.roles=broker,controller
+        node.id=0
+        controller.quorum.voters=0@controller1:9093,1@controller2:9093,2@controller3:9093
+        controller.quorum.bootstrap.servers=controller1:9093,controller2:9093,controller3:9093
+        listeners=PLAINTEXT://:9092,CONTROLLER://:9093
+        inter.broker.listener.name=PLAINTEXT
+        advertised.listeners=PLAINTEXT://controller1:9092
+        controller.listener.names=CONTROLLER
+        log.dirs=/tmp/kraft-combined-logs
+        s3.data.buckets=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        s3.ops.buckets=1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        s3.wal.path=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        num.partitions=1
+        offsets.topic.replication.factor=1
+        transaction.state.log.replication.factor=1
+        transaction.state.log.min.isr=1
+        EOF
+        
+        # Format storage
+        /opt/automq/kafka/bin/kafka-storage.sh format -t "$CLUSTER_ID" -c /tmp/server.properties --ignore-formatted || true
+        
+        # Start server
+        exec /opt/automq/kafka/bin/kafka-server-start.sh /tmp/server.properties
+    ports:
+      - "19092:9092"
+    networks:
+      automq_net:
+    depends_on:
+      minio:
+        condition: service_healthy
+      mc:
+        condition: service_started
+
+  # AutoMQ Controller Node 2
+  controller2:
+    container_name: "automq-controller2"
+    image: automq.azurecr.io/automq/automq-enterprise:5.3.7
+    stop_grace_period: 1m
+    environment:
+      <<: *common-env
+    command:
+      - bash
+      - -c
+      - |
+        # Create config file with node-specific settings
+        cat > /tmp/server.properties << EOF
+        process.roles=broker,controller
+        node.id=1
+        controller.quorum.voters=0@controller1:9093,1@controller2:9093,2@controller3:9093
+        controller.quorum.bootstrap.servers=controller1:9093,controller2:9093,controller3:9093
+        listeners=PLAINTEXT://:9092,CONTROLLER://:9093
+        inter.broker.listener.name=PLAINTEXT
+        advertised.listeners=PLAINTEXT://controller2:9092
+        controller.listener.names=CONTROLLER
+        log.dirs=/tmp/kraft-combined-logs
+        s3.data.buckets=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        s3.ops.buckets=1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        s3.wal.path=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        num.partitions=1
+        offsets.topic.replication.factor=1
+        transaction.state.log.replication.factor=1
+        transaction.state.log.min.isr=1
+        EOF
+        
+        # Format storage
+        /opt/automq/kafka/bin/kafka-storage.sh format -t "$CLUSTER_ID" -c /tmp/server.properties --ignore-formatted || true
+        
+        # Start server
+        exec /opt/automq/kafka/bin/kafka-server-start.sh /tmp/server.properties
+    ports:
+      - "29092:9092"
+    networks:
+      automq_net:
+    depends_on:
+      minio:
+        condition: service_healthy
+      mc:
+        condition: service_started
+
+
+  # AutoMQ Controller Node 3
+  controller3:
+    container_name: "automq-controller3"
+    image: automq.azurecr.io/automq/automq-enterprise:5.3.7
+    stop_grace_period: 1m
+    environment:
+      <<: *common-env
+    command:
+      - bash
+      - -c
+      - |
+        # Create config file with node-specific settings
+        cat > /tmp/server.properties << EOF
+        process.roles=broker,controller
+        node.id=2
+        controller.quorum.voters=0@controller1:9093,1@controller2:9093,2@controller3:9093
+        controller.quorum.bootstrap.servers=controller1:9093,controller2:9093,controller3:9093
+        listeners=PLAINTEXT://:9092,CONTROLLER://:9093
+        inter.broker.listener.name=PLAINTEXT
+        advertised.listeners=PLAINTEXT://controller3:9092
+        controller.listener.names=CONTROLLER
+        log.dirs=/tmp/kraft-combined-logs
+        s3.data.buckets=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        s3.ops.buckets=1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        s3.wal.path=0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true
+        num.partitions=1
+        offsets.topic.replication.factor=1
+        transaction.state.log.replication.factor=1
+        transaction.state.log.min.isr=1
+        EOF
+        
+        # Format storage
+        /opt/automq/kafka/bin/kafka-storage.sh format -t "$CLUSTER_ID" -c /tmp/server.properties --ignore-formatted || true
+        
+        # Start server
+        exec /opt/automq/kafka/bin/kafka-server-start.sh /tmp/server.properties
+    ports:
+      - "39092:9092"
+    networks:
+      automq_net:
+    depends_on:
+      minio:
+        condition: service_healthy
+      mc:
+        condition: service_started
+
+networks:
+  automq_net:
+    name: automq_net
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.6.0.0/16"
+          gateway: "10.6.0.1"

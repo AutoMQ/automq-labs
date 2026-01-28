@@ -25,7 +25,6 @@ print_header() {
     echo ""
 }
 
-# Stop AutoMQ nodes
 stop_automq() {
     print_info "Stopping AutoMQ nodes..."
     
@@ -38,7 +37,6 @@ stop_automq() {
     fi
 }
 
-# Stop MinIO
 stop_minio() {
     print_info "Stopping MinIO..."
     
@@ -50,7 +48,6 @@ stop_minio() {
     fi
 }
 
-# Remove data directories
 remove_data() {
     print_info "Removing data directories..."
     
@@ -58,7 +55,6 @@ remove_data() {
     print_info "✓ Data directories removed"
 }
 
-# Remove generated files (optional)
 remove_generated_files() {
     if [ "$1" = "--all" ]; then
         print_info "Removing generated files..."
@@ -71,7 +67,6 @@ remove_generated_files() {
     fi
 }
 
-# Print completion message
 print_complete() {
     echo ""
     echo "=============================================="
@@ -82,11 +77,9 @@ print_complete() {
     echo ""
 }
 
-# Main
 main() {
     print_header
     
-    # Confirm cleanup
     if [ "$1" != "-y" ] && [ "$1" != "--yes" ] && [ "$1" != "--all" ]; then
         printf "This will stop AutoMQ and MinIO, and remove data. Continue? [y/N] "
         read -r REPLY
