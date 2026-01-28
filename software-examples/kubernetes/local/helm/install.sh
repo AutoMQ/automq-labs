@@ -1,5 +1,5 @@
 #!/bin/bash
-# AutoMQ Enterprise Kubernetes Helm Installation Script
+# AutoMQ Software Kubernetes Helm Installation Script
 # Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/kubernetes/local/helm/install.sh | bash
 
 set -e

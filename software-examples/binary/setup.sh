@@ -1,5 +1,5 @@
 #!/bin/bash
-# AutoMQ Enterprise Binary Deployment Setup Script
+# AutoMQ Software Binary Deployment Setup Script
 # Supports: curl -sSL https://raw.githubusercontent.com/AutoMQ/automq-examples/main/software-examples/binary/setup.sh | bash
 
 set -e

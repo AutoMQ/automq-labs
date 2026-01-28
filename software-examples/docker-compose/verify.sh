@@ -1,5 +1,5 @@
 #!/bin/bash
-# AutoMQ Enterprise Verification Script
+# AutoMQ Software Verification Script
 
 set -e
 
@@ -27,7 +27,7 @@ print_error() {
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║         AutoMQ Enterprise - Cluster Verification             ║"
+echo "║         AutoMQ Software - Cluster Verification             ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 

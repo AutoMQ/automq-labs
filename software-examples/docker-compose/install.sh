@@ -1,5 +1,5 @@
 #!/bin/bash
-# AutoMQ Enterprise Docker Compose Installation Script
+# AutoMQ Software Docker Compose Installation Script
 
 set -e
 
@@ -31,7 +31,7 @@ print_error() {
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║         AutoMQ Enterprise - Docker Compose Setup             ║"
+echo "║         AutoMQ Software - Docker Compose Setup             ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 

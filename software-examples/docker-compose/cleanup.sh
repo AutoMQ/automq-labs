@@ -1,5 +1,5 @@
 #!/bin/bash
-# AutoMQ Enterprise Cleanup Script
+# AutoMQ Software Cleanup Script
 
 set -e
 
@@ -27,7 +27,7 @@ print_warning() {
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║           AutoMQ Enterprise - Cluster Cleanup                ║"
+echo "║           AutoMQ Software - Cluster Cleanup                ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 

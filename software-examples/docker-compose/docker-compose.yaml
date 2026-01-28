@@ -1,4 +1,4 @@
-# AutoMQ Enterprise Cluster with MinIO
+# AutoMQ Software Cluster with MinIO
 # Quick start deployment for local development and testing
 version: "3.8"
 

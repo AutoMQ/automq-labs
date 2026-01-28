@@ -1,6 +1,6 @@
-# AutoMQ Enterprise Quick Start (Docker Compose + MinIO)
+# AutoMQ Software Quick Start (Docker Compose + MinIO)
 
-This guide provides a quick start for deploying AutoMQ Enterprise on your local machine using Docker Compose with MinIO as the object storage backend.
+This guide provides a quick start for deploying AutoMQ Software on your local machine using Docker Compose with MinIO as the object storage backend.
 
 > **Platform Support**: Tested on macOS and Linux. Windows users should use WSL2.
 
@@ -9,7 +9,7 @@ This guide provides a quick start for deploying AutoMQ Enterprise on your local 
 - Docker Engine 20.10+ with Docker Compose V2
 - Minimum 4 CPU cores and 8GB RAM available for Docker
 - Internet access for pulling container images
-- Access to AutoMQ Enterprise container registry
+- Access to AutoMQ Software container registry
 
 ## Quick Start (One-Click Installation)
 
@@ -203,7 +203,7 @@ This quick start uses MinIO for local testing. For production deployments:
 
 For detailed production deployment instructions, please refer to the official documentation:
 
-👉 [AutoMQ Enterprise Documentation](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart)
+👉 [AutoMQ Software Documentation](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart)
 
 ## Support
 

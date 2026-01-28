@@ -1,4 +1,4 @@
-# Deploy AutoMQ Enterprise on Kubernetes with Helm
+# Deploy AutoMQ Software on Kubernetes with Helm
 
 This guide provides instructions for deploying the enterprise version of [AutoMQ](https://www.automq.com/) on a Kubernetes cluster using the managed Helm chart for Kafka.
 
@@ -19,7 +19,7 @@ Before you begin, ensure you have the following:
 
 ### 1. Configure `demo-values.yaml`
 
-The key to deploying AutoMQ is to provide a custom `values.yaml` file that configures the AutoMQ Enterprise Kafka chart to use AutoMQ's container image and settings.
+The key to deploying AutoMQ is to provide a custom `values.yaml` file that configures the AutoMQ Software Kafka chart to use AutoMQ's container image and settings.
 
 We provide some `demo-values.yaml` in this directory that is pre-configured for deploying AutoMQ on OCI using `VM.Standard.E5.Flex` instances and different credential type.
 - AccessKey Credentials: [demo-static-values.yaml](credential/demo-static-values.yaml)
@@ -28,11 +28,11 @@ We provide some `demo-values.yaml` in this directory that is pre-configured for 
 
 Edit the `demo-static-values.yaml` file and customize it for your environment. You will need to replace the placeholder values (marked with `<...>`), such as the S3 bucket names (`your-ops-bucket`, `your-data-bucket`), OCI region, endpoint, AK/SK.
 
-- For more details on available parameters, refer to the [AutoMQ Enterprise Kafka chart values](https://www.automq.com/docs/automq-cloud/appendix/helm-chart-values-readme).
+- For more details on available parameters, refer to the [AutoMQ Software Kafka chart values](https://www.automq.com/docs/automq-cloud/appendix/helm-chart-values-readme).
 
-- For more details on install AutoMQ Enterprise, refer to the [AutoMQ Enterprise Install](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart#install-automq).
+- For more details on install AutoMQ Software, refer to the [AutoMQ Software Install](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart#install-automq).
 
-- For more details on other advanced configurations, refer to the [AutoMQ Enterprise Other Advanced Configurations](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart#other-advanced-configurations).
+- For more details on other advanced configurations, refer to the [AutoMQ Software Other Advanced Configurations](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart#other-advanced-configurations).
 
 - For more details on performance tuning, refer to the [AutoMQ Performance Tuning Guide](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker).
 - For Prometheus/Collector metrics integration (how to set `s3.telemetry.metrics.exporter.*` under `global.config` when you need either pull-only or OTLP push), follow the [Integrating Metrics with Prometheus guide](https://www.automq.com/docs/automq/observability/integrating-metrics-with-prometheus). For example:

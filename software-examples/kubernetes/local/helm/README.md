@@ -146,7 +146,7 @@ This quick start uses MinIO for local testing. For production deployments:
 
 For detailed production deployment instructions including credentials setup, StorageClass configuration, and advanced features (TLS, authentication, auto-scaling), please refer to the official documentation:
 
-👉 [Deploy AutoMQ Enterprise Via Helm Chart](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart)
+👉 [Deploy AutoMQ Software Via Helm Chart](https://www.automq.com/docs/automq-cloud/appendix/deploy-automq-enterprise-via-helm-chart)
 
 ## Support
 

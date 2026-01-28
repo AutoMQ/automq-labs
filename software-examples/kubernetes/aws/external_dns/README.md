@@ -1,6 +1,6 @@
-# Best Practice Guide for AutoMQ Enterprise on AWS Kubernetes
+# Best Practice Guide for AutoMQ Software on AWS Kubernetes
 
-This demo summarizes the best practice for deploying AutoMQ Enterprise version on AWS EKS, focusing on the following key features:
+This demo summarizes the best practice for deploying AutoMQ Software version on AWS EKS, focusing on the following key features:
 
 - **Pod Authorization**: Based on IRSA's least privilege control, avoid storing long-term credentials in Pods.
 - **S3 WAL**: Use S3 for WAL storage to achieve fully diskless architecture.
@@ -100,7 +100,7 @@ kubectl create secret generic automq-tls-secret \
 > ```
 > See the [Integrating Metrics with Prometheus guide](https://www.automq.com/docs/automq/observability/integrating-metrics-with-prometheus) for more details.
 
-### 2.3 Install AutoMQ Enterprise
+### 2.3 Install AutoMQ Software
 
 ```bash
 helm install automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart \
