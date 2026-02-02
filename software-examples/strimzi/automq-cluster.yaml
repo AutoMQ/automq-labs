@@ -1,0 +1,96 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: controller
+  labels:
+    strimzi.io/cluster: my-cluster
+spec:
+  replicas: 3
+  roles:
+    - controller
+    - broker
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: 20Gi
+        kraftMetadata: shared
+        deleteClaim: false
+        class: gp2
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 12Gi
+    limits:
+      cpu: 2000m
+      memory: 16Gi
+  template:
+    pod:
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "automq"
+          effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - r6i.large
+                      - r6i.xlarge
+                      - r6i.2xlarge
+                      - r6in.large
+                      - r6in.xlarge
+                      - r6in.2xlarge
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: strimzi.io/component-type
+                    operator: In
+                    values:
+                      - kafka
+              topologyKey: kubernetes.io/hostname
+    kafkaContainer:
+      env:
+        - name: "KAFKA_HEAP_OPTS"
+          value: "-Xmx6g -Xms6g -XX:MaxDirectMemorySize=6g -XX:MetaspaceSize=96m"
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: my-cluster
+  annotations:
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+    strimzi.io/skip-broker-scaledown-check: "true"
+spec:
+  kafka:
+    version: 3.9.0
+    metadataVersion: 3.9-IV0
+    listeners:
+      - name: plain1
+        port: 9092
+        type: internal
+        tls: false
+      - name: plain2
+        port: 9093
+        type: internal
+        tls: false
+    config:
+      elasticstream.enable: true
+      # Replace the following with your bucket config.
+      s3.ops.buckets: "1@s3://${OPS_BUCKET}?region=${AWS_REGION}"
+      s3.data.buckets: "0@s3://${DATA_BUCKET}?region=${AWS_REGION}"
+      s3.wal.path: "0@s3://${DATA_BUCKET}?region=${AWS_REGION}"
+      automq.zonerouter.channels: "0@s3://${DATA_BUCKET}?region=${AWS_REGION}"
+      autobalancer.client.listener.name: PLAIN1-9092
+    rack:
+      topologyKey: topology.kubernetes.io/zone
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}

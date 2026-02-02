@@ -1,0 +1,11 @@
+region          = "us-east-1"
+resource_suffix = "automq"
+
+node_group = {
+  name          = "automq-nodes"
+  desired_size  = 3
+  max_size      = 5
+  min_size      = 3
+  instance_type = "r6i.large"
+  ami_type      = "AL2_x86_64"
+}
