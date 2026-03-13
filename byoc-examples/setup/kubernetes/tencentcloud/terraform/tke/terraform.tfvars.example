@@ -1,0 +1,25 @@
+# Basic Configuration
+region           = "ap-beijing"
+vpc_id           = "vpc-xxxxxxxx"
+tke_cluster_name = "automq-tke"
+
+availability_zones = ["ap-beijing-6"]
+subnet_ids         = ["subnet-xxxxxxxx"]
+
+# TKE Configuration
+tke_cluster_version  = "1.32.2"
+instance_type        = "SA5.LARGE16"
+instance_charge_type = "POSTPAID_BY_HOUR"
+service_cidr         = "192.168.128.0/20"
+
+# Access & Security
+key_ids            = ["skey-xxxxxxxx"]
+security_group_ids = ["sg-xxxxxxxx"]
+
+# CAM Policy
+cam_policy_file = "cam-policy.json"
+
+# Tags
+common_tags = {
+  Environment = "dev"
+}
