@@ -1,0 +1,381 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AutoMQ BYOC Console - One-click deployment template
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - VpcId
+          - SubnetId
+          - SecurityGroupId
+      - Label:
+          default: AutoMQ Configuration
+        Parameters:
+          - Config
+          - ConsoleInitialUser
+          - ConsoleInitialPassword
+          - ConsoleImageVersion
+      - Label:
+          default: EC2 Configuration
+        Parameters:
+          - InstanceType
+          - KeyPairName
+          - AmiId
+    ParameterLabels:
+      VpcId:
+        default: VPC ID
+      SubnetId:
+        default: Subnet ID
+      SecurityGroupId:
+        default: Security Group ID (Optional)
+      Config:
+        default: AutoMQ Config
+      ConsoleInitialUser:
+        default: Console Initial Username
+      ConsoleInitialPassword:
+        default: Console Initial Password
+      ConsoleImageVersion:
+        default: Console Image Version
+      InstanceType:
+        default: EC2 Instance Type
+      KeyPairName:
+        default: Key Pair Name (Optional)
+      AmiId:
+        default: AMI ID (Optional)
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The VPC to deploy the AutoMQ console into.
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: The subnet to launch the EC2 instance in. Must be in the selected VPC.
+
+  SecurityGroupId:
+    Type: String
+    Default: ''
+    Description: >-
+      Existing security group ID. If left empty, a new security group will be
+      created allowing inbound access on port 8080 (HTTP) and port 22 (SSH)
+      from 0.0.0.0/0 (all sources).
+
+  Config:
+    Type: String
+    NoEcho: true
+    Description: Base64-encoded AutoMQ configuration. Auto-filled during one-click deployment.
+
+  ConsoleInitialUser:
+    Type: String
+    Description: Initial admin username for the AutoMQ console.
+
+  ConsoleInitialPassword:
+    Type: String
+    NoEcho: true
+    Description: Initial admin password for the AutoMQ console.
+
+  ConsoleImageVersion:
+    Type: String
+    Description: >-
+      Full Docker image tag for the AutoMQ console
+      (e.g. 8.2.0-SNAPSHOT-20260407053236-aws). Auto-filled during one-click deployment.
+
+  InstanceType:
+    Type: String
+    Default: t4g.large
+    AllowedValues:
+      - t4g.large
+      - m6g.large
+      - m7g.large
+      - t3.large
+      - m5.large
+    Description: >-
+      EC2 instance type (2 vCPU / 8 GiB). ARM-based Graviton instances
+      (t4g, m6g, m7g) are recommended for better price-performance.
+
+  KeyPairName:
+    Type: String
+    Default: ''
+    Description: >-
+      EC2 key pair name for SSH access. If left empty, SSH login will not be
+      available.
+
+  AmiId:
+    Type: String
+    Default: ''
+    Description: >-
+      Custom AMI ID. If left empty, the latest Amazon Linux 2023 AMI will be
+      used.
+
+Mappings:
+  InstanceTypeToArch:
+    t4g.large:
+      Arch: arm64
+    m6g.large:
+      Arch: arm64
+    m7g.large:
+      Arch: arm64
+    t3.large:
+      Arch: x86_64
+    m5.large:
+      Arch: x86_64
+  ArchToAmiSsm:
+    arm64:
+      SsmKey: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+    x86_64:
+      SsmKey: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Conditions:
+  CreateSecurityGroup: !Equals [!Ref SecurityGroupId, '']
+  HasKeyPair: !Not [!Equals [!Ref KeyPairName, '']]
+  HasCustomAmi: !Not [!Equals [!Ref AmiId, '']]
+
+Resources:
+  # ---------- IAM ----------
+  AutoMQConsoleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'automq-byoc-console-role-${AWS::StackName}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub 'automq-byoc-console-policy-${AWS::StackName}'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: PassRoleToEC2
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: '*'
+                Condition:
+                  StringLike:
+                    iam:PassedToService: ec2.amazonaws.com*
+              - Sid: TagScopedMutations
+                Effect: Allow
+                Action:
+                  - autoscaling:AttachInstances
+                  - autoscaling:DeleteAutoScalingGroup
+                  - autoscaling:DetachInstances
+                  - autoscaling:ResumeProcesses
+                  - autoscaling:SuspendProcesses
+                  - autoscaling:UpdateAutoScalingGroup
+                  - ec2:AttachVolume
+                  - ec2:AuthorizeSecurityGroupEgress
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:DeleteSecurityGroup
+                  - ec2:DeleteVolume
+                  - ec2:DetachVolume
+                  - ec2:RebootInstances
+                  - ec2:StopInstances
+                  - ec2:TerminateInstances
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/automqVendor: automq
+              - Sid: ReadOnlyAndProvision
+                Effect: Allow
+                Action:
+                  - autoscaling:CreateAutoScalingGroup
+                  - autoscaling:DescribeAutoScalingGroups
+                  - ec2:CreateLaunchTemplate
+                  - ec2:CreateLaunchTemplateVersion
+                  - ec2:CreateSecurityGroup
+                  - ec2:CreateTags
+                  - ec2:CreateVolume
+                  - ec2:DeleteLaunchTemplate
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeImages
+                  - ec2:DescribeInstanceAttribute
+                  - ec2:DescribeInstanceTypeOfferings
+                  - ec2:DescribeInstances
+                  - ec2:DescribeLaunchTemplateVersions
+                  - ec2:DescribeLaunchTemplates
+                  - ec2:DescribeRouteTables
+                  - ec2:DescribeSecurityGroupRules
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeTags
+                  - ec2:DescribeVolumes
+                  - ec2:DescribeVpcEndpoints
+                  - ec2:DescribeVpcs
+                  - ec2:ModifyLaunchTemplate
+                  - ec2:RunInstances
+                  - elasticloadbalancing:DescribeTargetGroups
+                  - pricing:DescribeServices
+                  - pricing:GetAttributeValues
+                  - pricing:GetProducts
+                  - ssm:GetParameters
+                Resource: '*'
+              - Sid: AutoScalingServiceLinkedRole
+                Effect: Allow
+                Action: iam:CreateServiceLinkedRole
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    iam:AWSServiceName: autoscaling.amazonaws.com
+              - Sid: ECRPull
+                Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchGetImage
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchCheckLayerAvailability
+                Resource: '*'
+      Tags:
+        - Key: automqVendor
+          Value: automq
+        - Key: Name
+          Value: !Sub 'automq-byoc-console-role-${AWS::StackName}'
+
+  AutoMQInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub 'automq-byoc-console-profile-${AWS::StackName}'
+      Roles:
+        - !Ref AutoMQConsoleRole
+
+  # ---------- Security Group (conditional) ----------
+  AutoMQSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CreateSecurityGroup
+    Properties:
+      GroupDescription: AutoMQ BYOC Console security group
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+          Description: AutoMQ Console HTTP
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: SSH access
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: automqVendor
+          Value: automq
+        - Key: Name
+          Value: !Sub 'automq-byoc-console-sg-${AWS::StackName}'
+
+  # ---------- EC2 Instance ----------
+  AutoMQConsoleInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !If
+        - HasCustomAmi
+        - !Ref AmiId
+        - !Sub
+          - '{{resolve:ssm:${SsmKey}}}'
+          - SsmKey: !FindInMap
+              - ArchToAmiSsm
+              - !FindInMap [InstanceTypeToArch, !Ref InstanceType, Arch]
+              - SsmKey
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds:
+        - !If
+          - CreateSecurityGroup
+          - !Ref AutoMQSecurityGroup
+          - !Ref SecurityGroupId
+      IamInstanceProfile: !Ref AutoMQInstanceProfile
+      KeyName: !If
+        - HasKeyPair
+        - !Ref KeyPairName
+        - !Ref AWS::NoValue
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            DeleteOnTermination: true
+        - DeviceName: /dev/xvdb
+          Ebs:
+            VolumeSize: 20
+            VolumeType: gp3
+            DeleteOnTermination: true
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+
+          # ---------- Mount data disk ----------
+          # On Nitro instances (t3/m5/c5), /dev/xvdb maps to /dev/nvme1n1
+          DATA_DEVICE=""
+          for dev in /dev/xvdb /dev/nvme1n1; do
+            if [ -b "${!dev}" ]; then DATA_DEVICE="${!dev}"; break; fi
+          done
+          # Wait for the device to appear
+          if [ -z "${!DATA_DEVICE}" ]; then
+            for i in $(seq 1 60); do
+              for dev in /dev/xvdb /dev/nvme1n1; do
+                if [ -b "${!dev}" ]; then DATA_DEVICE="${!dev}"; break 2; fi
+              done
+              sleep 1
+            done
+          fi
+          # Format only if not already formatted
+          if ! blkid "${!DATA_DEVICE}"; then
+            mkfs.xfs "${!DATA_DEVICE}"
+          fi
+          mkdir -p /data
+          mount "${!DATA_DEVICE}" /data
+          # Persist mount across reboots
+          DATA_UUID=$(blkid -s UUID -o value "${!DATA_DEVICE}")
+          echo "UUID=${!DATA_UUID} /data xfs defaults,nofail 0 2" >> /etc/fstab
+
+          # ---------- Install Docker ----------
+          dnf install -y docker
+          systemctl enable docker
+          systemctl start docker
+
+          # ---------- ECR Login & Pull Image ----------
+          aws ecr get-login-password --region ${AWS::Region} | docker login --username AWS --password-stdin 780817326912.dkr.ecr.ap-northeast-1.amazonaws.com
+
+          # ---------- Start AutoMQ Console Container ----------
+          docker run -d --restart unless-stopped \
+            -v /data:/root \
+            --net=host \
+            -e 'CONFIG=${Config}' \
+            -e 'CONSOLE_INITIAL_USER=${ConsoleInitialUser}' \
+            -e 'CONSOLE_INITIAL_PASSWORD=${ConsoleInitialPassword}' \
+            780817326912.dkr.ecr.ap-northeast-1.amazonaws.com/automq/automq-byoc-console:${ConsoleImageVersion}
+      Tags:
+        - Key: automqVendor
+          Value: automq
+        - Key: Name
+          Value: !Sub 'automq-byoc-console-${AWS::StackName}'
+
+Outputs:
+  InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref AutoMQConsoleInstance
+
+  PrivateIp:
+    Description: Private IP address of the console instance
+    Value: !GetAtt AutoMQConsoleInstance.PrivateIp
+
+  ConsoleUrl:
+    Description: AutoMQ Console URL (use public IP if instance has one)
+    Value: !Sub 'http://${AutoMQConsoleInstance.PrivateIp}:8080'
+
+  SecurityGroupId:
+    Description: Security group ID used by the console instance
+    Value: !If
+      - CreateSecurityGroup
+      - !Ref AutoMQSecurityGroup
+      - !Ref SecurityGroupId
+
+  IAMRoleArn:
+    Description: ARN of the IAM role attached to the console instance
+    Value: !GetAtt AutoMQConsoleRole.Arn
