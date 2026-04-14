@@ -149,7 +149,7 @@ metadata:
     strimzi.io/skip-broker-scaledown-check: "true"
 spec:
   kafka:
-    version: 3.9.0
+    version: 3.9.1
     metadataVersion: 3.9-IV0
     listeners:
       - name: plain1
