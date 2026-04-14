@@ -27,6 +27,8 @@ The key to deploying Strimzi Operator is to provide a custom `values.yaml` file 
 
 A pre-configured `strimzi-values.yaml` file is provided in this directory as your starting point. We recommend using the fixed version `0.47` of Strimzi to avoid compatibility issues.
 
+The `strimzi-values.yaml` maps Kafka versions to AutoMQ container images via the `STRIMZI_KAFKA_IMAGES` environment variable. The current default configuration uses AutoMQ `1.6.5` (based on Kafka `3.9.1`).
+
 **Action:**
 
 Customize the `strimzi-values.yaml` file based on your requirements, or use the provided configuration as-is.
@@ -79,9 +81,53 @@ This command will create a new AutoMQ cluster managed by the Strimzi Operator in
 
 ## Managing the Deployment
 
-### Upgrading the Deployment
+### Upgrading AutoMQ Version
 
-To apply changes to your Strimzi Operator deployment after updating `strimzi-values.yaml`, use the `helm upgrade` command:
+To upgrade AutoMQ to a new version (e.g., from `1.6.0` to `1.6.5`), follow these steps in order:
+
+#### Step 1: Update the image mapping
+
+Edit `strimzi-values.yaml` to point the target Kafka version to the new AutoMQ image. For example, to upgrade to AutoMQ `1.6.5` (based on Kafka `3.9.1`):
+
+```yaml
+extraEnvs:
+  - name: STRIMZI_KAFKA_IMAGES
+    value: |
+      3.9.0=automqinc/automq:1.6.0-strimzi
+      3.9.1=automqinc/automq:1.6.5-strimzi
+      4.0.0=quay.io/strimzi/kafka:0.47.0-kafka-4.0.0
+```
+
+Then apply the change to the Strimzi Operator:
+
+```shell
+helm upgrade automq-strimzi-operator oci://quay.io/strimzi-helm/strimzi-kafka-operator \
+  --version 0.47.0 \
+  --namespace automq \
+  --values strimzi-values.yaml
+```
+
+#### Step 2: Update the Kafka version in the cluster spec
+
+If the new AutoMQ version is based on a different Kafka version (e.g., upgrading from `3.9.0` to `3.9.1`), update `spec.kafka.version` in `automq-demo.yaml`:
+
+```yaml
+spec:
+  kafka:
+    version: 3.9.1
+```
+
+Then apply the change to trigger a rolling upgrade:
+
+```shell
+kubectl apply -f automq-demo.yaml -n automq
+```
+
+> **Important:** Always run `helm upgrade` first (Step 1), then `kubectl apply` (Step 2). The Operator must know the new image mapping before the cluster version change is applied.
+
+### Upgrading Operator Configuration
+
+To apply other changes to your Strimzi Operator deployment after updating `strimzi-values.yaml`, use the `helm upgrade` command:
 
 ```shell
 helm upgrade automq-strimzi-operator oci://quay.io/strimzi-helm/strimzi-kafka-operator \
