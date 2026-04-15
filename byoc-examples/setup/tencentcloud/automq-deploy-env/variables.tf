@@ -19,12 +19,12 @@ variable "availability_zones" {
 variable "automq_node_pool" {
   description = "Configuration for the AutoMQ workload node pool"
   type = object({
-    instance_type      = string
-    min_size           = number
-    max_size           = number
-    desired_capacity   = number
-    spot               = bool
-    spot_max_price     = optional(string, "1000")
+    instance_type    = string
+    min_size         = number
+    max_size         = number
+    desired_capacity = number
+    spot             = bool
+    spot_max_price   = optional(string, "1000")
   })
   default = {
     instance_type    = "SA5.LARGE16"
