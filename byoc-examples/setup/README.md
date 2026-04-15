@@ -6,4 +6,5 @@ This directory provides guides and Terraform scripts for deploying AutoMQ on var
 
 *   [**AWS**](aws/README.md): Deploy AutoMQ on Amazon Web Services. (**Available**)
 *   [**Azure**](azure/README.md): Deploy AutoMQ on Microsoft Azure. (*Coming Soon*)
+*   [**Tencent Cloud**](tencentcloud/README.md): Deploy AutoMQ on Tencent Cloud. (**Available**)
 *   [**GCP**](./gcp/README.md): Deploy AutoMQ on Google Cloud Platform. (*Coming Soon*)
