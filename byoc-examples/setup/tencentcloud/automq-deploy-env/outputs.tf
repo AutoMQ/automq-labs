@@ -3,9 +3,9 @@ output "cloud_provider" {
   value       = "tencentcloud"
 }
 
-output "scope" {
-  description = "Current account main UIN identifier"
-  value       = data.tencentcloud_user_info.current.uin
+output "cloud_account_id" {
+  description = "Tencent Cloud account ID (owner UIN)"
+  value       = data.tencentcloud_user_info.current.owner_uin
 }
 
 output "region" {
@@ -14,8 +14,8 @@ output "region" {
 }
 
 output "zone" {
-  description = "Primary availability zone"
-  value       = local.azs[0]
+  description = "Primary availability zone (from the first provided subnet)"
+  value       = data.tencentcloud_vpc_subnets.selected.instance_list[0].availability_zone
 }
 
 output "cluster" {
@@ -25,22 +25,12 @@ output "cluster" {
 
 output "vpc_id" {
   description = "VPC ID"
-  value       = tencentcloud_vpc.main.id
+  value       = var.vpc_id
 }
 
-output "console_subnet_id" {
-  description = "Public subnet ID for console placement"
-  value       = tencentcloud_subnet.public.id
-}
-
-output "automq_subnet_map" {
-  description = "Map of availability zones to private subnet IDs"
-  value = {
-    for zone, subnet_ids in {
-      for subnet in tencentcloud_subnet.private :
-      subnet.availability_zone => subnet.id...
-    } : zone => subnet_ids
-  }
+output "subnet_ids" {
+  description = "Subnet IDs used for TKE cluster"
+  value       = var.subnet_ids
 }
 
 output "ops_bucket_name" {
@@ -55,7 +45,7 @@ output "cluster_security_group" {
 
 # Outputs consumed by other modules
 output "k8s_cluster_auth" {
-  description = "K8s cluster auth info from TKE internet endpoint"
+  description = "K8s cluster auth info from TKE internet endpoint (empty when public access is disabled)"
   sensitive   = true
   value = {
     endpoint           = local.cluster_endpoint_internet
@@ -67,9 +57,9 @@ output "k8s_cluster_auth" {
 }
 
 output "kube_config" {
-  description = "Kubeconfig"
+  description = "Kubeconfig for internet endpoint (empty when public access is disabled)"
   sensitive   = true
-  value       = tencentcloud_kubernetes_cluster_endpoint.endpoint.kube_config
+  value       = var.enable_cluster_internet ? tencentcloud_kubernetes_cluster_endpoint.endpoint.kube_config : ""
 }
 
 output "k8s_cluster_auth_intranet" {

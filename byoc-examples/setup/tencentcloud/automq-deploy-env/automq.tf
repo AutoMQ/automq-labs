@@ -4,7 +4,7 @@ resource "tencentcloud_private_dns_zone" "console" {
 
   vpc_set {
     region      = var.region
-    uniq_vpc_id = tencentcloud_vpc.main.id
+    uniq_vpc_id = var.vpc_id
   }
 }
 
@@ -147,8 +147,8 @@ resource "tencentcloud_kubernetes_node_pool" "automq_node_pool" {
   name       = "automq-node-pool"
   cluster_id = tencentcloud_kubernetes_cluster.main.id
 
-  vpc_id     = tencentcloud_vpc.main.id
-  subnet_ids = tencentcloud_subnet.private[*].id
+  vpc_id     = var.vpc_id
+  subnet_ids = var.subnet_ids
 
   min_size         = var.automq_node_pool.min_size
   max_size         = var.automq_node_pool.max_size
@@ -163,9 +163,11 @@ resource "tencentcloud_kubernetes_node_pool" "automq_node_pool" {
   auto_scaling_config {
     instance_type = var.automq_node_pool.instance_type
 
-    instance_charge_type = var.automq_node_pool.spot ? "SPOTPAID" : "POSTPAID_BY_HOUR"
-    spot_instance_type   = var.automq_node_pool.spot ? "one-time" : null
-    spot_max_price       = var.automq_node_pool.spot ? var.automq_node_pool.spot_max_price : null
+    instance_charge_type       = var.automq_node_pool.instance_charge_type
+    spot_instance_type         = var.automq_node_pool.instance_charge_type == "SPOTPAID" ? "one-time" : null
+    spot_max_price             = var.automq_node_pool.instance_charge_type == "SPOTPAID" ? var.automq_node_pool.spot_max_price : null
+    instance_charge_type_prepaid_period       = var.automq_node_pool.instance_charge_type == "PREPAID" ? var.automq_node_pool.prepaid_period : null
+    instance_charge_type_prepaid_renew_flag   = var.automq_node_pool.instance_charge_type == "PREPAID" ? var.automq_node_pool.prepaid_renew_flag : null
 
     system_disk_type   = "CLOUD_BSSD"
     system_disk_size   = 50

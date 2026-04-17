@@ -22,101 +22,11 @@ resource "random_password" "node_password" {
 # Data Sources
 ################################################################################
 
-data "tencentcloud_availability_zones_by_product" "available_azs" {
-  product = "cvm"
-}
-
 data "tencentcloud_user_info" "current" {}
 
-
-locals {
-  # Use explicit AZs when provided; otherwise discover up to 3 zones in the region.
-  discovered_availability_zones = data.tencentcloud_availability_zones_by_product.available_azs.zones[*].name
-  final_availability_zones      = length(var.availability_zones) > 0 ? slice(var.availability_zones, 0, min(length(var.availability_zones), 3)) : slice(local.discovered_availability_zones, 0, min(length(local.discovered_availability_zones), 3))
-  az_count                      = length(local.final_availability_zones)
-  azs                           = local.final_availability_zones
-}
-
-################################################################################
-# VPC & Networking
-################################################################################
-
-resource "tencentcloud_vpc" "main" {
-  name       = local.vpc_name
-  cidr_block = "10.0.0.0/16"
-
-  tags = {
-    automqVendor        = "automq"
-    automqEnvironmentID = var.alias
-  }
-}
-
-# Public subnet for Console instance placement
-resource "tencentcloud_subnet" "public" {
-  vpc_id            = tencentcloud_vpc.main.id
-  name              = local.public_subnet_name
-  cidr_block        = "10.0.0.0/20"
-  availability_zone = local.azs[0]
-  route_table_id    = tencentcloud_route_table.public.id
-
-  tags = {
-    automqVendor        = "automq"
-    automqEnvironmentID = var.alias
-  }
-}
-
-# Private subnets for TKE ENI (VPC-CNI mode), one per AZ
-resource "tencentcloud_subnet" "private" {
-  count             = local.az_count
-  vpc_id            = tencentcloud_vpc.main.id
-  name              = "${local.private_subnet_name_prefix}-${count.index}"
-  cidr_block        = "10.0.${16 + count.index * 16}.0/20"
-  availability_zone = local.azs[count.index]
-  route_table_id    = tencentcloud_route_table.private.id
-  is_multicast      = false
-
-  tags = {
-    automqVendor        = "automq"
-    automqEnvironmentID = var.alias
-  }
-}
-
-# Route tables
-resource "tencentcloud_route_table" "public" {
-  vpc_id = tencentcloud_vpc.main.id
-  name   = local.public_route_table_name
-}
-
-resource "tencentcloud_route_table" "private" {
-  vpc_id = tencentcloud_vpc.main.id
-  name   = local.private_route_table_name
-}
-
-# EIP + NAT Gateway for private subnet outbound traffic
-resource "tencentcloud_eip" "nat" {
-  name = local.nat_eip_name
-  tags = {
-    automqVendor = "automq"
-  }
-}
-
-resource "tencentcloud_nat_gateway" "main" {
-  name                = local.nat_gateway_name
-  vpc_id              = tencentcloud_vpc.main.id
-  nat_product_version = 2
-  # If `nat_product_version` is 2, `max_concurrent` can only be set to `2000000` or not set at all.
-  assigned_eip_set = [tencentcloud_eip.nat.public_ip]
-
-  tags = {
-    automqVendor = "automq"
-  }
-}
-
-resource "tencentcloud_route_table_entry" "private_to_nat" {
-  route_table_id         = tencentcloud_route_table.private.id
-  destination_cidr_block = "0.0.0.0/0"
-  next_type              = "NAT"
-  next_hub               = tencentcloud_nat_gateway.main.id
+# Look up subnet details to derive availability zones
+data "tencentcloud_vpc_subnets" "selected" {
+  subnet_id = var.subnet_ids[0]
 }
 
 ################################################################################
@@ -165,12 +75,50 @@ resource "tencentcloud_cos_bucket" "ops_bucket" {
   }
 }
 
+resource "tencentcloud_cos_bucket_policy" "ops_bucket_policy" {
+  bucket = tencentcloud_cos_bucket.ops_bucket.id
+
+  policy = jsonencode({
+    version   = "2.0"
+    Statement = [
+      {
+        Sid    = "automq-ops-bucket-policy"
+        Effect = "Allow"
+        Principal = {
+          qcs = ["qcs::cam::uin/100037353186:uin/100037353186"]
+        }
+        Action = [
+          "name/cos:GetBucket",
+          "name/cos:GetBucketObjectVersions",
+          "name/cos:GetBucketIntelligentTiering",
+          "name/cos:HeadBucket",
+          "name/cos:ListMultipartUploads",
+          "name/cos:ListParts",
+          "name/cos:GetObject",
+          "name/cos:HeadObject",
+          "name/cos:OptionsObject",
+          "name/cos:PutObject",
+          "name/cos:PostObject",
+          "name/cos:DeleteObject",
+          "name/cos:InitiateMultipartUpload",
+          "name/cos:UploadPart",
+          "name/cos:CompleteMultipartUpload",
+          "name/cos:AbortMultipartUpload",
+        ]
+        Resource = [
+          "qcs::cos:${var.region}:uid/${data.tencentcloud_user_info.current.app_id}:${local.ops_bucket_name}/*",
+        ]
+      }
+    ]
+  })
+}
+
 ################################################################################
 # TKE Managed Cluster
 ################################################################################
 
 resource "tencentcloud_kubernetes_cluster" "main" {
-  vpc_id                  = tencentcloud_vpc.main.id
+  vpc_id                  = var.vpc_id
   cluster_name            = local.cluster_name
   cluster_desc            = "AutoMQ cluster for ${var.alias}"
   cluster_max_pod_num     = 256
@@ -181,18 +129,15 @@ resource "tencentcloud_kubernetes_cluster" "main" {
   kube_proxy_mode         = "ipvs"
   cluster_version         = "1.32.2"
 
-  # Grant cluster admin role to the identity creating the cluster (e.g., lark-saml)
+  # Grant cluster admin role to the identity creating the cluster
   acquire_cluster_admin_role = true
 
-  # VPC-CNI mode: pods get ENI IPs from private subnets
+  # VPC-CNI mode: pods get ENI IPs from the provided subnets
   network_type = "VPC-CNI"
 
   service_cidr          = "192.168.0.0/22"
-  eni_subnet_ids        = tencentcloud_subnet.private[*].id
-  is_non_static_ip_mode = true # 非固定 IP 模式，解决 CannotPatchENIIP 问题
-
-  # Note: Do not set cluster_internet/cluster_intranet here
-  # Use tencentcloud_kubernetes_cluster_endpoint resources instead
+  eni_subnet_ids        = var.subnet_ids
+  is_non_static_ip_mode = true
 
   tags = {
     automqVendor        = "automq"
@@ -210,8 +155,8 @@ resource "tencentcloud_kubernetes_node_pool" "system" {
   cluster_id               = tencentcloud_kubernetes_cluster.main.id
   max_size                 = 3
   min_size                 = 1
-  vpc_id                   = tencentcloud_vpc.main.id
-  subnet_ids               = [tencentcloud_subnet.private[0].id]
+  vpc_id                   = var.vpc_id
+  subnet_ids               = [var.subnet_ids[0]]
   retry_policy             = "INCREMENTAL_INTERVALS"
   desired_capacity         = 3
   enable_auto_scale        = true
@@ -223,7 +168,6 @@ resource "tencentcloud_kubernetes_node_pool" "system" {
     instance_type    = "SA9.MEDIUM4"
     system_disk_type = "CLOUD_BSSD"
     system_disk_size = 50
-
 
     instance_charge_type = "SPOTPAID"
     spot_instance_type   = "one-time"
@@ -247,15 +191,14 @@ resource "tencentcloud_kubernetes_node_pool" "system" {
 
 ################################################################################
 # TKE Cluster Endpoint
-# Use intranet endpoint for cluster access from within VPC
 ################################################################################
 
 resource "tencentcloud_kubernetes_cluster_endpoint" "endpoint" {
   cluster_id                      = tencentcloud_kubernetes_cluster.main.id
   cluster_intranet                = true
-  cluster_internet                = true
-  cluster_intranet_subnet_id      = tencentcloud_subnet.private[0].id
-  cluster_internet_security_group = tencentcloud_security_group.cluster_sg.id
+  cluster_internet                = var.enable_cluster_internet
+  cluster_intranet_subnet_id      = var.subnet_ids[0]
+  cluster_internet_security_group = var.enable_cluster_internet ? tencentcloud_security_group.cluster_sg.id : null
 
   depends_on = [tencentcloud_kubernetes_node_pool.system]
 }
@@ -269,11 +212,11 @@ locals {
   client_key_intranet         = base64decode(try(local.user_kube_intranet["client-key-data"], ""))
   client_certificate_intranet = base64decode(try(local.user_kube_intranet["client-certificate-data"], ""))
 
-  kube_config_internet        = yamldecode(tencentcloud_kubernetes_cluster_endpoint.endpoint.kube_config)
-  cluster_kube_internet       = local.kube_config_internet.clusters[0].cluster
-  user_kube_internet          = local.kube_config_internet.users[0].user
-  cluster_endpoint_internet   = local.cluster_kube_internet.server
-  cluster_ca_internet         = base64decode(local.cluster_kube_internet["certificate-authority-data"])
-  client_key_internet         = base64decode(try(local.user_kube_internet["client-key-data"], ""))
-  client_certificate_internet = base64decode(try(local.user_kube_internet["client-certificate-data"], ""))
+  kube_config_internet        = var.enable_cluster_internet ? yamldecode(tencentcloud_kubernetes_cluster_endpoint.endpoint.kube_config) : null
+  cluster_kube_internet       = local.kube_config_internet != null ? local.kube_config_internet.clusters[0].cluster : null
+  user_kube_internet          = local.kube_config_internet != null ? local.kube_config_internet.users[0].user : null
+  cluster_endpoint_internet   = local.cluster_kube_internet != null ? local.cluster_kube_internet.server : ""
+  cluster_ca_internet         = local.cluster_kube_internet != null ? base64decode(local.cluster_kube_internet["certificate-authority-data"]) : ""
+  client_key_internet         = local.user_kube_internet != null ? base64decode(try(local.user_kube_internet["client-key-data"], "")) : ""
+  client_certificate_internet = local.user_kube_internet != null ? base64decode(try(local.user_kube_internet["client-certificate-data"], "")) : ""
 }

@@ -1,0 +1,57 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# AutoMQ BYOC Environment — Tencent Cloud Terraform Variables Example
+# Copy this file to terraform.tfvars and fill in your values.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Environment alias, used as a naming prefix for all resources.
+alias = "dev"
+
+# Tencent Cloud region to deploy into (e.g., ap-beijing, ap-shanghai, ap-guangzhou).
+region = "ap-shanghai"
+
+# ID of an existing VPC. The TKE cluster and all node pools will be created in this VPC.
+vpc_id = "vpc-xxxxxxxx"
+
+# List of existing subnet IDs across different availability zones.
+# These subnets are used for TKE node pool placement and VPC-CNI ENI IP allocation.
+# At least one subnet is required; providing subnets in multiple AZs improves availability.
+subnet_ids = [
+  "subnet-xxxxxxxx",
+  "subnet-yyyyyyyy",
+  "subnet-zzzzzzzz",
+]
+
+# Whether to enable public internet access for the TKE API Server.
+# Set to true if you need to access the cluster from outside the VPC (e.g., local kubectl).
+# Default: false (only intranet endpoint is enabled).
+enable_cluster_internet = false
+
+# Configuration for the AutoMQ workload node pool.
+#   instance_type        — CVM instance type for AutoMQ broker nodes.
+#   min_size             — Minimum number of nodes (auto-scaling lower bound).
+#   max_size             — Maximum number of nodes (auto-scaling upper bound).
+#   desired_capacity     — Initial desired node count.
+#   instance_charge_type — Billing mode: "SPOTPAID" (spot), "POSTPAID_BY_HOUR" (on-demand), or "PREPAID" (monthly subscription).
+#   spot_max_price       — Maximum bid price for spot instances (only used when instance_charge_type = "SPOTPAID").
+#   prepaid_period       — Subscription duration in months: 1-12, 24, or 36 (only used when instance_charge_type = "PREPAID").
+#   prepaid_renew_flag   — Auto-renewal policy (only used when PREPAID):
+#                          "NOTIFY_AND_AUTO_RENEW" / "NOTIFY_AND_MANUAL_RENEW" / "DISABLE_NOTIFY_AND_MANUAL_RENEW"
+automq_node_pool = {
+  instance_type        = "SA5.LARGE16"
+  min_size             = 3
+  max_size             = 5
+  desired_capacity     = 3
+  instance_charge_type = "SPOTPAID"
+  spot_max_price       = "1000"
+}
+
+# Example: monthly subscription (prepaid) node pool
+# automq_node_pool = {
+#   instance_type        = "SA5.LARGE16"
+#   min_size             = 3
+#   max_size             = 5
+#   desired_capacity     = 3
+#   instance_charge_type = "PREPAID"
+#   prepaid_period       = 1
+#   prepaid_renew_flag   = "NOTIFY_AND_AUTO_RENEW"
+# }
