@@ -55,3 +55,31 @@ automq_node_pool = {
 #   prepaid_period       = 1
 #   prepaid_renew_flag   = "NOTIFY_AND_AUTO_RENEW"
 # }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Console Instance (optional)
+# Set enable_console = true to create a console CVM with EIP, CBS data disk,
+# SSH key pair, dedicated security group, and CAM role.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Whether to create the AutoMQ console instance and its dependencies.
+# Default: false
+enable_console = false
+
+# Subnet ID for the console CVM instance. Required when enable_console = true.
+# console_subnet_id = "subnet-xxxxxxxx"
+
+# Image name regex to find the console AMI. Default: "automq-byoc-console"
+# console_image_name = "automq-byoc-console"
+
+# CVM instance type for the console. Default: "SA9.MEDIUM4"
+# console_instance_type = "SA9.MEDIUM4"
+
+# Whether to run cloud-init to auto-configure the console on first boot.
+# Default: true
+# console_init = true
+
+# Whether to assign a public EIP to the console instance.
+# When false, the console is only accessible via its private IP within the VPC.
+# Default: false
+# console_public_access = true

@@ -6,6 +6,12 @@ terraform {
     random = {
       source = "hashicorp/random"
     }
+    tls = {
+      source = "hashicorp/tls"
+    }
+    local = {
+      source = "hashicorp/local"
+    }
   }
 }
 

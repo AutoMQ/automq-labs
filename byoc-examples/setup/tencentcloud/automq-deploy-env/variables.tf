@@ -26,6 +26,42 @@ variable "enable_cluster_internet" {
   default     = false
 }
 
+variable "enable_console" {
+  description = "Whether to create the AutoMQ console CVM instance and its dependencies (security group, CAM role, EIP, CBS disk, SSH key pair)"
+  type        = bool
+  default     = false
+}
+
+variable "console_subnet_id" {
+  description = "Subnet ID for the console CVM instance. Required when enable_console = true."
+  type        = string
+  default     = ""
+}
+
+variable "console_image_name" {
+  description = "Image name regex filter for the console CVM instance"
+  type        = string
+  default     = "automq-byoc-console"
+}
+
+variable "console_instance_type" {
+  description = "CVM instance type for the console"
+  type        = string
+  default     = "SA9.MEDIUM4"
+}
+
+variable "console_init" {
+  description = "Whether to run console environment initialization via cloud-init"
+  type        = bool
+  default     = false
+}
+
+variable "console_public_access" {
+  description = "Whether to assign a public EIP to the console instance"
+  type        = bool
+  default     = false
+}
+
 variable "automq_node_pool" {
   description = "Configuration for the AutoMQ workload node pool"
   type = object({
