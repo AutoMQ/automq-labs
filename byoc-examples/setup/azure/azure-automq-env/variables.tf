@@ -31,7 +31,7 @@ variable "private_subnet_id" {
 variable "kubernetes_version" {
   description = "AKS control plane version"
   type        = string
-  default     = "1.32.9"
+  default     = "1.34.7"
 }
 
 variable "kubernetes_pricing_tier" {
