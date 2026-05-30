@@ -1,0 +1,12 @@
+apiVersion: 1
+
+providers:
+  - name: Mimir AutoMQ Lab
+    orgId: 1
+    folder: AutoMQ Labs
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

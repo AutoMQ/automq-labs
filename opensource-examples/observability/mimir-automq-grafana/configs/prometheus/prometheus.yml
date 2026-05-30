@@ -1,0 +1,61 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+  external_labels:
+    cluster: mimir-automq-lab
+    namespace: docker-compose
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: automq
+    static_configs:
+      - targets: ["automq:9090"]
+
+  - job_name: mimir/distributor
+    static_configs:
+      - targets: ["mimir-distributor:8080"]
+        labels:
+          component: distributor
+
+  - job_name: mimir/ingester
+    static_configs:
+      - targets: ["mimir-ingester-zone-a-0:8080"]
+        labels:
+          component: ingester
+          zone: zone-a
+      - targets: ["mimir-ingester-zone-b-0:8080"]
+        labels:
+          component: ingester
+          zone: zone-b
+
+  - job_name: mimir/query
+    static_configs:
+      - targets: ["mimir-query-frontend:8080"]
+        labels:
+          component: query-frontend
+      - targets: ["mimir-query-scheduler:8080"]
+        labels:
+          component: query-scheduler
+      - targets: ["mimir-querier:8080"]
+        labels:
+          component: querier
+
+  - job_name: mimir/storage
+    static_configs:
+      - targets: ["mimir-store-gateway:8080"]
+        labels:
+          component: store-gateway
+      - targets: ["mimir-compactor:8080"]
+        labels:
+          component: compactor
+
+remote_write:
+  - url: http://mimir-distributor:8080/api/v1/push
+    remote_timeout: 10s
+    queue_config:
+      capacity: 20000
+      max_samples_per_send: 2000
+      max_shards: 8

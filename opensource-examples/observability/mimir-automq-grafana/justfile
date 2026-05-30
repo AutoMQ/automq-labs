@@ -1,0 +1,40 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+default:
+    @just --list
+
+up:
+    docker compose up -d
+    @echo
+    @echo "Grafana:    http://localhost:3000/d/mimir-automq-lab"
+    @echo "Mimir API:  http://localhost:9010/prometheus"
+    @echo "Prometheus: http://localhost:9091"
+    @echo "MinIO:      http://localhost:9001  admin/password"
+    @echo "AutoMQ:     localhost:29092"
+
+down:
+    docker compose down -v
+
+logs:
+    docker compose logs -f
+
+ps:
+    docker compose ps
+
+config:
+    docker compose config
+
+verify:
+    @./scripts/verify.sh
+
+query-traffic:
+    @./scripts/generate-metrics.sh
+
+produce:
+    @just query-traffic
+
+failure-demo:
+    @./scripts/failure-ingester.sh
+
+open-play:
+    @open ../../../site/play/mimir.html
