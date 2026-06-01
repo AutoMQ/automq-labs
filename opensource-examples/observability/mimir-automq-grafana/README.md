@@ -1,8 +1,7 @@
 # Mimir + AutoMQ Ingest Storage Lab
 
-This lab is the runnable companion for `site/play/mimir.html`. It runs a small
-Mimir ingest-storage deployment where AutoMQ provides the Kafka-compatible
-durable log, and MinIO stands in for S3.
+This lab runs a small Mimir ingest-storage deployment where AutoMQ provides the
+Kafka-compatible durable log, and MinIO stands in for S3.
 
 ## Architecture
 
@@ -41,6 +40,7 @@ within minutes.
 
 - Docker with Docker Compose.
 - `just` for running the demo commands.
+- Go 1.24 or later for building the local workload-generator binary.
 - `curl` for verification commands.
 - At least 8 GB of available memory is recommended for the full stack.
 
@@ -67,6 +67,17 @@ just down
 ```
 
 First image pulls can take a while. If Docker Hub times out, rerun `just up`.
+
+`just up` first runs `just build-workload`, which compiles the synthetic
+workload generator into `workload-generator/bin/workload-generator` for the
+current host architecture. The generator Docker image then uses `scratch` and
+copies that local binary, so it does not pull a remote `golang` builder image.
+If you run Docker Compose directly, build the binary first:
+
+```bash
+just build-workload
+docker compose up -d --build
+```
 
 ## Verify The Data Path
 
@@ -113,7 +124,7 @@ or two Prometheus scrape intervals and retry.
 ## Dashboard Guide
 
 Open Grafana at http://localhost:3000/d/mimir-automq-lab and check these
-panels:
+infrastructure panels:
 
 | Panel | What it shows |
 | --- | --- |
@@ -123,10 +134,30 @@ panels:
 | Bytes Written To AutoMQ | Bytes written by Mimir ingest storage into the Kafka-compatible topic. |
 | Ingester Consumption From AutoMQ | Ingesters consuming records from AutoMQ, grouped by zone. |
 
-The demo does not use mocked metrics. Prometheus scrapes real metrics from
-AutoMQ, Mimir, and Prometheus itself, then remote-writes those samples into
-Mimir. The `just query-traffic` command only creates extra read-path activity by
-querying Mimir for a short period.
+Open the business workload dashboard at
+http://localhost:3000/d/mimir-automq-business to see the synthetic commerce
+workload. The workload generator exposes standard Prometheus metrics at
+`/metrics`; Prometheus scrapes those metrics and remote-writes them into Mimir.
+
+Useful workload panels:
+
+| Panel | What it shows |
+| --- | --- |
+| Orders Per Second By Status | Synthetic order throughput split by success, failed, and cancelled orders. |
+| Checkout Latency | p50/p95/p99 checkout latency from a Prometheus histogram. |
+| Payment Failure Rate | Failure-rate spikes during incident scenarios. |
+| Active Users | Regional traffic shape. |
+| Revenue Per Second | Business impact of traffic and failures. |
+| Mimir Ingest Path | How the business workload changes remote_write and Mimir ingest throughput. |
+| AutoMQ-Backed Ingest Storage Traffic | Bytes written by Mimir ingest storage into the Kafka-compatible topic. |
+| Product View Series | High-cardinality product-view series exposed by the workload generator. |
+| Product Views Per Second | Product-view traffic generated across shop, campaign, and category labels. |
+
+The infrastructure dashboard uses real metrics from AutoMQ, Mimir, and
+Prometheus itself. The business dashboard uses a synthetic workload generator so
+the demo has repeatable traffic spikes and failure patterns. The generator does
+not write directly to Mimir; it follows the normal Prometheus scrape and
+remote_write path.
 
 ## Commands
 
@@ -137,6 +168,11 @@ querying Mimir for a short period.
 | `just query-traffic` | Generate extra query traffic while Prometheus remote-writes samples. |
 | `just produce` | Backward-compatible alias for `just query-traffic`. |
 | `just failure-demo` | Stop one ingester, keep writes flowing through AutoMQ, restart it, and show replay logs. |
+| `just workload-normal` | Switch the synthetic workload back to normal traffic. |
+| `just workload-spike` | Trigger a two-minute business traffic spike. |
+| `just workload-failure` | Trigger a two-minute failure scenario with higher latency and payment failures. |
+| `just workload-recover` | Trigger a gradual recovery scenario. |
+| `just workload-cardinality-spike` | Trigger a two-minute high-cardinality spike with 3,000 product-view series. |
 | `just logs` | Follow container logs. |
 | `just down` | Stop and remove the local environment and volumes. |
 
@@ -144,7 +180,9 @@ querying Mimir for a short period.
 
 | Service | URL |
 | --- | --- |
-| Grafana dashboard | http://localhost:3000/d/mimir-automq-lab |
+| Infrastructure dashboard | http://localhost:3000/d/mimir-automq-lab |
+| Business workload dashboard | http://localhost:3000/d/mimir-automq-business |
+| Workload generator scenario API | http://localhost:18080/scenario |
 | Mimir query-frontend | http://localhost:9010/prometheus |
 | Mimir distributor | http://localhost:9009 |
 | Prometheus | http://localhost:9091 |
@@ -156,15 +194,39 @@ querying Mimir for a short period.
 
 1. Run `just up`.
 2. Open Grafana and watch the `Mimir + AutoMQ Ingest Storage Lab` dashboard.
-3. Open MinIO and inspect `automq-data` and `mimir-blocks`.
-4. Run `just failure-demo`.
-5. Watch the replay-delay and ingester-consumption panels while the stopped
+3. Open the `Mimir + AutoMQ Business Workload` dashboard.
+4. Run `just workload-spike` or `just workload-failure`.
+5. Watch the business curves change and the Mimir/AutoMQ ingest panels follow.
+6. Open MinIO and inspect `automq-data` and `mimir-blocks`.
+7. Run `just failure-demo`.
+8. Watch the replay-delay and ingester-consumption panels while the stopped
    ingester starts again.
 
 The failure demo stops one ingester for 45 seconds. During that window,
 Prometheus continues remote-writing samples to the Mimir distributor. The
 distributor acknowledges writes after AutoMQ persists the records, and the
 restarted ingester catches up from its Kafka consumer-group offset.
+
+## Workload Scenario API
+
+The generator exposes a small HTTP API:
+
+```bash
+curl -X POST http://localhost:18080/scenario/normal
+curl -X POST 'http://localhost:18080/scenario/spike?duration=2m&multiplier=8'
+curl -X POST 'http://localhost:18080/scenario/failure?duration=2m&error_rate=0.14'
+curl -X POST 'http://localhost:18080/scenario/recover?duration=2m'
+curl -X POST 'http://localhost:18080/scenario/cardinality-spike?duration=2m&series=3000'
+curl http://localhost:18080/scenario
+```
+
+Prometheus scrapes `http://workload-generator:18080/metrics`, so scenario
+changes appear in Grafana after the next scrape and remote_write cycle.
+The `cardinality-spike` scenario increases the number of exposed
+`demo_product_views_total` label combinations. This should make
+`prometheus_remote_storage_samples_total`, Mimir distributor received samples,
+and AutoMQ-backed ingest-storage bytes rise more visibly than a value-only
+traffic spike.
 
 ## Troubleshooting
 

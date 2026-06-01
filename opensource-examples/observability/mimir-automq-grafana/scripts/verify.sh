@@ -40,6 +40,7 @@ wait_http "Mimir distributor" "http://localhost:9009/ready"
 wait_http "Mimir query-frontend" "http://localhost:9010/ready"
 wait_http "Grafana" "http://localhost:3000/api/health"
 wait_http "Prometheus" "http://localhost:9091/-/ready"
+wait_http "Workload generator" "http://localhost:18080/healthz"
 
 echo
 echo "Querying Mimir for a Prometheus self metric..."
@@ -61,6 +62,24 @@ fi
 
 if echo "$grafana_response" | grep -q '"result":\[\]'; then
   echo "Grafana datasource query returned no series. Wait for Prometheus to scrape and remote-write samples, then retry."
+  exit 1
+fi
+
+echo
+echo "Querying Mimir for synthetic workload metrics..."
+workload_response="$(
+  curl -fsS --get "http://localhost:9010/prometheus/api/v1/query" \
+    --data-urlencode 'query=sum(rate(demo_orders_total[1m]))'
+)"
+echo "$workload_response" | sed 's/,/,\n/g' | head -n 20
+
+if ! echo "$workload_response" | grep -q '"result":\['; then
+  echo "Mimir did not return a vector result for demo_orders_total."
+  exit 1
+fi
+
+if echo "$workload_response" | grep -q '"result":\[\]'; then
+  echo "No synthetic workload series yet. Wait for Prometheus to scrape and remote-write samples, then retry."
   exit 1
 fi
 

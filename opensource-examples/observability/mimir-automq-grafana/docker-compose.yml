@@ -33,7 +33,10 @@ services:
       /usr/bin/mc mb --ignore-existing minio/mimir-blocks;
       /usr/bin/mc anonymous set public minio/automq-data >/dev/null;
       /usr/bin/mc anonymous set public minio/automq-ops >/dev/null;
-      tail -f /dev/null
+      /usr/bin/mc ls minio/automq-data >/dev/null;
+      /usr/bin/mc ls minio/automq-ops >/dev/null;
+      /usr/bin/mc ls minio/mimir-blocks >/dev/null;
+      echo 'MinIO buckets are ready.'
       "
 
   automq:
@@ -45,7 +48,7 @@ services:
       minio:
         condition: service_healthy
       mc:
-        condition: service_started
+        condition: service_completed_successfully
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -226,6 +229,13 @@ services:
       - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
       - mimir-compactor-data:/data
 
+  workload-generator:
+    build: ./workload-generator
+    container_name: lab-workload-generator
+    hostname: workload-generator
+    ports:
+      - "18080:18080"
+
   prometheus:
     image: prom/prometheus:v3.4.1
     container_name: lab-prometheus
@@ -237,6 +247,8 @@ services:
       - --log.level=info
     depends_on:
       mimir-distributor:
+        condition: service_started
+      workload-generator:
         condition: service_started
     ports:
       - "9091:9090"
