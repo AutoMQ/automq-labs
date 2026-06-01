@@ -65,6 +65,8 @@ Edit the `automq-demo.yaml` file and customize it for your environment. You'll n
 
 For more details on performance tuning and available parameters, refer to the [AutoMQ Performance Tuning Guide](https://www.automq.com/docs/automq/deployment/performance-tuning-for-broker) and the official [Kafka broker configuration tuning](https://strimzi.io/docs/operators/in-development/deploying#con-broker-config-properties-str).
 
+If you want to run controllers and brokers in separate Strimzi node pools, use `automq-demo-split-roles.yaml` as the starting point. In that example, the `controller` pool uses only the `controller` role, while the `broker` pool uses only the `broker` role.
+
 #### 2. Deploy the Cluster
 
 Once your `automq-demo.yaml` file is ready, use the `kubectl apply` command to deploy AutoMQ.
@@ -78,6 +80,12 @@ kubectl apply -f automq-demo.yaml -n automq
 ```
 
 This command will create a new AutoMQ cluster managed by the Strimzi Operator in the `automq` namespace.
+
+For the split-role example, apply the alternate manifest instead:
+
+```shell
+kubectl apply -f automq-demo-split-roles.yaml -n automq
+```
 
 ## Managing the Deployment
 
