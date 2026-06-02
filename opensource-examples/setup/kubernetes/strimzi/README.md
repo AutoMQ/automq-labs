@@ -67,6 +67,8 @@ For more details on performance tuning and available parameters, refer to the [A
 
 If you want to run controllers and brokers in separate Strimzi node pools, use `automq-demo-split-roles.yaml` as the starting point. In that example, the `controller` pool uses only the `controller` role, while the `broker` pool uses only the `broker` role.
 
+If you also want Kubernetes to place controllers and brokers on different node groups, use `automq-demo-split-roles-nodegroups.yaml` as the starting point. This example keeps the same Kafka role split and adds node affinity plus tolerations for separate EKS node groups. Replace `${controller-nodegroup}` and `${broker-nodegroup}` with your node group names, and update the custom label or taint values if your cluster uses different scheduling keys.
+
 #### 2. Deploy the Cluster
 
 Once your `automq-demo.yaml` file is ready, use the `kubectl apply` command to deploy AutoMQ.
@@ -86,6 +88,50 @@ For the split-role example, apply the alternate manifest instead:
 ```shell
 kubectl apply -f automq-demo-split-roles.yaml -n automq
 ```
+
+For the split-role example with separate EKS node groups, apply:
+
+```shell
+kubectl apply -f automq-demo-split-roles-nodegroups.yaml -n automq
+```
+
+### Controller and Broker Node Groups
+
+The controller/broker split has two independent parts:
+
+1. Kafka process roles are controlled by `KafkaNodePool.spec.roles`. Use `roles: [controller]` for controller-only nodes and `roles: [broker]` for broker-only nodes.
+2. Kubernetes scheduling is controlled by `template.pod.affinity` and `template.pod.tolerations`. Use these fields when the controller and broker pods must run on different node groups.
+
+On EKS, managed node groups are labeled with `eks.amazonaws.com/nodegroup`. You can combine that label with your own labels and taints to make the placement explicit. For example, the controller pool in `automq-demo-split-roles-nodegroups.yaml` matches the controller node group:
+
+```yaml
+roles:
+  - controller
+template:
+  pod:
+    tolerations:
+      - key: "node-role.automq.io/strimzi-role"
+        operator: "Equal"
+        value: "controller"
+        effect: "NoSchedule"
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: eks.amazonaws.com/nodegroup
+                  operator: In
+                  values:
+                    - "${controller-nodegroup}"
+                - key: node-role.automq.io/strimzi-role
+                  operator: In
+                  values:
+                    - controller
+```
+
+The broker pool uses the same pattern with `roles: [broker]`, `${broker-nodegroup}`, and `value: broker`.
+
+This node group separation is optional for AutoBalancer. AutoBalancer works with controller-only and broker-only Strimzi node pools as long as the broker pool exists and the AutoMQ storage, listener, and rack settings are configured correctly.
 
 ## Managing the Deployment
 
