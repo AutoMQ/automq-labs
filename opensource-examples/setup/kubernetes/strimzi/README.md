@@ -87,44 +87,6 @@ For the split-role example, apply the alternate manifest instead:
 kubectl apply -f automq-demo-split-roles.yaml -n automq
 ```
 
-### Controller and Broker Node Groups
-
-The controller/broker split has two independent parts:
-
-1. Kafka process roles are controlled by `KafkaNodePool.spec.roles`. Use `roles: [controller]` for controller-only nodes and `roles: [broker]` for broker-only nodes.
-2. Kubernetes scheduling is controlled by `template.pod.affinity` and `template.pod.tolerations`. Use these fields when the controller and broker pods must run on different node groups.
-
-On EKS, managed node groups are labeled with `eks.amazonaws.com/nodegroup`. You can combine that label with your own labels and taints to make the placement explicit. For example, the controller pool in `automq-demo-split-roles.yaml` matches the controller node group:
-
-```yaml
-roles:
-  - controller
-template:
-  pod:
-    tolerations:
-      - key: "node-role.automq.io/strimzi-role"
-        operator: "Equal"
-        value: "controller"
-        effect: "NoSchedule"
-    affinity:
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-            - matchExpressions:
-                - key: eks.amazonaws.com/nodegroup
-                  operator: In
-                  values:
-                    - "${controller-nodegroup}"
-                - key: node-role.automq.io/strimzi-role
-                  operator: In
-                  values:
-                    - controller
-```
-
-The broker pool uses the same pattern with `roles: [broker]`, `${broker-nodegroup}`, and `value: broker`.
-
-This node group separation is optional for AutoBalancer. AutoBalancer works with controller-only and broker-only Strimzi node pools as long as the broker pool exists and the AutoMQ storage, listener, and rack settings are configured correctly.
-
 ## Managing the Deployment
 
 ### Upgrading AutoMQ Version
