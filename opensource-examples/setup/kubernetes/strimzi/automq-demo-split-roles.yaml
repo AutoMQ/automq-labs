@@ -31,15 +31,30 @@ spec:
           operator: "Equal"
           value: "automq"
           effect: "NoSchedule"
+        # Use this toleration when the controller node group is tainted for
+        # controller-only pods. Replace the key/value with your cluster's taint,
+        # or remove this entry if your nodes are not tainted this way.
+        - key: "node-role.automq.io/strimzi-role"
+          operator: "Equal"
+          value: "controller"
+          effect: "NoSchedule"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                  - key: node.kubernetes.io/instance-type
+                  # EKS managed node groups add this label automatically.
+                  # Replace the value with your controller node group name.
+                  - key: eks.amazonaws.com/nodegroup
                     operator: In
                     values:
-                      - r6in.large
+                      - "${controller-nodegroup}"
+                  # Add this custom label to the controller node group, or
+                  # replace it with the label key/value used in your cluster.
+                  - key: node-role.automq.io/strimzi-role
+                    operator: In
+                    values:
+                      - controller
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
@@ -102,15 +117,30 @@ spec:
           operator: "Equal"
           value: "automq"
           effect: "NoSchedule"
+        # Use this toleration when the broker node group is tainted for
+        # broker-only pods. Replace the key/value with your cluster's taint,
+        # or remove this entry if your nodes are not tainted this way.
+        - key: "node-role.automq.io/strimzi-role"
+          operator: "Equal"
+          value: "broker"
+          effect: "NoSchedule"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
               - matchExpressions:
-                  - key: node.kubernetes.io/instance-type
+                  # EKS managed node groups add this label automatically.
+                  # Replace the value with your broker node group name.
+                  - key: eks.amazonaws.com/nodegroup
                     operator: In
                     values:
-                      - r6in.large
+                      - "${broker-nodegroup}"
+                  # Add this custom label to the broker node group, or replace
+                  # it with the label key/value used in your cluster.
+                  - key: node-role.automq.io/strimzi-role
+                    operator: In
+                    values:
+                      - broker
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
