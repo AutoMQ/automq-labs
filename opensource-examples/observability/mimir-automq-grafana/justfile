@@ -63,6 +63,3 @@ workload-recover duration="2m":
 
 workload-cardinality-spike duration="2m" series="3000":
     @./scripts/workload-scenario.sh cardinality-spike {{duration}} "series={{series}}"
-
-open-play:
-    @open ../../../site/play/mimir.html
