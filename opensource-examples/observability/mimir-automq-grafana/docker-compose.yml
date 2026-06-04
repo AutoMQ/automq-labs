@@ -1,0 +1,293 @@
+services:
+  minio:
+    image: minio/minio:RELEASE.2025-05-24T17-08-30Z
+    container_name: lab-minio
+    hostname: minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+      MINIO_DOMAIN: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mc:
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
+    container_name: lab-mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set minio http://minio:9000 admin password) do echo '...waiting for minio...' && sleep 1; done;
+      /usr/bin/mc mb --ignore-existing minio/automq-data;
+      /usr/bin/mc mb --ignore-existing minio/automq-ops;
+      /usr/bin/mc mb --ignore-existing minio/mimir-blocks;
+      /usr/bin/mc anonymous set public minio/automq-data >/dev/null;
+      /usr/bin/mc anonymous set public minio/automq-ops >/dev/null;
+      /usr/bin/mc ls minio/automq-data >/dev/null;
+      /usr/bin/mc ls minio/automq-ops >/dev/null;
+      /usr/bin/mc ls minio/mimir-blocks >/dev/null;
+      echo 'MinIO buckets are ready.'
+      "
+
+  automq:
+    image: automqinc/automq:1.6.0
+    container_name: lab-automq
+    hostname: automq
+    stop_grace_period: 1m
+    depends_on:
+      minio:
+        condition: service_healthy
+      mc:
+        condition: service_completed_successfully
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "9093:9093"
+      - "19090:9090"
+    environment:
+      KAFKA_S3_ACCESS_KEY: admin
+      KAFKA_S3_SECRET_KEY: password
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx1536m -XX:MetaspaceSize=96m -XX:MaxDirectMemorySize=512m
+      CLUSTER_ID: 3D4fXN-yS1-vsQ8aJ_q4Mg
+    command:
+      - bash
+      - -c
+      - |
+        /opt/automq/kafka/bin/kafka-server-start.sh \
+          /opt/automq/kafka/config/kraft/server.properties \
+          --override cluster.id=$${CLUSTER_ID} \
+          --override node.id=0 \
+          --override controller.quorum.voters=0@automq:9093 \
+          --override controller.quorum.bootstrap.servers=automq:9093 \
+          --override listeners=PLAINTEXT://:9092,HOST://:29092,CONTROLLER://:9093 \
+          --override advertised.listeners=PLAINTEXT://automq:9092,HOST://localhost:29092 \
+          --override listener.security.protocol.map=PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT,CONTROLLER:PLAINTEXT \
+          --override inter.broker.listener.name=PLAINTEXT \
+          --override s3.data.buckets='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+          --override s3.ops.buckets='1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+          --override s3.wal.path='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+          --override s3.telemetry.metrics.exporter.type=prometheus \
+          --override s3.metrics.exporter.prom.host=0.0.0.0 \
+          --override s3.metrics.exporter.prom.port=9090
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
+
+  kafka-client:
+    image: automqinc/automq:1.6.0
+    container_name: lab-kafka-client
+    hostname: kafka-client
+    depends_on:
+      automq:
+        condition: service_healthy
+    command: ["tail", "-f", "/dev/null"]
+
+  mimir-distributor:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-distributor
+    hostname: mimir-distributor
+    command: ["-config.file=/etc/mimir/mimir.yaml", "-target=distributor"]
+    depends_on:
+      automq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "9009:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-distributor-data:/data
+
+  mimir-ingester-zone-a-0:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-ingester-zone-a-0
+    hostname: mimir-ingester-zone-a-0
+    command:
+      - -config.file=/etc/mimir/mimir.yaml
+      - -target=ingester
+      - -ingester.ring.instance-id=ingester-zone-a-0
+      - -ingester.ring.instance-availability-zone=zone-a
+    depends_on:
+      automq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "9011:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-ingester-zone-a-0-data:/data
+
+  mimir-ingester-zone-b-0:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-ingester-zone-b-0
+    hostname: mimir-ingester-zone-b-0
+    command:
+      - -config.file=/etc/mimir/mimir.yaml
+      - -target=ingester
+      - -ingester.ring.instance-id=ingester-zone-b-0
+      - -ingester.ring.instance-availability-zone=zone-b
+    depends_on:
+      automq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "9012:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-ingester-zone-b-0-data:/data
+
+  mimir-querier:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-querier
+    hostname: mimir-querier
+    command: ["-config.file=/etc/mimir/mimir.yaml", "-target=querier"]
+    depends_on:
+      mimir-ingester-zone-a-0:
+        condition: service_started
+      mimir-ingester-zone-b-0:
+        condition: service_started
+      mimir-query-scheduler:
+        condition: service_started
+      mimir-store-gateway:
+        condition: service_started
+    ports:
+      - "9013:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-querier-data:/data
+
+  mimir-query-frontend:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-query-frontend
+    hostname: mimir-query-frontend
+    command: ["-config.file=/etc/mimir/mimir.yaml", "-target=query-frontend"]
+    depends_on:
+      mimir-query-scheduler:
+        condition: service_started
+      mimir-querier:
+        condition: service_started
+    ports:
+      - "9010:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-query-frontend-data:/data
+
+  mimir-query-scheduler:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-query-scheduler
+    hostname: mimir-query-scheduler
+    command: ["-config.file=/etc/mimir/mimir.yaml", "-target=query-scheduler"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    ports:
+      - "9016:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-query-scheduler-data:/data
+
+  mimir-store-gateway:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-store-gateway
+    hostname: mimir-store-gateway
+    command: ["-config.file=/etc/mimir/mimir.yaml", "-target=store-gateway"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    ports:
+      - "9014:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-store-gateway-data:/data
+
+  mimir-compactor:
+    image: grafana/mimir:3.0.0
+    container_name: lab-mimir-compactor
+    hostname: mimir-compactor
+    command: ["-config.file=/etc/mimir/mimir.yaml", "-target=compactor"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    ports:
+      - "9015:8080"
+    volumes:
+      - ./configs/mimir/mimir.yaml:/etc/mimir/mimir.yaml:ro
+      - mimir-compactor-data:/data
+
+  workload-generator:
+    build: ./workload-generator
+    container_name: lab-workload-generator
+    hostname: workload-generator
+    ports:
+      - "18080:18080"
+
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    container_name: lab-prometheus
+    hostname: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --log.level=info
+    depends_on:
+      mimir-distributor:
+        condition: service_started
+      workload-generator:
+        condition: service_started
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    container_name: lab-grafana
+    hostname: grafana
+    depends_on:
+      mimir-query-frontend:
+        condition: service_started
+      prometheus:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_USERS_DEFAULT_THEME: light
+      GF_LOG_LEVEL: warn
+    volumes:
+      - ./configs/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./configs/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+
+volumes:
+  minio-data:
+  mimir-distributor-data:
+  mimir-ingester-zone-a-0-data:
+  mimir-ingester-zone-b-0-data:
+  mimir-querier-data:
+  mimir-query-frontend-data:
+  mimir-query-scheduler-data:
+  mimir-store-gateway-data:
+  mimir-compactor-data:
+  prometheus-data:
+  grafana-data:

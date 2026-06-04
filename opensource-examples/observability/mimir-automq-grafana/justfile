@@ -1,0 +1,65 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+
+default:
+    @just --list
+
+up:
+    @just build-workload
+    docker compose up -d
+    @echo
+    @echo "Grafana:    http://localhost:3000/d/mimir-automq-lab"
+    @echo "Workload:   http://localhost:3000/d/mimir-automq-business"
+    @echo "Mimir API:  http://localhost:9010/prometheus"
+    @echo "Prometheus: http://localhost:9091"
+    @echo "Generator:  http://localhost:18080/scenario"
+    @echo "MinIO:      http://localhost:9001  admin/password"
+    @echo "AutoMQ:     localhost:29092"
+
+down:
+    docker compose down -v
+
+logs:
+    docker compose logs -f
+
+ps:
+    docker compose ps
+
+config:
+    docker compose config
+
+build-workload:
+    @mkdir -p workload-generator/bin
+    @arch="$(uname -m)"; \
+      case "$arch" in \
+        arm64|aarch64) goarch=arm64 ;; \
+        x86_64|amd64) goarch=amd64 ;; \
+        *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; \
+      esac; \
+      cd workload-generator && GOOS=linux GOARCH=$goarch CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/workload-generator .
+
+verify:
+    @./scripts/verify.sh
+
+query-traffic:
+    @./scripts/generate-metrics.sh
+
+produce:
+    @just query-traffic
+
+failure-demo:
+    @./scripts/failure-ingester.sh
+
+workload-normal:
+    @./scripts/workload-scenario.sh normal
+
+workload-spike duration="2m":
+    @./scripts/workload-scenario.sh spike {{duration}}
+
+workload-failure duration="2m":
+    @./scripts/workload-scenario.sh failure {{duration}}
+
+workload-recover duration="2m":
+    @./scripts/workload-scenario.sh recover {{duration}}
+
+workload-cardinality-spike duration="2m" series="3000":
+    @./scripts/workload-scenario.sh cardinality-spike {{duration}} "series={{series}}"

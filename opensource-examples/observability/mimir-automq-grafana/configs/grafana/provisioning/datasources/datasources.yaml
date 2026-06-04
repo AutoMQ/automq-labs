@@ -1,0 +1,24 @@
+apiVersion: 1
+
+datasources:
+  - name: Mimir
+    uid: mimir
+    type: prometheus
+    access: proxy
+    orgId: 1
+    url: http://mimir-query-frontend:8080/prometheus
+    isDefault: true
+    jsonData:
+      prometheusType: Mimir
+      timeInterval: 5s
+
+  - name: Prometheus Local
+    uid: prometheus-local
+    type: prometheus
+    access: proxy
+    orgId: 1
+    url: http://prometheus:9090
+    isDefault: false
+    jsonData:
+      prometheusType: Prometheus
+      timeInterval: 5s
