@@ -1,5 +1,6 @@
 COMPOSE_REST := "docker compose -f docker-compose.yml -f docker-compose.automq-rest.yml"
 COMPOSE_TABLEBUCKET := "docker compose -f docker-compose.yml -f docker-compose.automq-tablebucket.yml"
+SPARK_PACKAGES := "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.10.1,org.apache.iceberg:iceberg-aws-bundle:1.10.1"
 
 default: help
 
@@ -26,8 +27,10 @@ help:
     @echo "  produce-tablebucket [topic] [count]"
     @echo "  check-commit-rest [topic]"
     @echo "  check-commit-tablebucket [topic]"
-    @echo "  trino-sql-rest <SQL>"
-    @echo "  trino-sql-tablebucket <SQL>"
+    @echo "  spark-sql-rest <SQL>"
+    @echo "  spark-sql-tablebucket <SQL>"
+    @echo "  query-rest [topic]"
+    @echo "  query-tablebucket [topic]"
 
 up-rest:
     @test -f .env || (echo "Missing .env. Copy .env.example to .env and fill in your Aliyun settings." && exit 1)
@@ -95,11 +98,51 @@ test-tablebucket topic="orders_tablebucket" count="10":
     @just produce-tablebucket "{{topic}}" "{{count}}"
     @just check-commit-tablebucket "{{topic}}"
 
-trino-sql-rest SQL:
-    {{COMPOSE_REST}} exec trino trino --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg
+spark-sql-rest SQL:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{COMPOSE_REST}} exec spark-iceberg bash -lc '/opt/spark/bin/spark-sql --packages {{SPARK_PACKAGES}} \
+      --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+      --conf spark.sql.defaultCatalog=oss_tables \
+      --conf spark.sql.catalog.oss_tables=org.apache.iceberg.spark.SparkCatalog \
+      --conf spark.sql.catalog.oss_tables.type=rest \
+      --conf spark.sql.catalog.oss_tables.uri="$OSS_ICEBERG_REST_URI" \
+      --conf spark.sql.catalog.oss_tables.warehouse="$OSS_TABLE_BUCKET_ARN" \
+      --conf spark.sql.catalog.oss_tables.rest.sigv4-enabled=true \
+      --conf spark.sql.catalog.oss_tables.rest.signing-name=osstables \
+      --conf spark.sql.catalog.oss_tables.rest.signing-region="$AWS_REGION" \
+      --conf spark.sql.catalog.oss_tables.client.region="$AWS_REGION" \
+      --conf spark.sql.catalog.oss_tables.client.credentials-provider=software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider \
+      --conf spark.sql.catalog.oss_tables.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+      --conf spark.sql.catalog.oss_tables.s3.endpoint="$OSS_ENDPOINT" \
+      --conf spark.sql.catalog.oss_tables.s3.path-style-access=false \
+      -e "{{SQL}}"'
 
-trino-sql-tablebucket SQL:
-    {{COMPOSE_TABLEBUCKET}} exec trino trino --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg
+spark-sql-tablebucket SQL:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    {{COMPOSE_TABLEBUCKET}} exec spark-iceberg bash -lc '/opt/spark/bin/spark-sql --packages {{SPARK_PACKAGES}} \
+      --conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
+      --conf spark.sql.defaultCatalog=oss_tables \
+      --conf spark.sql.catalog.oss_tables=org.apache.iceberg.spark.SparkCatalog \
+      --conf spark.sql.catalog.oss_tables.type=rest \
+      --conf spark.sql.catalog.oss_tables.uri="$OSS_ICEBERG_REST_URI" \
+      --conf spark.sql.catalog.oss_tables.warehouse="$OSS_TABLE_BUCKET_ARN" \
+      --conf spark.sql.catalog.oss_tables.rest.sigv4-enabled=true \
+      --conf spark.sql.catalog.oss_tables.rest.signing-name=osstables \
+      --conf spark.sql.catalog.oss_tables.rest.signing-region="$AWS_REGION" \
+      --conf spark.sql.catalog.oss_tables.client.region="$AWS_REGION" \
+      --conf spark.sql.catalog.oss_tables.client.credentials-provider=software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider \
+      --conf spark.sql.catalog.oss_tables.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+      --conf spark.sql.catalog.oss_tables.s3.endpoint="$OSS_ENDPOINT" \
+      --conf spark.sql.catalog.oss_tables.s3.path-style-access=false \
+      -e "{{SQL}}"'
+
+query-rest topic="orders_rest" namespace="automq_it":
+    @just spark-sql-rest "SELECT * FROM oss_tables.{{namespace}}.{{topic}} LIMIT 10"
+
+query-tablebucket topic="orders_tablebucket" namespace="automq_it":
+    @just spark-sql-tablebucket "SELECT * FROM oss_tables.{{namespace}}.{{topic}} LIMIT 10"
 
 _wait-rest:
     @just _wait "{{COMPOSE_REST}}"

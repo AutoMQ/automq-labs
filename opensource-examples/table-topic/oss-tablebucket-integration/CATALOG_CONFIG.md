@@ -64,23 +64,24 @@ This mode maps to the S3 Tables Catalog implementation path used by `awslabs/s3-
 
 The `s3.endpoint` and `s3.path-style-access=false` settings are required by `S3FileIO` when it writes Iceberg metadata and data files to Aliyun OSS.
 
-## Trino Catalog
+## Spark Catalog
 
-The Trino container generates `/etc/trino/catalog/iceberg.properties` from `.env`:
+The Spark SQL commands configure an Iceberg REST catalog named `oss_tables`:
 
 ```properties
-connector.name=iceberg
-iceberg.catalog.type=rest
-iceberg.rest-catalog.uri=${OSS_ICEBERG_REST_URI}
-iceberg.rest-catalog.warehouse=${OSS_TABLE_BUCKET_ARN}
-iceberg.rest-catalog.security=SIGV4
-iceberg.rest-catalog.signing-name=osstables
-iceberg.register-table-procedure.enabled=true
-fs.native-s3.enabled=true
-s3.endpoint=${OSS_ENDPOINT}
-s3.path-style-access=false
-s3.aws-access-key=${AWS_ACCESS_KEY_ID}
-s3.aws-secret-key=${AWS_SECRET_ACCESS_KEY}
-s3.region=${AWS_REGION}
-iceberg.file-format=PARQUET
+spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions
+spark.sql.catalog.oss_tables=org.apache.iceberg.spark.SparkCatalog
+spark.sql.catalog.oss_tables.type=rest
+spark.sql.catalog.oss_tables.uri=${OSS_ICEBERG_REST_URI}
+spark.sql.catalog.oss_tables.warehouse=${OSS_TABLE_BUCKET_ARN}
+spark.sql.catalog.oss_tables.rest.sigv4-enabled=true
+spark.sql.catalog.oss_tables.rest.signing-name=osstables
+spark.sql.catalog.oss_tables.rest.signing-region=${AWS_REGION}
+spark.sql.catalog.oss_tables.client.region=${AWS_REGION}
+spark.sql.catalog.oss_tables.client.credentials-provider=software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider
+spark.sql.catalog.oss_tables.io-impl=org.apache.iceberg.aws.s3.S3FileIO
+spark.sql.catalog.oss_tables.s3.endpoint=${OSS_ENDPOINT}
+spark.sql.catalog.oss_tables.s3.path-style-access=false
 ```
+
+Spark uses Iceberg's `S3FileIO` for data reads, so it can query tables written by both AutoMQ catalog modes through the OSS Tables REST Catalog.

@@ -77,40 +77,24 @@ services:
     networks:
       oss_tablebucket_net:
 
-  trino:
-    image: trinodb/trino:481
-    container_name: oss-tablebucket-trino
-    hostname: trino
-    user: root
+  spark-iceberg:
+    image: tabulario/spark-iceberg
+    container_name: oss-tablebucket-spark-iceberg
+    hostname: spark-iceberg
     environment:
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       AWS_REGION: ${AWS_REGION:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
       OSS_TABLE_BUCKET_ARN: ${OSS_TABLE_BUCKET_ARN:-}
       OSS_ICEBERG_REST_URI: ${OSS_ICEBERG_REST_URI:-}
       OSS_ENDPOINT: ${OSS_ENDPOINT:-}
     ports:
-      - "18090:8080"
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        cat > /etc/trino/catalog/iceberg.properties <<EOF
-        connector.name=iceberg
-        iceberg.catalog.type=rest
-        iceberg.rest-catalog.uri=$${OSS_ICEBERG_REST_URI:-}
-        iceberg.rest-catalog.warehouse=$${OSS_TABLE_BUCKET_ARN:-}
-        iceberg.rest-catalog.security=SIGV4
-        iceberg.rest-catalog.signing-name=osstables
-        iceberg.register-table-procedure.enabled=true
-        fs.native-s3.enabled=true
-        s3.endpoint=$${OSS_ENDPOINT:-}
-        s3.path-style-access=false
-        s3.aws-access-key=$${AWS_ACCESS_KEY_ID:-}
-        s3.aws-secret-key=$${AWS_SECRET_ACCESS_KEY:-}
-        s3.region=$${AWS_REGION:-}
-        iceberg.file-format=PARQUET
-        EOF
-        /usr/lib/trino/bin/run-trino
+      - "18080:8080"
+      - "18888:8888"
+      - "10000:10000"
+      - "10001:10001"
+    entrypoint: ["tail", "-f", "/dev/null"]
     networks:
       oss_tablebucket_net:
 
