@@ -1,0 +1,143 @@
+COMPOSE_REST := "docker compose -f docker-compose.yml -f docker-compose.automq-rest.yml"
+COMPOSE_TABLEBUCKET := "docker compose -f docker-compose.yml -f docker-compose.automq-tablebucket.yml"
+
+default: help
+
+help:
+    @echo "AutoMQ Table Topic with Aliyun OSS TableBucket"
+    @echo ""
+    @echo "Environment:"
+    @echo "  up-rest                 Start AutoMQ with OSS Tables REST Catalog"
+    @echo "  up-tablebucket          Start AutoMQ with OSS TableBucket Catalog"
+    @echo "  down                    Stop local containers and remove local volumes"
+    @echo "  status-rest             Show REST-mode container status"
+    @echo "  status-tablebucket      Show TableBucket-mode container status"
+    @echo "  logs-rest [service]     Tail REST-mode logs"
+    @echo "  logs-tablebucket [svc]  Tail TableBucket-mode logs"
+    @echo ""
+    @echo "Test:"
+    @echo "  test-rest [topic] [count]"
+    @echo "  test-tablebucket [topic] [count]"
+    @echo ""
+    @echo "Manual steps:"
+    @echo "  create-topic-rest [topic]"
+    @echo "  create-topic-tablebucket [topic]"
+    @echo "  produce-rest [topic] [count]"
+    @echo "  produce-tablebucket [topic] [count]"
+    @echo "  check-commit-rest [topic]"
+    @echo "  check-commit-tablebucket [topic]"
+    @echo "  trino-sql-rest <SQL>"
+    @echo "  trino-sql-tablebucket <SQL>"
+
+up-rest:
+    @test -f .env || (echo "Missing .env. Copy .env.example to .env and fill in your Aliyun settings." && exit 1)
+    {{COMPOSE_REST}} up --build -d
+    @just _wait-rest
+
+up-tablebucket:
+    @test -f .env || (echo "Missing .env. Copy .env.example to .env and fill in your Aliyun settings." && exit 1)
+    {{COMPOSE_TABLEBUCKET}} up --build -d
+    @just _wait-tablebucket
+
+down:
+    {{COMPOSE_REST}} down -v --remove-orphans || true
+    {{COMPOSE_TABLEBUCKET}} down -v --remove-orphans || true
+
+status-rest:
+    {{COMPOSE_REST}} ps
+
+status-tablebucket:
+    {{COMPOSE_TABLEBUCKET}} ps
+
+logs-rest service="":
+    #!/usr/bin/env bash
+    if [ -z "{{service}}" ]; then
+      {{COMPOSE_REST}} logs -f
+    else
+      {{COMPOSE_REST}} logs -f "{{service}}"
+    fi
+
+logs-tablebucket service="":
+    #!/usr/bin/env bash
+    if [ -z "{{service}}" ]; then
+      {{COMPOSE_TABLEBUCKET}} logs -f
+    else
+      {{COMPOSE_TABLEBUCKET}} logs -f "{{service}}"
+    fi
+
+create-topic-rest topic="orders_rest":
+    {{COMPOSE_REST}} exec producer python /app/producer.py create-topic --topic "{{topic}}"
+
+create-topic-tablebucket topic="orders_tablebucket":
+    {{COMPOSE_TABLEBUCKET}} exec producer python /app/producer.py create-topic --topic "{{topic}}"
+
+produce-rest topic="orders_rest" count="10":
+    {{COMPOSE_REST}} exec producer python /app/producer.py produce-avro --topic "{{topic}}" --count "{{count}}"
+
+produce-tablebucket topic="orders_tablebucket" count="10":
+    {{COMPOSE_TABLEBUCKET}} exec producer python /app/producer.py produce-avro --topic "{{topic}}" --count "{{count}}"
+
+check-commit-rest topic="orders_rest":
+    @just _check-commit "{{COMPOSE_REST}}" "{{topic}}"
+
+check-commit-tablebucket topic="orders_tablebucket":
+    @just _check-commit "{{COMPOSE_TABLEBUCKET}}" "{{topic}}"
+
+test-rest topic="orders_rest" count="10":
+    @just up-rest
+    @just create-topic-rest "{{topic}}"
+    @just produce-rest "{{topic}}" "{{count}}"
+    @just check-commit-rest "{{topic}}"
+
+test-tablebucket topic="orders_tablebucket" count="10":
+    @just up-tablebucket
+    @just create-topic-tablebucket "{{topic}}"
+    @just produce-tablebucket "{{topic}}" "{{count}}"
+    @just check-commit-tablebucket "{{topic}}"
+
+trino-sql-rest SQL:
+    {{COMPOSE_REST}} exec trino trino --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg
+
+trino-sql-tablebucket SQL:
+    {{COMPOSE_TABLEBUCKET}} exec trino trino --execute '{{SQL}}' --output-format ALIGNED --catalog iceberg
+
+_wait-rest:
+    @just _wait "{{COMPOSE_REST}}"
+
+_wait-tablebucket:
+    @just _wait "{{COMPOSE_TABLEBUCKET}}"
+
+_wait compose:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Waiting for AutoMQ and Schema Registry..."
+    timeout=120
+    elapsed=0
+    until {{compose}} exec -T automq /opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 \
+      && curl -fsS http://localhost:18081/subjects >/dev/null 2>&1; do
+      if [ "$elapsed" -ge "$timeout" ]; then
+        echo "Services were not ready within ${timeout}s"
+        exit 1
+      fi
+      sleep 2
+      elapsed=$((elapsed + 2))
+    done
+    echo "Services ready"
+
+_check-commit compose topic:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Waiting for Table Topic commit for {{topic}}..."
+    timeout=120
+    elapsed=0
+    pattern="COMMIT_RESPONSE.*code=0.*topic='{{topic}}'.*dataFiles=[1-9]"
+    until {{compose}} logs --no-color automq 2>&1 | grep -E "$pattern" >/dev/null; do
+      if [ "$elapsed" -ge "$timeout" ]; then
+        echo "No successful Table Topic commit found for {{topic}} within ${timeout}s"
+        {{compose}} logs --no-color automq 2>&1 | grep "{{topic}}" | tail -80 || true
+        exit 1
+      fi
+      sleep 2
+      elapsed=$((elapsed + 2))
+    done
+    echo "Table Topic commit succeeded for {{topic}}"

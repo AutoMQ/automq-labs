@@ -1,0 +1,1 @@
+confluent-kafka[schema-registry,avro]==2.8.0
