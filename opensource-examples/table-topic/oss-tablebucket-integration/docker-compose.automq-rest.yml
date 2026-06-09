@@ -1,0 +1,67 @@
+services:
+  automq:
+    image: automqinc/automq:1.7.0
+    container_name: oss-tablebucket-automq
+    hostname: automq
+    stop_grace_period: 1m
+    environment:
+      - KAFKA_S3_ACCESS_KEY=admin
+      - KAFKA_S3_SECRET_KEY=password
+      - KAFKA_HEAP_OPTS=-Xms1g -Xmx4g -XX:MetaspaceSize=96m -XX:MaxDirectMemorySize=1G
+      - CLUSTER_ID=3D4fXN-yS1-vsQ8aJ_q4Mg
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-}
+      - OSS_TABLE_BUCKET_ARN=${OSS_TABLE_BUCKET_ARN:-}
+      - OSS_ICEBERG_REST_URI=${OSS_ICEBERG_REST_URI:-}
+      - OSS_ENDPOINT=${OSS_ENDPOINT:-}
+      - TABLE_TOPIC_NAMESPACE=${TABLE_TOPIC_NAMESPACE:-automq_it}
+    ports:
+      - "39092:9092"
+      - "39093:9093"
+      - "39090:9090"
+    command:
+      - bash
+      - -c
+      - |
+        /opt/automq/kafka/bin/kafka-server-start.sh \
+        /opt/automq/kafka/config/kraft/server.properties \
+        --override cluster.id=$${CLUSTER_ID} \
+        --override node.id=0 \
+        --override controller.quorum.voters=0@automq:9093 \
+        --override controller.quorum.bootstrap.servers=automq:9093 \
+        --override listeners=PLAINTEXT://:9092,CONTROLLER://:9093 \
+        --override advertised.listeners=PLAINTEXT://automq:9092 \
+        --override s3.data.buckets='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.ops.buckets='1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.wal.path='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override automq.table.topic.catalog.type=rest \
+        --override automq.table.topic.catalog.uri=$${OSS_ICEBERG_REST_URI:-} \
+        --override automq.table.topic.catalog.warehouse=$${OSS_TABLE_BUCKET_ARN:-} \
+        --override automq.table.topic.catalog.rest.sigv4-enabled=true \
+        --override automq.table.topic.catalog.rest.signing-region=$${AWS_REGION:-} \
+        --override automq.table.topic.catalog.rest.signing-name=osstables \
+        --override automq.table.topic.catalog.client.region=$${AWS_REGION:-} \
+        --override automq.table.topic.catalog.client.credentials-provider=software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider \
+        --override automq.table.topic.catalog.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
+        --override automq.table.topic.catalog.s3.endpoint=$${OSS_ENDPOINT:-} \
+        --override automq.table.topic.catalog.s3.path-style-access=false \
+        --override automq.table.topic.namespace=$${TABLE_TOPIC_NAMESPACE:-automq_it} \
+        --override automq.table.topic.schema.registry.url=http://schema-registry:8081 \
+        --override s3.telemetry.metrics.exporter.type=prometheus \
+        --override s3.metrics.exporter.prom.host=0.0.0.0 \
+        --override s3.metrics.exporter.prom.port=9090
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/automq/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 20s
+      timeout: 20s
+      retries: 8
+      start_period: 30s
+    depends_on:
+      minio:
+        condition: service_healthy
+      mc:
+        condition: service_started
+    networks:
+      oss_tablebucket_net:
