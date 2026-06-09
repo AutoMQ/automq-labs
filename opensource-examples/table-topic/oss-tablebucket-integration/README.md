@@ -1,11 +1,11 @@
-# AutoMQ Table Topic with Aliyun OSS TableBucket
+# AutoMQ Table Topic with Aliyun OSS Tables
 
 This example shows how to write Avro messages from AutoMQ Table Topic into Aliyun OSS Tables.
 
 It covers two AutoMQ catalog modes:
 
 - OSS Tables REST Catalog
-- OSS TableBucket Catalog
+- OSS S3 Tables Catalog
 
 AutoMQ uses local MinIO for its own stream storage in this example. Table Topic writes Iceberg metadata and data to Aliyun OSS Tables / OSS. Trino is included for querying the resulting Iceberg tables through the OSS Tables REST Catalog.
 
@@ -15,7 +15,7 @@ For the catalog settings used by each mode, see [CATALOG_CONFIG.md](CATALOG_CONF
 
 - Docker
 - `just`
-- An Aliyun OSS TableBucket
+- An Aliyun OSS Tables Table Bucket
 - AK/SK with permission to access OSS Tables and OSS
 - Public network access to the configured Aliyun endpoints
 
@@ -63,7 +63,7 @@ Query the table with Trino:
 just trino-sql-rest "SELECT * FROM automq_it.orders_rest LIMIT 10"
 ```
 
-## Run with OSS TableBucket Catalog
+## Run with OSS S3 Tables Catalog
 
 Start the environment:
 
@@ -78,6 +78,8 @@ just test-tablebucket
 ```
 
 By default this writes to the `orders_tablebucket` table in `TABLE_TOPIC_NAMESPACE`.
+
+The `tablebucket` command and compose names match AutoMQ's `automq.table.topic.catalog.type=tablebucket` configuration value. The catalog path itself is the S3 Tables Catalog-compatible path.
 
 Query the table with Trino:
 

@@ -41,11 +41,11 @@ automq.table.topic.namespace=${TABLE_TOPIC_NAMESPACE}
 automq.table.topic.schema.registry.url=http://schema-registry:8081
 ```
 
-`warehouse` is the OSS TableBucket ARN.
+`warehouse` is the OSS Tables Table Bucket ARN.
 
-## AutoMQ with OSS TableBucket Catalog
+## AutoMQ with OSS S3 Tables Catalog
 
-`docker-compose.automq-tablebucket.yml` configures AutoMQ Table Topic to use the OSS TableBucket Catalog:
+`docker-compose.automq-tablebucket.yml` configures AutoMQ Table Topic to use the OSS S3 Tables Catalog-compatible path:
 
 ```properties
 automq.table.topic.catalog.type=tablebucket
@@ -59,6 +59,8 @@ automq.table.topic.catalog.s3.path-style-access=false
 automq.table.topic.namespace=${TABLE_TOPIC_NAMESPACE}
 automq.table.topic.schema.registry.url=http://schema-registry:8081
 ```
+
+This mode maps to the S3 Tables Catalog implementation path used by `awslabs/s3-tables-catalog`, exposed in AutoMQ as `automq.table.topic.catalog.type=tablebucket`.
 
 The `s3.endpoint` and `s3.path-style-access=false` settings are required by `S3FileIO` when it writes Iceberg metadata and data files to Aliyun OSS.
 

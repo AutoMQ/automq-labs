@@ -105,7 +105,7 @@ def produce_avro(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="AutoMQ OSS TableBucket example producer")
+    parser = argparse.ArgumentParser(description="AutoMQ OSS Tables example producer")
     subcommands = parser.add_subparsers(dest="command", required=True)
 
     create = subcommands.add_parser("create-topic", help="Create a Table Topic")

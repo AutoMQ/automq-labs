@@ -4,11 +4,11 @@ COMPOSE_TABLEBUCKET := "docker compose -f docker-compose.yml -f docker-compose.a
 default: help
 
 help:
-    @echo "AutoMQ Table Topic with Aliyun OSS TableBucket"
+    @echo "AutoMQ Table Topic with Aliyun OSS Tables"
     @echo ""
     @echo "Environment:"
     @echo "  up-rest                 Start AutoMQ with OSS Tables REST Catalog"
-    @echo "  up-tablebucket          Start AutoMQ with OSS TableBucket Catalog"
+    @echo "  up-tablebucket          Start AutoMQ with OSS S3 Tables Catalog"
     @echo "  down                    Stop local containers and remove local volumes"
     @echo "  status-rest             Show REST-mode container status"
     @echo "  status-tablebucket      Show TableBucket-mode container status"
