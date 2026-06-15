@@ -1,0 +1,18 @@
+subscription_id         = "<subscription-guid>"
+aks_name                = "<existing-aks-name>"
+aks_resource_group_name = "<existing-aks-resource-group>"
+
+nodepool_name       = "automq"
+workload_identity_id = "/subscriptions/<subscription-guid>/resourceGroups/<identity-rg>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<identity-name>"
+
+subnet_id  = "/subscriptions/<subscription-guid>/resourceGroups/<network-rg>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<subnet-name>"
+vm_size    = "Standard_D4as_v5"
+node_count = 3
+min_count  = 3
+max_count  = 20
+spot       = false
+
+tags = {
+  app       = "automq"
+  component = "nodepool"
+}

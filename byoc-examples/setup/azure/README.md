@@ -18,6 +18,12 @@ This is the recommended way to set up a production-ready AutoMQ environment on A
 
 See the [`azure-automq-env/README.md`](./azure-automq-env/README.md) for detailed instructions.
 
+### [`existing-aks-automq-nodepool/`](./existing-aks-automq-nodepool/)
+
+This Terraform configuration adds an AutoMQ node pool to an existing AKS cluster. It imports the AKS cluster as a data resource, creates the user-specified node pool, and attaches the user-specified workload identity to the VMSS backing the node pool.
+
+See the [`existing-aks-automq-nodepool/README.md`](./existing-aks-automq-nodepool/README.md) for more details.
+
 ### [`network-example/`](./network-example/)
 
 This directory contains a standalone Terraform example to create a Virtual Network (VNet) with public and private subnets, suitable for an AutoMQ deployment. This can be used as a prerequisite for setting up the `azure-automq-env`.

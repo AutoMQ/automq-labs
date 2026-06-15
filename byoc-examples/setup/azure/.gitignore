@@ -1,0 +1,4 @@
+# Local Terraform variable files with environment-specific values.
+terraform.tfvars
+existing-aks-automq-nodepool/terraform.tfvars
+azure-automq-env/terraform.tfvars
