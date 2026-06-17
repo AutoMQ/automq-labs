@@ -1,0 +1,20 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # AutoMQ Broker 1
+  - job_name: 'automq-server1'
+    static_configs:
+      - targets: ['server1:8890']
+        labels:
+          instance: 'server1'
+          broker_id: '0'
+
+  # AutoMQ Broker 2
+  - job_name: 'automq-server2'
+    static_configs:
+      - targets: ['server2:8890']
+        labels:
+          instance: 'server2'
+          broker_id: '1'

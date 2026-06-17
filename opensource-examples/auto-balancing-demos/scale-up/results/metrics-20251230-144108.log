@@ -1,0 +1,36 @@
+
+=== Partition Metrics: 01-before-scaleup at 2025-12-30 14:43:32 ===
+Broker 0: 6 partitions
+Broker 1: 6 partitions
+Broker 2: 0 partitions
+Distribution: 6 6 0 
+
+=== Partition Metrics: 01-before-scaleup-verification at 2025-12-30 14:44:08 ===
+Broker 0: 6 partitions
+Broker 1: 6 partitions
+Broker 2: 0 partitions
+Distribution: 6 6 0 
+
+=== Partition Metrics: 02-during-scaleup at 2025-12-30 14:46:27 ===
+Broker 0: 4 partitions
+Broker 1: 4 partitions
+Broker 2: 4 partitions
+Distribution: 4 4 4 
+
+=== Partition Metrics: 02-during-scaleup-verification at 2025-12-30 14:47:03 ===
+Broker 0: 4 partitions
+Broker 1: 4 partitions
+Broker 2: 4 partitions
+Distribution: 4 4 4 
+
+=== Partition Metrics: 03-after-scaleup at 2025-12-30 14:47:24 ===
+Broker 0: 4 partitions
+Broker 1: 4 partitions
+Broker 2: 4 partitions
+Distribution: 4 4 4 
+
+=== Partition Metrics: 03-after-scaleup-verification at 2025-12-30 14:48:00 ===
+Broker 0: 4 partitions
+Broker 1: 4 partitions
+Broker 2: 4 partitions
+Distribution: 4 4 4 
