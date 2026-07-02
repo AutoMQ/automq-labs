@@ -477,7 +477,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "kafka_tabletopic_fps_fields_per_second{job=\"$cluster_id\", topic=~\"$topic\"}",
+          "expr": "{__name__=~\"kafka_tabletopic_fps_fields/s|kafka_tabletopic_fps_fields_per_second|kafka_tabletopic_fields_per_second\", job=\"$cluster_id\", topic=~\"$topic\"}",
           "legendFormat": "{{topic}}",
           "refId": "A"
         }
@@ -588,7 +588,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "kafka_tabletopic_fps_fields_per_second{job=\"$cluster_id\", topic=~\"$topic\"}",
+          "expr": "{__name__=~\"kafka_tabletopic_fps_fields/s|kafka_tabletopic_fps_fields_per_second|kafka_tabletopic_fields_per_second\", job=\"$cluster_id\", topic=~\"$topic\"}",
           "legendFormat": "{{topic}}",
           "refId": "A"
         }
@@ -720,14 +720,14 @@
       {
         "current": {},
         "datasource": { "type": "prometheus", "uid": "${datasource}" },
-        "definition": "label_values(kafka_tabletopic_fps_fields_per_second{job=\"$cluster_id\"}, topic)",
+        "definition": "label_values({__name__=~\"kafka_tabletopic_fps_fields/s|kafka_tabletopic_fps_fields_per_second|kafka_tabletopic_fields_per_second\", job=\"$cluster_id\"}, topic)",
         "hide": 0,
         "includeAll": true,
         "label": "Topic",
         "multi": true,
         "name": "topic",
         "options": [],
-        "query": { "query": "label_values(kafka_tabletopic_fps_fields_per_second{job=\"$cluster_id\"}, topic)", "refId": "StandardVariableQuery" },
+        "query": { "query": "label_values({__name__=~\"kafka_tabletopic_fps_fields/s|kafka_tabletopic_fps_fields_per_second|kafka_tabletopic_fields_per_second\", job=\"$cluster_id\"}, topic)", "refId": "StandardVariableQuery" },
         "refresh": 2,
         "sort": 1,
         "type": "query"

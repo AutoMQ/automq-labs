@@ -72,7 +72,7 @@ The Table Topic Dashboard provides three views:
 |--------|-------------|
 | `kafka_tableworker_eventloop_busy_ratio_percent` | Table worker event loop busy ratio |
 | `kafka_tabletopic_delay_milliseconds` | Delay from Kafka to Iceberg by topic |
-| `kafka_tabletopic_fps_fields_per_second` | Fields per second by topic |
+| `kafka_tabletopic_fields_per_second` | Fields per second by topic |
 
 ## Troubleshooting
 
