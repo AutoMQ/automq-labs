@@ -1,0 +1,179 @@
+[0;34m[15:45:38][0m =========================================
+[0;34m[15:45:38][0m QPS-Based Auto-Balancing Experiment
+[0;34m[15:45:38][0m =========================================
+[0;34m[15:45:38][0m Cleaning up existing environment...
+time="2025-12-30T15:45:38+08:00" level=warning msg="/Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/docker-compose-with-metrics.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Volume qps-based_minio-data  Removing
+ Volume qps-based_prometheus-data  Removing
+ Volume qps-based_grafana-data  Removing
+ Volume qps-based_minio-data  Removed
+ Volume qps-based_prometheus-data  Removed
+ Volume qps-based_grafana-data  Removed
+[0;34m[15:45:45][0m Starting cluster...
+time="2025-12-30T15:45:45+08:00" level=warning msg="/Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/docker-compose-with-metrics.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network automq_net_qps  Creating
+ Network automq_net_qps  Created
+ Volume "qps-based_prometheus-data"  Creating
+ Volume "qps-based_prometheus-data"  Created
+ Volume "qps-based_grafana-data"  Creating
+ Volume "qps-based_grafana-data"  Created
+ Volume "qps-based_minio-data"  Creating
+ Volume "qps-based_minio-data"  Created
+ Container prometheus-qps  Creating
+ Container minio-qps  Creating
+ Container renderer-qps  Creating
+ Container minio-qps  Created
+ Container mc-qps  Creating
+ Container prometheus-qps  Created
+ Container grafana-qps  Creating
+ Container renderer-qps  Created
+ Container mc-qps  Created
+ Container automq-server2-qps  Creating
+ Container automq-server3-qps  Creating
+ Container automq-server1-qps  Creating
+ Container grafana-qps  Created
+ Container automq-server1-qps  Created
+ Container automq-server2-qps  Created
+ Container automq-server3-qps  Created
+ Container renderer-qps  Starting
+ Container minio-qps  Starting
+ Container prometheus-qps  Starting
+ Container minio-qps  Started
+ Container minio-qps  Waiting
+ Container prometheus-qps  Started
+ Container grafana-qps  Starting
+ Container renderer-qps  Started
+ Container grafana-qps  Started
+ Container minio-qps  Healthy
+ Container mc-qps  Starting
+ Container mc-qps  Started
+ Container automq-server3-qps  Starting
+ Container automq-server1-qps  Starting
+ Container automq-server2-qps  Starting
+ Container automq-server2-qps  Started
+ Container automq-server1-qps  Started
+ Container automq-server3-qps  Started
+[0;34m[15:46:22][0m Waiting for brokers...
+[0;32m[15:46:24] ✅ Brokers ready![0m
+[0;34m[15:46:24][0m Waiting for Grafana to be ready...
+[0;32m[15:46:24] ✅ Grafana is ready![0m
+[0;34m[15:46:24][0m Creating topic...
+Error while executing topic command : Topic 'Optional[qps-test]' does not exist as expected
+[2025-12-30 07:46:25,596] ERROR java.lang.IllegalArgumentException: Topic 'Optional[qps-test]' does not exist as expected
+	at org.apache.kafka.tools.TopicCommand.ensureTopicExists(TopicCommand.java:218)
+	at org.apache.kafka.tools.TopicCommand$TopicService.deleteTopic(TopicCommand.java:656)
+	at org.apache.kafka.tools.TopicCommand.execute(TopicCommand.java:113)
+	at org.apache.kafka.tools.TopicCommand.mainNoExit(TopicCommand.java:90)
+	at org.apache.kafka.tools.TopicCommand.main(TopicCommand.java:85)
+ (org.apache.kafka.tools.TopicCommand)
+[0;34m[15:46:26][0m Waiting 10 seconds for topic deletion to complete...
+Created topic qps-test.
+[0;34m[15:46:37][0m Waiting 15 seconds for topic to be fully created...
+[0;34m[15:46:52][0m Creating imbalanced distribution...
+Current partition replica assignment
+
+{"version":1,"partitions":[{"topic":"qps-test","partition":0,"replicas":[0],"log_dirs":["any"]},{"topic":"qps-test","partition":1,"replicas":[1],"log_dirs":["any"]},{"topic":"qps-test","partition":2,"replicas":[2],"log_dirs":["any"]},{"topic":"qps-test","partition":3,"replicas":[1],"log_dirs":["any"]},{"topic":"qps-test","partition":4,"replicas":[0],"log_dirs":["any"]},{"topic":"qps-test","partition":5,"replicas":[2],"log_dirs":["any"]}]}
+
+Save this to use as the --reassignment-json-file option during rollback
+Successfully started partition reassignments for qps-test-0,qps-test-1,qps-test-2,qps-test-3,qps-test-4,qps-test-5
+[0;34m[15:46:54][0m Waiting 30 seconds for reassignment to complete...
+[0;34m[15:47:24][0m Verifying initial partition distribution...
+Topic: qps-test	TopicId: v48O4kY_SSm2WWDHQTi7OA	PartitionCount: 6	ReplicationFactor: 1	Configs: min.insync.replicas=1,segment.bytes=1073741824
+	Topic: qps-test	Partition: 0	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 1	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 2	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 3	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 4	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 5	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+[0;34m[15:47:26][0m Waiting 60 seconds for metrics to accumulate...
+[0;34m[15:48:26][0m Capturing screenshot: 01-before-qps-load
+[0;34m[15:48:26][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[15:48:26][0m   Attempt 1/5: 4-1-1-
+[0;34m[15:48:47][0m   Attempt 2/5: 4-1-1-
+[0;32m[15:48:47] ✅ Metrics stable at: 4-1-1-[0m
+[0;34m[15:48:47][0m Querying partition metrics from brokers (01-before-qps-load)...
+[0;34m[15:48:47][0m   Broker 0: 4 partitions
+[0;34m[15:48:47][0m   Broker 1: 1 partitions
+[0;34m[15:48:47][0m   Broker 2: 1 partitions
+[0;34m[15:48:47][0m Distribution: 4 1 1 
+[0;34m[15:48:47][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[15:49:24] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/screenshots/01-before-qps-load-20251230-154538.png (26584 bytes)[0m
+[0;34m[15:49:24][0m Verifying metrics match screenshot...
+[0;34m[15:49:24][0m Querying partition metrics from brokers (01-before-qps-load-verification)...
+[0;34m[15:49:24][0m   Broker 0: 4 partitions
+[0;34m[15:49:25][0m   Broker 1: 1 partitions
+[0;34m[15:49:25][0m   Broker 2: 1 partitions
+[0;34m[15:49:25][0m Distribution: 4 1 1 
+[0;34m[15:49:25][0m Starting HIGH QPS traffic generation...
+4d0a26167aa0ac6a51f53c11699e7809c3228ba6eff9d4b4a9e70f818ec9b5ba
+[0;32m[15:49:26] ✅ HIGH QPS traffic started (50K msgs/sec, 100 bytes each)[0m
+[0;34m[15:49:26][0m Monitoring for rebalancing...
+[0;34m[15:49:26][0m Check 1/30 - 15:49:26
+[0;34m[15:49:28][0m Broker 0: 4, Broker 1: 1, Broker 2: 1
+[0;34m[15:49:58][0m Check 2/30 - 15:49:58
+[0;34m[15:50:10][0m Broker 0: 2, Broker 1: 2, Broker 2: 2
+[0;32m[15:50:11] ✅ ✅ REBALANCING DETECTED![0m
+[0;34m[15:50:41][0m Capturing screenshot: 02-during-qps-rebalance
+[0;34m[15:50:41][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[15:50:57][0m   Attempt 1/5: 2-2-2-
+[0;34m[15:51:19][0m   Attempt 2/5: 2-2-2-
+[0;32m[15:51:19] ✅ Metrics stable at: 2-2-2-[0m
+[0;34m[15:51:19][0m Querying partition metrics from brokers (02-during-qps-rebalance)...
+[0;34m[15:51:20][0m   Broker 0: 2 partitions
+[0;34m[15:51:21][0m   Broker 1: 2 partitions
+[0;34m[15:51:22][0m   Broker 2: 2 partitions
+[0;34m[15:51:22][0m Distribution: 2 2 2 
+[0;34m[15:51:22][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[15:52:10] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/screenshots/02-during-qps-rebalance-20251230-154538.png (31677 bytes)[0m
+[0;34m[15:52:10][0m Verifying metrics match screenshot...
+[0;34m[15:52:10][0m Querying partition metrics from brokers (02-during-qps-rebalance-verification)...
+[0;34m[15:52:12][0m   Broker 0: 2 partitions
+[0;34m[15:52:13][0m   Broker 1: 2 partitions
+[0;34m[15:52:13][0m   Broker 2: 2 partitions
+[0;34m[15:52:13][0m Distribution: 2 2 2 
+[0;32m[15:52:13] ✅ ✅ BALANCED![0m
+[0;34m[15:52:44][0m Capturing screenshot: 03-after-qps-rebalance
+[0;34m[15:52:44][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[15:52:45][0m   Attempt 1/5: 2-2-2-
+[0;34m[15:53:05][0m   Attempt 2/5: 2-2-2-
+[0;32m[15:53:05] ✅ Metrics stable at: 2-2-2-[0m
+[0;34m[15:53:05][0m Querying partition metrics from brokers (03-after-qps-rebalance)...
+[0;34m[15:53:05][0m   Broker 0: 2 partitions
+[0;34m[15:53:05][0m   Broker 1: 2 partitions
+[0;34m[15:53:05][0m   Broker 2: 2 partitions
+[0;34m[15:53:05][0m Distribution: 2 2 2 
+[0;34m[15:53:05][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[15:53:43] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/screenshots/03-after-qps-rebalance-20251230-154538.png (32087 bytes)[0m
+[0;34m[15:53:43][0m Verifying metrics match screenshot...
+[0;34m[15:53:43][0m Querying partition metrics from brokers (03-after-qps-rebalance-verification)...
+[0;34m[15:53:43][0m   Broker 0: 2 partitions
+[0;34m[15:53:43][0m   Broker 1: 2 partitions
+[0;34m[15:53:43][0m   Broker 2: 2 partitions
+[0;34m[15:53:43][0m Distribution: 2 2 2 
+[0;34m[15:53:43][0m Stopping traffic...
+qps-producer-20251230-154538
+qps-producer-20251230-154538
+[0;34m[15:53:54][0m Final partition distribution:
+Topic: qps-test	TopicId: v48O4kY_SSm2WWDHQTi7OA	PartitionCount: 6	ReplicationFactor: 1	Configs: min.insync.replicas=1,segment.bytes=1073741824
+	Topic: qps-test	Partition: 0	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 1	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 2	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 3	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 4	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: qps-test	Partition: 5	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+[0;34m[15:53:56][0m 
+[0;34m[15:53:56][0m =========================================
+[0;34m[15:53:56][0m QPS-Based Experiment Complete!
+[0;34m[15:53:56][0m =========================================
+[0;34m[15:53:56][0m Results directory: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results
+[0;34m[15:53:56][0m Screenshots directory: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/screenshots
+[0;34m[15:53:56][0m Log file: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/experiment-20251230-154538.log
+[0;34m[15:53:56][0m 
+[0;34m[15:53:56][0m Screenshots captured:
+  /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/screenshots/01-before-qps-load-20251230-154538.png (26K)
+  /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/screenshots/02-during-qps-rebalance-20251230-154538.png (31K)
+  /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/qps-based/results/screenshots/03-after-qps-rebalance-20251230-154538.png (31K)
+[0;34m[15:53:56][0m 
+[0;32m[15:53:56] ✅ ✅ Demo completed successfully - auto-balancing worked![0m
+[0;34m[15:53:56][0m 
+[0;34m[15:53:56][0m To clean up: docker compose -f docker-compose-with-metrics.yml down -v

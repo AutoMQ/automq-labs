@@ -1,0 +1,228 @@
+version: "3.8"
+
+x-common-variables: &common-env
+  KAFKA_S3_ACCESS_KEY: minioadmin
+  KAFKA_S3_SECRET_KEY: minioadmin
+  KAFKA_HEAP_OPTS: -Xms1200m -Xmx1200m
+  CLUSTER_ID: 5XF4fHIOTfSIqkmje2KFlg
+  KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=localhost
+  KAFKA_AUTO_BALANCER_CONTROLLER_ENABLE: "true"
+  KAFKA_AUTO_BALANCER_CONTROLLER_GOALS: "kafka.autobalancer.goals.NetworkInUsageDistributionGoal,kafka.autobalancer.goals.NetworkOutUsageDistributionGoal"
+  KAFKA_AUTO_BALANCER_CONTROLLER_ANOMALY_DETECT_INTERVAL_MS: "30000"
+  KAFKA_AUTO_BALANCER_CONTROLLER_EXECUTION_CONCURRENCY: "50"
+  KAFKA_AUTO_BALANCER_CONTROLLER_EXECUTION_INTERVAL_MS: "5000"
+
+services:
+  minio:
+    container_name: "minio-scaledown"
+    image: minio/minio:RELEASE.2025-05-24T17-08-30Z
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_DOMAIN: minio
+    ports:
+      - "9020:9000"
+      - "9021:9001"
+    command: ["server", "/data", "--console-address", ":9001"]
+    networks:
+      automq_net:
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+  mc:
+    container_name: "mc-scaledown"
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set minio http://minio:9000 minioadmin minioadmin) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc rm -r --force minio/automq-data;
+      /usr/bin/mc rm -r --force minio/automq-ops;
+      /usr/bin/mc mb minio/automq-data;
+      /usr/bin/mc mb minio/automq-ops;
+      /usr/bin/mc anonymous set public minio/automq-data;
+      /usr/bin/mc anonymous set public minio/automq-ops;
+      tail -f /dev/null
+      "
+    networks:
+      - automq_net
+
+  server1:
+    container_name: "automq-server1-scaledown"
+    image: automqinc/automq:1.6.0
+    stop_grace_period: 1m
+    environment:
+      <<: *common-env
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: server1
+    command:
+      - bash
+      - -c
+      - |
+        /opt/automq/kafka/bin/kafka-server-start.sh \
+        /opt/automq/kafka/config/kraft/server.properties \
+        --override cluster.id=$CLUSTER_ID \
+        --override node.id=0 \
+        --override controller.quorum.voters=0@server1:9093,1@server2:9093,2@server3:9093 \
+        --override controller.quorum.bootstrap.servers=server1:9093,server2:9093,server3:9093 \
+        --override advertised.listeners=PLAINTEXT://server1:9092 \
+        --override s3.data.buckets='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.ops.buckets='1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.wal.path='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.wal.cache.size=104857600 \
+        --override s3.block.cache.size=20971520 \
+        --override s3.wal.upload.threshold=52428800 \
+        --override autobalancer.controller.enable=true \
+        --override autobalancer.controller.goals=kafka.autobalancer.goals.NetworkInUsageDistributionGoal,kafka.autobalancer.goals.NetworkOutUsageDistributionGoal \
+        --override autobalancer.controller.anomaly.detect.interval.ms=30000 \
+        --override metric.reporters=kafka.autobalancer.metricsreporter.AutoBalancerMetricsReporter
+    ports:
+      - "9112:9092"
+      - "9119:9999"
+    networks:
+      automq_net:
+    depends_on:
+      - minio
+      - mc
+
+  server2:
+    container_name: "automq-server2-scaledown"
+    image: automqinc/automq:1.6.0
+    stop_grace_period: 1m
+    environment:
+      <<: *common-env
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: server2
+    command:
+      - bash
+      - -c
+      - |
+        /opt/automq/kafka/bin/kafka-server-start.sh \
+        /opt/automq/kafka/config/kraft/server.properties \
+        --override cluster.id=$CLUSTER_ID \
+        --override node.id=1 \
+        --override controller.quorum.voters=0@server1:9093,1@server2:9093,2@server3:9093 \
+        --override controller.quorum.bootstrap.servers=server1:9093,server2:9093,server3:9093 \
+        --override advertised.listeners=PLAINTEXT://server2:9092 \
+        --override s3.data.buckets='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.ops.buckets='1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.wal.path='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.wal.cache.size=104857600 \
+        --override s3.block.cache.size=20971520 \
+        --override s3.wal.upload.threshold=52428800 \
+        --override autobalancer.controller.enable=true \
+        --override autobalancer.controller.goals=kafka.autobalancer.goals.NetworkInUsageDistributionGoal,kafka.autobalancer.goals.NetworkOutUsageDistributionGoal \
+        --override autobalancer.controller.anomaly.detect.interval.ms=30000 \
+        --override metric.reporters=kafka.autobalancer.metricsreporter.AutoBalancerMetricsReporter
+    ports:
+      - "9113:9092"
+      - "9120:9999"
+    networks:
+      automq_net:
+    depends_on:
+      - minio
+      - mc
+
+  server3:
+    container_name: "automq-server3-scaledown"
+    image: automqinc/automq:1.6.0
+    stop_grace_period: 1m
+    environment:
+      <<: *common-env
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_HOSTNAME: server3
+    command:
+      - bash
+      - -c
+      - |
+        /opt/automq/kafka/bin/kafka-server-start.sh \
+        /opt/automq/kafka/config/kraft/server.properties \
+        --override cluster.id=$CLUSTER_ID \
+        --override node.id=2 \
+        --override controller.quorum.voters=0@server1:9093,1@server2:9093,2@server3:9093 \
+        --override controller.quorum.bootstrap.servers=server1:9093,server2:9093,server3:9093 \
+        --override advertised.listeners=PLAINTEXT://server3:9092 \
+        --override s3.data.buckets='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.ops.buckets='1@s3://automq-ops?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.wal.path='0@s3://automq-data?region=us-east-1&endpoint=http://minio:9000&pathStyle=true' \
+        --override s3.wal.cache.size=104857600 \
+        --override s3.block.cache.size=20971520 \
+        --override s3.wal.upload.threshold=52428800 \
+        --override autobalancer.controller.enable=true \
+        --override autobalancer.controller.goals=kafka.autobalancer.goals.NetworkInUsageDistributionGoal,kafka.autobalancer.goals.NetworkOutUsageDistributionGoal \
+        --override autobalancer.controller.anomaly.detect.interval.ms=30000 \
+        --override metric.reporters=kafka.autobalancer.metricsreporter.AutoBalancerMetricsReporter
+    ports:
+      - "9114:9092"
+      - "9121:9999"
+    networks:
+      automq_net:
+    depends_on:
+      - minio
+      - mc
+
+  prometheus:
+    container_name: "prometheus-scaledown"
+    image: prom/prometheus:latest
+    ports:
+      - "9096:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=2h'
+      - '--web.enable-lifecycle'
+    networks:
+      - automq_net
+
+  grafana:
+    container_name: "grafana-scaledown"
+    image: grafana/grafana:latest
+    ports:
+      - "3006:3000"
+    volumes:
+      - ../common/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../common/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+      GF_RENDERING_SERVER_URL: "http://renderer:8081/render"
+      GF_RENDERING_CALLBACK_URL: "http://grafana:3000/"
+      GF_LOG_LEVEL: "info"
+    networks:
+      - automq_net
+    depends_on:
+      - prometheus
+
+  renderer:
+    container_name: "renderer-scaledown"
+    image: grafana/grafana-image-renderer:latest
+    ports:
+      - "8086:8081"
+    environment:
+      ENABLE_METRICS: "true"
+      HTTP_HOST: "0.0.0.0"
+    networks:
+      - automq_net
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  automq_net:
+    name: automq_net_scaledown
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: "10.9.0.0/16"
+          gateway: "10.9.0.1"
