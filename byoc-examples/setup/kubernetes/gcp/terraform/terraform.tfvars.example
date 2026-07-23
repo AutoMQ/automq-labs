@@ -1,0 +1,30 @@
+project_id  = "your-gcp-project-id"
+region      = "us-central1"
+zones       = ["us-central1-a", "us-central1-b", "us-central1-c"]
+name_prefix = "automq"
+
+automq_config        = "replace-with-base64-CONFIG-value"
+automq_console_image = "replace-me"
+
+# Restrict this to the public IP range used to access the Console.
+console_ingress_source_ranges = ["0.0.0.0/0"]
+
+# Set all three values only when automq_console_image is private.
+automq_console_registry = {
+  server   = ""
+  username = ""
+  password = ""
+}
+
+network_cidrs = {
+  management = "10.10.0.0/24"
+  workload   = "10.20.0.0/20"
+  pods       = "10.30.0.0/16"
+  services   = "10.40.0.0/20"
+}
+
+automq_node_pool = {
+  machine_type = "n4d-standard-2"
+  min_size     = 3
+  max_size     = 10
+}
