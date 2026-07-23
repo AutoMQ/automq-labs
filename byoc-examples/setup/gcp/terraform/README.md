@@ -10,7 +10,7 @@ and Kubernetes infrastructure have independent Terraform state and lifecycle.
 - A Console service account and its GCP control-plane permissions.
 - A custom role for Cloud DNS managed-zone IAM policy operations.
 - A firewall rule for public Console access on TCP port 8080.
-- Generated initial Console and AutoMQ Terraform provider credentials.
+- Generated bootstrap credentials used during Console initialization.
 
 The Console creates the environment Ops Bucket during bootstrap and creates
 each Instance's Data Bucket and DNS Zone when the Instance is created.
@@ -71,17 +71,17 @@ existing VPC and subnet.
 
 ## AutoMQ Provider
 
-The Console generates an initial access key pair for automation:
+Get the provider endpoint and environment ID from Terraform:
 
 ```bash
 terraform output -raw console_endpoint
-terraform output -raw console_initial_access_key
-terraform output -raw console_initial_secret_key
 terraform output -raw automq_environment_id
 ```
 
-Use these values with provider `automq/automq` to create an
-`automq_kafka_instance`. See the standalone
+Sign in to the Console, create a Service Account and an Access Key in the UI,
+then configure provider `automq/automq` with that Access Key. See
+[Service Accounts](https://docs.automq.com/automq-cloud/manage-identities-and-access/service-accounts)
+and the standalone
 [AutoMQ Instance example](../automq-cluster/) for a minimal GKE configuration.
 
 ## Configuration
