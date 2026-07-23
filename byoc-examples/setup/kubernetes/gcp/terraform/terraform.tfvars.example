@@ -1,0 +1,17 @@
+project_id  = "your-gcp-project-id"
+region      = "us-central1"
+zones       = ["us-central1-a", "us-central1-b", "us-central1-c"]
+name_prefix = "automq"
+
+network_cidrs = {
+  management = "10.10.0.0/24"
+  workload   = "10.20.0.0/20"
+  pods       = "10.30.0.0/16"
+  services   = "10.40.0.0/20"
+}
+
+automq_node_pool = {
+  machine_type = "n2d-standard-4"
+  min_size     = 3
+  max_size     = 10
+}
