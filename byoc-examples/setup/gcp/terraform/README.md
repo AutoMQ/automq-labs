@@ -81,7 +81,8 @@ terraform output -raw automq_environment_id
 ```
 
 Use these values with provider `automq/automq` to create an
-`automq_kafka_instance`.
+`automq_kafka_instance`. See the standalone
+[AutoMQ Instance example](../automq-cluster/) for a minimal GKE configuration.
 
 ## Configuration
 
