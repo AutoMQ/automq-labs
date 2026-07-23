@@ -7,6 +7,11 @@ decode() {
 
 CONSOLE_IMAGE="$(decode '${console_image_b64}')"
 CONFIG="$(decode '${config_b64}')"
+ENVIRONMENT_ID="$(decode '${environment_id_b64}')"
+CLIENT_ID="$(decode '${client_id_b64}')"
+CLIENT_SECRET="$(decode '${client_secret_b64}')"
+REGION="$(decode '${region_b64}')"
+OPS_BUCKET="$(decode '${ops_bucket_b64}')"
 HOME_ENDPOINT="$(decode '${home_endpoint_b64}')"
 INITIAL_PASSWORD="$(decode '${initial_password_b64}')"
 ACCESS_KEY="$(decode '${access_key_b64}')"
@@ -49,18 +54,29 @@ if [ -n "$REGISTRY_SERVER" ]; then
     "$REGISTRY_SERVER"
 fi
 
+# CMP_* variables bind directly even when an image profile omits the shorter aliases.
 docker run -d \
   --name automq-console \
   --restart unless-stopped \
   --net=host \
   -v /data:/root \
   -e CONFIG="$CONFIG" \
+  -e CMP_ENVIRONMENTID="$ENVIRONMENT_ID" \
+  -e CMP_CLIENTID="$CLIENT_ID" \
+  -e CMP_CLIENTSECRET="$CLIENT_SECRET" \
+  -e CMP_REGION="$REGION" \
+  -e CMP_OPSBUCKET_BUCKETNAME="$OPS_BUCKET" \
   -e CLOUD_PROVIDER=gcp \
   -e HOME_ENDPOINT="$HOME_ENDPOINT" \
+  -e CMP_HOMEENDPOINT="$HOME_ENDPOINT" \
   -e CONSOLE_INITIAL_USER=admin \
+  -e CMP_INITIALUSER=admin \
   -e CONSOLE_INITIAL_PASSWORD="$INITIAL_PASSWORD" \
+  -e CMP_INITIALPASSWORD="$INITIAL_PASSWORD" \
   -e CONSOLE_INITIAL_ACCESS_KEY="$ACCESS_KEY" \
+  -e CMP_INITIALACCESSKEY="$ACCESS_KEY" \
   -e CONSOLE_INITIAL_SECRET_KEY="$SECRET_KEY" \
+  -e CMP_INITIALSECRETKEY="$SECRET_KEY" \
   -e CONSOLE_PORT=8080 \
   -e GCP_SERVICE_ACCOUNT="$SERVICE_ACCOUNT" \
   "$CONSOLE_IMAGE"
