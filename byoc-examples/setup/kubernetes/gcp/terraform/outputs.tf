@@ -38,9 +38,19 @@ output "management_subnet_id" {
   value       = module.network.management_subnet_id
 }
 
+output "management_subnet_cidr" {
+  description = "Primary CIDR of the management subnet."
+  value       = module.network.management_subnet_cidr
+}
+
 output "workload_subnet_id" {
   description = "Canonical GKE workload subnet resource ID."
   value       = module.network.workload_subnet_id
+}
+
+output "automq_network_tag" {
+  description = "Network tag applied to AutoMQ workload nodes."
+  value       = module.gke.automq_network_tag
 }
 
 output "workload_identity_pool" {
@@ -51,42 +61,4 @@ output "workload_identity_pool" {
 output "get_credentials_command" {
   description = "Command that configures kubectl credentials for the GKE cluster."
   value       = "gcloud container clusters get-credentials ${module.gke.cluster_name} --region ${var.region} --project ${var.project_id}"
-}
-
-output "console_endpoint" {
-  description = "Public endpoint for the AutoMQ BYOC Console."
-  value       = module.console.endpoint
-}
-
-output "console_initial_password" {
-  description = "Initial password for the AutoMQ BYOC Console."
-  value       = module.console.initial_password
-  sensitive   = true
-}
-
-output "console_initial_access_key" {
-  description = "Access key ID for the AutoMQ Terraform provider."
-  value       = module.console.initial_access_key
-  sensitive   = true
-}
-
-output "console_initial_secret_key" {
-  description = "Secret key for the AutoMQ Terraform provider."
-  value       = module.console.initial_secret_key
-  sensitive   = true
-}
-
-output "console_service_account_email" {
-  description = "Email address of the service account used by the AutoMQ Console VM."
-  value       = module.console.service_account_email
-}
-
-output "automq_environment_id" {
-  description = "AutoMQ BYOC environment ID used by the Console and Terraform provider."
-  value       = local.automq_environment_id
-}
-
-output "console_vm_name" {
-  description = "AutoMQ Console VM name."
-  value       = module.console.vm_name
 }
