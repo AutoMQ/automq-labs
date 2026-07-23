@@ -1,7 +1,7 @@
-# Provisioning a Kubernetes Cluster on GCP
+# AutoMQ BYOC Environment on GCP
 
-This directory provides resources for creating an AutoMQ-ready Google Kubernetes Engine (GKE) cluster.
+This directory provides resources for creating an AutoMQ BYOC environment on Google Cloud, including the VPC, GKE cluster, and AutoMQ Console.
 
 ## Tools
 
-- [Terraform](./terraform/): Provisions the VPC, subnets, Cloud NAT, regional GKE cluster, and dedicated AutoMQ node pool.
+- [Terraform](./terraform/): Provisions the complete GCP BYOC environment.

@@ -1,7 +1,13 @@
 locals {
+  automq_environment_id = nonsensitive(jsondecode(base64decode(var.automq_config)).environmentId)
+
   required_services = toset([
+    "cloudresourcemanager.googleapis.com",
     "compute.googleapis.com",
     "container.googleapis.com",
+    "dns.googleapis.com",
+    "iam.googleapis.com",
+    "storage.googleapis.com",
   ])
 
   automq_ports = [
@@ -50,6 +56,27 @@ module "gke" {
   automq_node_pool             = var.automq_node_pool
 
   depends_on = [google_project_service.required]
+}
+
+module "console" {
+  source = "./console"
+
+  project_id           = var.project_id
+  region               = var.region
+  zone                 = var.zones[0]
+  name_prefix          = var.name_prefix
+  network_id           = module.network.vpc_id
+  management_subnet_id = module.network.management_subnet_id
+
+  config                = var.automq_config
+  console_image         = var.automq_console_image
+  home_endpoint         = var.automq_home_endpoint
+  machine_type          = var.console_machine_type
+  ingress_source_ranges = var.console_ingress_source_ranges
+  registry              = var.automq_console_registry
+  depends_on = [
+    google_project_service.required,
+  ]
 }
 
 resource "google_compute_firewall" "management_to_automq" {
