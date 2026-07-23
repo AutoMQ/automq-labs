@@ -1,0 +1,19 @@
+project_id           = "your-gcp-project-id"
+region               = "us-central1"
+zone                 = "us-central1-a"
+name_prefix          = "automq"
+network_id           = "projects/your-gcp-project-id/global/networks/automq-vpc"
+management_subnet_id = "projects/your-gcp-project-id/regions/us-central1/subnetworks/automq-management"
+
+automq_config        = "replace-with-base64-CONFIG-value"
+automq_console_image = "replace-me"
+
+# Restrict this to the public IP range used to access the Console.
+console_ingress_source_ranges = ["0.0.0.0/0"]
+
+# Set all three values only when automq_console_image is private.
+automq_console_registry = {
+  server   = ""
+  username = ""
+  password = ""
+}
