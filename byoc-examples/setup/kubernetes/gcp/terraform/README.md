@@ -109,6 +109,9 @@ Supported AutoMQ node machine types are `n4d-standard-2`, `n4d-highmem-2`,
 `n4a-highmem-1`, `n4a-standard-2`, and `n4d-standard-4`. Confirm that the
 selected type is available in all three zones. The AutoMQ node pool uses
 `hyperdisk-balanced` boot disks, as required by these N4 machine families.
+When an Instance is created, AutoMQ also creates the
+`automq-disk-gcp-pd-balanced` StorageClass for persistent volumes. The name is
+retained for compatibility; its disk type is `hyperdisk-balanced`.
 
 When overriding `network_cidrs`, use non-overlapping IPv4 ranges that do not
 conflict with connected VPC, VPN, or on-premises networks.
@@ -119,8 +122,16 @@ GKE nodes use private IP addresses and reach external services through Cloud
 NAT. The GKE control-plane endpoint remains public and uses GKE authentication
 and authorization; Master Authorized Networks is not enabled in this example.
 
-The management subnet can reach AutoMQ workload nodes only on the required
-ports. Add separate, narrowly scoped rules for Kafka clients in other subnets.
+The management and workload subnets share one VPC, so GCP provides routes
+between them. The Console uses the management subnet. Private GKE nodes use the
+workload subnet, with secondary ranges for Pods and Services, and Cloud NAT
+provides their outbound Internet access. The example firewall allows the
+management subnet to reach tagged AutoMQ nodes on the required control and
+Kafka ports.
+
+For Kafka clients in another subnet, add a narrowly scoped ingress firewall
+rule from the client CIDR to the same AutoMQ node tag. Open only the listener
+ports those clients require, typically TCP `9092` for plaintext Kafka.
 
 ## Cleanup
 

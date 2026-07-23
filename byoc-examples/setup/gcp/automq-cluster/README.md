@@ -37,21 +37,20 @@ Get the Console values:
 
 ```bash
 terraform output -raw console_endpoint
-terraform output -raw console_initial_access_key
-terraform output -raw console_initial_secret_key
 terraform output -raw automq_environment_id
 ```
 
-Protect the Console credentials and Terraform state. Both contain sensitive
-values.
+Sign in to the Console, create a Service Account and an Access Key in the UI,
+and protect the generated credentials. See
+[Service Accounts](https://docs.automq.com/automq-cloud/manage-identities-and-access/service-accounts).
 
-Edit the example values in `terraform/main.tf`, then export the Console
-credentials:
+Edit the example values in `terraform/main.tf`, then export the provider
+endpoint and Service Account credentials:
 
 ```bash
 export AUTOMQ_BYOC_ENDPOINT="<console-endpoint>"
-export AUTOMQ_BYOC_ACCESS_KEY="<console-access-key>"
-export AUTOMQ_BYOC_SECRET_KEY="<console-secret-key>"
+export AUTOMQ_BYOC_ACCESS_KEY="<service-account-access-key>"
+export AUTOMQ_BYOC_SECRET_KEY="<service-account-secret-key>"
 ```
 
 ## Create
