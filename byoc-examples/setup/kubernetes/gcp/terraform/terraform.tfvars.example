@@ -24,7 +24,7 @@ network_cidrs = {
 }
 
 automq_node_pool = {
-  machine_type = "n2d-standard-4"
+  machine_type = "n4d-standard-2"
   min_size     = 3
   max_size     = 10
 }

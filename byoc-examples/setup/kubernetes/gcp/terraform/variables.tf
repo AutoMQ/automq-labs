@@ -71,18 +71,24 @@ variable "automq_node_pool" {
     max_size     = number
   })
   default = {
-    machine_type = "n2d-standard-4"
+    machine_type = "n4d-standard-2"
     min_size     = 3
     max_size     = 10
   }
 
   validation {
     condition = (
-      trimspace(var.automq_node_pool.machine_type) != "" &&
+      contains([
+        "n4d-standard-2",
+        "n4d-highmem-2",
+        "n4a-highmem-1",
+        "n4a-standard-2",
+        "n4d-standard-4",
+      ], var.automq_node_pool.machine_type) &&
       var.automq_node_pool.min_size >= 3 &&
       var.automq_node_pool.max_size >= var.automq_node_pool.min_size
     )
-    error_message = "automq_node_pool requires a non-empty machine_type, min_size of at least 3, and max_size greater than or equal to min_size."
+    error_message = "automq_node_pool.machine_type must be an AutoMQ-supported GCP machine type; min_size must be at least 3; max_size must be greater than or equal to min_size."
   }
 }
 

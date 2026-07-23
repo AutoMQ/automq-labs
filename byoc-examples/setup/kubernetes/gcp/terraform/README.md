@@ -117,11 +117,11 @@ Use these values with provider `automq/automq` to create an `automq_kafka_instan
 | `console_machine_type` | Console VM machine type | `e2-standard-2` |
 | `console_ingress_source_ranges` | CIDRs allowed to access Console port 8080 | `0.0.0.0/0` |
 | `network_cidrs` | Management, workload, Pod, and Service CIDRs | See `terraform.tfvars.example` |
-| `automq_node_pool.machine_type` | AutoMQ node machine type | `n2d-standard-4` |
+| `automq_node_pool.machine_type` | AutoMQ node machine type | `n4d-standard-2` |
 | `automq_node_pool.min_size` | Minimum total nodes across the three zones | `3` |
 | `automq_node_pool.max_size` | Maximum total nodes across the three zones | `10` |
 
-To use an Arm-based Tau T2A machine, set `automq_node_pool.machine_type` to a suitable `t2a-standard-*` type and choose three zones where that type is available. Workloads scheduled to that pool must provide Arm64-compatible images.
+Supported AutoMQ node machine types are `n4d-standard-2`, `n4d-highmem-2`, `n4a-highmem-1`, `n4a-standard-2`, and `n4d-standard-4`. Confirm that the selected type is available in all three zones.
 
 When overriding `network_cidrs`, use non-overlapping IPv4 ranges that do not conflict with connected VPC, VPN, or on-premises networks.
 

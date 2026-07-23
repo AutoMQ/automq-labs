@@ -71,6 +71,7 @@ resource "google_container_node_pool" "automq" {
 
   node_config {
     machine_type = var.automq_node_pool.machine_type
+    disk_type    = "hyperdisk-balanced"
     oauth_scopes = ["https://www.googleapis.com/auth/cloud-platform"]
     tags         = [local.automq_network_tag]
 
