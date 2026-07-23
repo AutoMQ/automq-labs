@@ -2,6 +2,7 @@ locals {
   resource_prefix = "${var.name_prefix}-console"
 
   service_account_id = trim(substr("${local.resource_prefix}-sa", 0, 30), "-")
+  config             = jsondecode(base64decode(var.config))
 
   labels = {
     automq_vendor = "automq"
@@ -141,6 +142,11 @@ resource "google_compute_instance" "console" {
   metadata_startup_script = templatefile("${path.module}/startup.sh.tpl", {
     console_image_b64     = base64encode(var.console_image)
     config_b64            = base64encode(var.config)
+    environment_id_b64    = base64encode(local.config.environmentId)
+    client_id_b64         = base64encode(local.config.clientId)
+    client_secret_b64     = base64encode(local.config.clientSecret)
+    region_b64            = base64encode(local.config.region)
+    ops_bucket_b64        = base64encode(local.config.opsBucket.bucketName)
     home_endpoint_b64     = base64encode(var.home_endpoint)
     initial_password_b64  = base64encode(random_password.initial_password.result)
     access_key_b64        = base64encode(random_password.access_key.result)
