@@ -3,11 +3,6 @@ output "endpoint" {
   value       = "http://${google_compute_address.console.address}:8080"
 }
 
-output "initial_username" {
-  description = "Initial AutoMQ Console username."
-  value       = "admin"
-}
-
 output "initial_password" {
   description = "Initial AutoMQ Console password."
   value       = random_password.initial_password.result
@@ -26,9 +21,9 @@ output "initial_secret_key" {
   sensitive   = true
 }
 
-output "service_account" {
-  description = "Full resource name of the Console service account."
-  value       = google_service_account.console.name
+output "service_account_email" {
+  description = "Email address of the Console service account."
+  value       = google_service_account.console.email
 }
 
 output "vm_name" {

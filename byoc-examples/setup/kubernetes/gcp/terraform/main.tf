@@ -9,18 +9,6 @@ locals {
     "iam.googleapis.com",
     "storage.googleapis.com",
   ])
-
-  automq_ports = [
-    "8081",
-    "8083",
-    "9090",
-    "9092",
-    "9093",
-    "9102",
-    "9103",
-    "9112",
-    "9113",
-  ]
 }
 
 resource "google_project_service" "required" {
@@ -74,9 +62,8 @@ module "console" {
   machine_type          = var.console_machine_type
   ingress_source_ranges = var.console_ingress_source_ranges
   registry              = var.automq_console_registry
-  depends_on = [
-    google_project_service.required,
-  ]
+
+  depends_on = [google_project_service.required]
 }
 
 resource "google_compute_firewall" "management_to_automq" {
@@ -90,6 +77,6 @@ resource "google_compute_firewall" "management_to_automq" {
 
   allow {
     protocol = "tcp"
-    ports    = local.automq_ports
+    ports    = ["8081", "8083", "9090", "9092", "9093", "9102", "9103", "9112", "9113"]
   }
 }

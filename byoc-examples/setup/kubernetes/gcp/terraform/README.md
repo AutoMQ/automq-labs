@@ -9,7 +9,7 @@ The example creates:
 - A dedicated VPC.
 - A management subnet for the AutoMQ Console.
 - A workload subnet with secondary ranges for GKE Pods and Services.
-- A Cloud Router and Cloud NAT covering both subnets.
+- A Cloud Router and Cloud NAT for private GKE node egress.
 - A regional GKE Standard cluster with private nodes and a public control-plane endpoint.
 - The GKE default node pool for system workloads.
 - One dedicated AutoMQ node pool spanning three zones.
@@ -72,6 +72,8 @@ This example does not create an AutoMQ Instance. After the environment is ready,
    terraform output -raw get_credentials_command
    ```
 
+   Run the command printed by Terraform.
+
 ## Verify
 
 Verify the Console endpoint:
@@ -121,7 +123,7 @@ Use these values with provider `automq/automq` to create an `automq_kafka_instan
 | `automq_node_pool.min_size` | Minimum total nodes across the three zones | `3` |
 | `automq_node_pool.max_size` | Maximum total nodes across the three zones | `10` |
 
-Supported AutoMQ node machine types are `n4d-standard-2`, `n4d-highmem-2`, `n4a-highmem-1`, `n4a-standard-2`, and `n4d-standard-4`. Confirm that the selected type is available in all three zones.
+Supported AutoMQ node machine types are `n4d-standard-2`, `n4d-highmem-2`, `n4a-highmem-1`, `n4a-standard-2`, and `n4d-standard-4`. Confirm that the selected type is available in all three zones. The AutoMQ node pool uses `hyperdisk-balanced` boot disks, as required by these N4 machine families.
 
 When overriding `network_cidrs`, use non-overlapping IPv4 ranges that do not conflict with connected VPC, VPN, or on-premises networks.
 

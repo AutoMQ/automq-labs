@@ -58,11 +58,6 @@ output "console_endpoint" {
   value       = module.console.endpoint
 }
 
-output "console_initial_username" {
-  description = "Initial username for the AutoMQ BYOC Console."
-  value       = module.console.initial_username
-}
-
 output "console_initial_password" {
   description = "Initial password for the AutoMQ BYOC Console."
   value       = module.console.initial_password
@@ -81,9 +76,9 @@ output "console_initial_secret_key" {
   sensitive   = true
 }
 
-output "console_service_account" {
-  description = "Service account used by the AutoMQ Console VM."
-  value       = module.console.service_account
+output "console_service_account_email" {
+  description = "Email address of the service account used by the AutoMQ Console VM."
+  value       = module.console.service_account_email
 }
 
 output "automq_environment_id" {
