@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'automq-brokers'
+    static_configs:
+      - targets:
+          - 'broker-0:9999'
+          - 'broker-1:9999'
+        labels:
+          cluster: 'automq-demo'
+
+  - job_name: 'automq-controller'
+    static_configs:
+      - targets:
+          - 'controller-0:9999'
+        labels:
+          cluster: 'automq-demo'
+
+  - job_name: 'minio'
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets:
+          - 'minio:9000'

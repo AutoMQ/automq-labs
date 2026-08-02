@@ -1,0 +1,193 @@
+[0;34m[2025-12-30 14:41:08][0m =========================================
+[0;34m[2025-12-30 14:41:08][0m Scale-Up Auto-Balancing Experiment
+[0;34m[2025-12-30 14:41:08][0m =========================================
+[0;34m[2025-12-30 14:41:08][0m Timestamp: 20251230-144108
+[0;34m[2025-12-30 14:41:08][0m 
+[0;34m[2025-12-30 14:41:08][0m Step 1: Cleaning up previous environment...
+time="2025-12-30T14:41:08+08:00" level=warning msg="/Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/scale-up/docker-compose-with-metrics.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Volume scale-up_prometheus-data  Removing
+ Volume scale-up_grafana-data  Removing
+ Volume scale-up_prometheus-data  Removed
+ Volume scale-up_grafana-data  Removed
+[0;34m[2025-12-30 14:41:15][0m Starting initial 2-broker cluster...
+time="2025-12-30T14:41:15+08:00" level=warning msg="/Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/scale-up/docker-compose-with-metrics.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network automq_net_scaleup  Creating
+ Network automq_net_scaleup  Created
+ Volume "scale-up_prometheus-data"  Creating
+ Volume "scale-up_prometheus-data"  Created
+ Volume "scale-up_grafana-data"  Creating
+ Volume "scale-up_grafana-data"  Created
+ Container prometheus-scaleup  Creating
+ Container renderer-scaleup  Creating
+ Container minio-scaleup  Creating
+ Container prometheus-scaleup  Created
+ Container grafana-scaleup  Creating
+ Container minio-scaleup  Created
+ Container mc-scaleup  Creating
+ Container renderer-scaleup  Created
+ Container grafana-scaleup  Created
+ Container mc-scaleup  Created
+ Container automq-server1-scaleup  Creating
+ Container automq-server2-scaleup  Creating
+ Container automq-server1-scaleup  Created
+ Container automq-server2-scaleup  Created
+ Container prometheus-scaleup  Starting
+ Container minio-scaleup  Starting
+ Container renderer-scaleup  Starting
+ Container prometheus-scaleup  Started
+ Container grafana-scaleup  Starting
+ Container minio-scaleup  Started
+ Container minio-scaleup  Waiting
+ Container renderer-scaleup  Started
+ Container grafana-scaleup  Started
+ Container minio-scaleup  Healthy
+ Container mc-scaleup  Starting
+ Container mc-scaleup  Started
+ Container automq-server2-scaleup  Starting
+ Container automq-server1-scaleup  Starting
+ Container automq-server2-scaleup  Started
+ Container automq-server1-scaleup  Started
+[0;34m[2025-12-30 14:41:51][0m Waiting for brokers to be ready...
+[0;32m[2025-12-30 14:41:53] ✅ Brokers are ready![0m
+[0;34m[2025-12-30 14:41:53][0m Step 2: Creating topic with 12 partitions...
+Created topic scaleup-test.
+[0;34m[2025-12-30 14:41:54][0m Waiting 15 seconds for topic to be fully created...
+[0;34m[2025-12-30 14:42:09][0m Step 3: Verifying initial partition distribution...
+Topic: scaleup-test	TopicId: X3Ani8ZfQzSewXg0UAoreA	PartitionCount: 12	ReplicationFactor: 1	Configs: min.insync.replicas=1,segment.bytes=1073741824
+	Topic: scaleup-test	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 1	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 2	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 3	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 4	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 5	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 6	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 7	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 8	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 9	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 10	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 11	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+[0;34m[2025-12-30 14:42:11][0m Initial distribution: Broker 0: 6, Broker 1: 6
+[0;34m[2025-12-30 14:42:11][0m Step 4: Waiting 60 seconds for metrics to accumulate...
+[0;34m[2025-12-30 14:43:11][0m Capturing screenshot: 01-before-scaleup
+[0;34m[2025-12-30 14:43:11][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[2025-12-30 14:43:11][0m   Attempt 1/5: 6-6-0-
+[0;34m[2025-12-30 14:43:32][0m   Attempt 2/5: 6-6-0-
+[0;32m[2025-12-30 14:43:32] ✅ Metrics stable at: 6-6-0-[0m
+[0;34m[2025-12-30 14:43:32][0m Querying partition metrics from brokers (01-before-scaleup)...
+[0;34m[2025-12-30 14:43:32][0m   Broker 0: 6 partitions
+[0;34m[2025-12-30 14:43:32][0m   Broker 1: 6 partitions
+[0;34m[2025-12-30 14:43:32][0m   Broker 2: 0 partitions
+[0;34m[2025-12-30 14:43:32][0m Distribution: 6 6 0 
+[0;34m[2025-12-30 14:43:32][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[2025-12-30 14:44:08] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/scale-up/results/screenshots/01-before-scaleup-20251230-144108.png (20794 bytes)[0m
+[0;34m[2025-12-30 14:44:08][0m Verifying metrics match screenshot...
+[0;34m[2025-12-30 14:44:08][0m Querying partition metrics from brokers (01-before-scaleup-verification)...
+[0;34m[2025-12-30 14:44:08][0m   Broker 0: 6 partitions
+[0;34m[2025-12-30 14:44:08][0m   Broker 1: 6 partitions
+[0;34m[2025-12-30 14:44:08][0m   Broker 2: 0 partitions
+[0;34m[2025-12-30 14:44:08][0m Distribution: 6 6 0 
+[0;34m[2025-12-30 14:44:08][0m Step 5: Starting traffic generation...
+c23149cbfe71dd453162ad7ab91075a252126a3ec1fec79afe92ab9c8b15598e
+[0;32m[2025-12-30 14:44:09] ✅ Traffic generation started[0m
+[0;34m[2025-12-30 14:44:19][0m Step 6: ⬆️  SCALING UP - Adding 3rd broker...
+time="2025-12-30T14:44:19+08:00" level=warning msg="/Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/scale-up/docker-compose-with-metrics.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container minio-scaleup  Running
+ Container mc-scaleup  Running
+ Container automq-server3-scaleup  Creating
+ Container automq-server3-scaleup  Created
+ Container minio-scaleup  Waiting
+ Container minio-scaleup  Healthy
+ Container automq-server3-scaleup  Starting
+ Container automq-server3-scaleup  Started
+[0;32m[2025-12-30 14:44:20] ✅ 3rd broker started at 14:44:20[0m
+[0;34m[2025-12-30 14:44:40][0m Verifying 3rd broker joined the cluster...
+server3:9092 (id: 2 rack: null) -> (
+[0;32m[2025-12-30 14:44:41] ✅ 3rd broker (ID: 2) successfully joined cluster[0m
+[0;34m[2025-12-30 14:44:41][0m Step 7: Monitoring for partition rebalancing...
+[0;34m[2025-12-30 14:44:41][0m Checking every 30 seconds...
+[0;34m[2025-12-30 14:44:41][0m 
+[0;34m[2025-12-30 14:44:41][0m =========================================
+[0;34m[2025-12-30 14:44:41][0m Check 1/30 - 14:44:41
+[0;34m[2025-12-30 14:44:41][0m =========================================
+[0;34m[2025-12-30 14:44:43][0m Broker 0: 6 partitions
+[0;34m[2025-12-30 14:44:43][0m Broker 1: 6 partitions
+[0;34m[2025-12-30 14:44:43][0m Broker 2: 0 partitions
+[0;34m[2025-12-30 14:44:43][0m 
+[0;34m[2025-12-30 14:45:13][0m =========================================
+[0;34m[2025-12-30 14:45:13][0m Check 2/30 - 14:45:13
+[0;34m[2025-12-30 14:45:13][0m =========================================
+[0;34m[2025-12-30 14:45:15][0m Broker 0: 4 partitions
+[0;34m[2025-12-30 14:45:15][0m Broker 1: 4 partitions
+[0;34m[2025-12-30 14:45:15][0m Broker 2: 4 partitions
+[0;32m[2025-12-30 14:45:15] ✅ ✅ REBALANCING DETECTED! Broker 2 now has 4 partitions[0m
+[0;34m[2025-12-30 14:45:45][0m Capturing screenshot: 02-during-scaleup
+[0;34m[2025-12-30 14:45:45][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[2025-12-30 14:45:45][0m   Attempt 1/5: 4-4-0-
+[0;34m[2025-12-30 14:46:06][0m   Attempt 2/5: 4-4-4-
+[0;34m[2025-12-30 14:46:27][0m   Attempt 3/5: 4-4-4-
+[0;32m[2025-12-30 14:46:27] ✅ Metrics stable at: 4-4-4-[0m
+[0;34m[2025-12-30 14:46:27][0m Querying partition metrics from brokers (02-during-scaleup)...
+[0;34m[2025-12-30 14:46:27][0m   Broker 0: 4 partitions
+[0;34m[2025-12-30 14:46:27][0m   Broker 1: 4 partitions
+[0;34m[2025-12-30 14:46:27][0m   Broker 2: 4 partitions
+[0;34m[2025-12-30 14:46:27][0m Distribution: 4 4 4 
+[0;34m[2025-12-30 14:46:27][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[2025-12-30 14:47:03] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/scale-up/results/screenshots/02-during-scaleup-20251230-144108.png (30199 bytes)[0m
+[0;34m[2025-12-30 14:47:03][0m Verifying metrics match screenshot...
+[0;34m[2025-12-30 14:47:03][0m Querying partition metrics from brokers (02-during-scaleup-verification)...
+[0;34m[2025-12-30 14:47:03][0m   Broker 0: 4 partitions
+[0;34m[2025-12-30 14:47:03][0m   Broker 1: 4 partitions
+[0;34m[2025-12-30 14:47:03][0m   Broker 2: 4 partitions
+[0;34m[2025-12-30 14:47:03][0m Distribution: 4 4 4 
+[0;32m[2025-12-30 14:47:03] ✅ ✅ BALANCED STATE ACHIEVED![0m
+[0;34m[2025-12-30 14:47:03][0m Capturing screenshot: 03-after-scaleup
+[0;34m[2025-12-30 14:47:03][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[2025-12-30 14:47:03][0m   Attempt 1/5: 4-4-4-
+[0;34m[2025-12-30 14:47:24][0m   Attempt 2/5: 4-4-4-
+[0;32m[2025-12-30 14:47:24] ✅ Metrics stable at: 4-4-4-[0m
+[0;34m[2025-12-30 14:47:24][0m Querying partition metrics from brokers (03-after-scaleup)...
+[0;34m[2025-12-30 14:47:24][0m   Broker 0: 4 partitions
+[0;34m[2025-12-30 14:47:24][0m   Broker 1: 4 partitions
+[0;34m[2025-12-30 14:47:24][0m   Broker 2: 4 partitions
+[0;34m[2025-12-30 14:47:24][0m Distribution: 4 4 4 
+[0;34m[2025-12-30 14:47:24][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[2025-12-30 14:48:00] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/scale-up/results/screenshots/03-after-scaleup-20251230-144108.png (30011 bytes)[0m
+[0;34m[2025-12-30 14:48:00][0m Verifying metrics match screenshot...
+[0;34m[2025-12-30 14:48:00][0m Querying partition metrics from brokers (03-after-scaleup-verification)...
+[0;34m[2025-12-30 14:48:00][0m   Broker 0: 4 partitions
+[0;34m[2025-12-30 14:48:00][0m   Broker 1: 4 partitions
+[0;34m[2025-12-30 14:48:00][0m   Broker 2: 4 partitions
+[0;34m[2025-12-30 14:48:00][0m Distribution: 4 4 4 
+[0;34m[2025-12-30 14:48:00][0m Continuing to monitor for stability...
+[0;34m[2025-12-30 14:48:00][0m Step 8: Stopping traffic generation...
+scaleup-producer-20251230-144108
+scaleup-producer-20251230-144108
+[0;34m[2025-12-30 14:48:10][0m Step 9: Final partition distribution...
+Topic: scaleup-test	TopicId: X3Ani8ZfQzSewXg0UAoreA	PartitionCount: 12	ReplicationFactor: 1	Configs: min.insync.replicas=1,segment.bytes=1073741824
+	Topic: scaleup-test	Partition: 0	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 1	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 2	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 3	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 4	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 5	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 6	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 7	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 8	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 9	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 10	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: scaleup-test	Partition: 11	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+[0;34m[2025-12-30 14:48:12][0m Final distribution: Broker 0: 4, Broker 1: 4, Broker 2: 4
+[0;34m[2025-12-30 14:48:12][0m Step 10: Capturing final overview screenshot...
+[0;32m[2025-12-30 14:48:17] ✅ Screenshot saved: final-overview-20251230-144108.png[0m
+[0;34m[2025-12-30 14:48:17][0m Step 11: Generating results report...
+[0;32m[2025-12-30 14:48:17] ✅ Results report generated: experiment-summary-20251230-144108.md[0m
+[0;34m[2025-12-30 14:48:17][0m 
+[0;34m[2025-12-30 14:48:17][0m =========================================
+[0;34m[2025-12-30 14:48:17][0m Experiment Complete!
+[0;34m[2025-12-30 14:48:17][0m =========================================
+[0;34m[2025-12-30 14:48:17][0m Results: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/scale-up/results
+[0;34m[2025-12-30 14:48:17][0m 
+[0;32m[2025-12-30 14:48:17] ✅ ✅ Scale-up auto-balancing was successful![0m
+[0;34m[2025-12-30 14:48:17][0m 
+[0;34m[2025-12-30 14:48:17][0m To view Grafana: http://localhost:3010
+[0;34m[2025-12-30 14:48:17][0m 

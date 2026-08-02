@@ -1,0 +1,99 @@
+# JMX Exporter configuration for AutoMQ/Kafka metrics
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # Broker Topic Metrics - Bytes In/Out
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=BytesInPerSec><>OneMinuteRate
+    name: kafka_server_broker_topic_metrics_bytes_in_per_sec
+    type: GAUGE
+    help: "Bytes in per second (1-minute rate)"
+  
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=BytesOutPerSec><>OneMinuteRate
+    name: kafka_server_broker_topic_metrics_bytes_out_per_sec
+    type: GAUGE
+    help: "Bytes out per second (1-minute rate)"
+  
+  # Broker Topic Metrics - Messages In
+  - pattern: kafka.server<type=BrokerTopicMetrics, name=MessagesInPerSec><>OneMinuteRate
+    name: kafka_server_broker_topic_metrics_messages_in_per_sec
+    type: GAUGE
+    help: "Messages in per second (1-minute rate)"
+  
+  # Request Metrics - Produce
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=Produce><>Mean
+    name: kafka_network_request_metrics_produce_total_time_ms_mean
+    type: GAUGE
+    help: "Mean produce request time in milliseconds"
+  
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=Produce><>99thPercentile
+    name: kafka_network_request_metrics_produce_total_time_ms_p99
+    type: GAUGE
+    help: "99th percentile produce request time in milliseconds"
+  
+  # Request Metrics - Fetch
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=Fetch><>Mean
+    name: kafka_network_request_metrics_fetch_total_time_ms_mean
+    type: GAUGE
+    help: "Mean fetch request time in milliseconds"
+  
+  - pattern: kafka.network<type=RequestMetrics, name=TotalTimeMs, request=Fetch><>99thPercentile
+    name: kafka_network_request_metrics_fetch_total_time_ms_p99
+    type: GAUGE
+    help: "99th percentile fetch request time in milliseconds"
+  
+  # Request Rate
+  - pattern: kafka.network<type=RequestMetrics, name=RequestsPerSec, request=(.+)><>OneMinuteRate
+    name: kafka_network_request_metrics_requests_per_sec
+    type: GAUGE
+    labels:
+      request: "$1"
+    help: "Requests per second by request type"
+  
+  # Partition Count
+  - pattern: kafka.server<type=ReplicaManager, name=PartitionCount><>Value
+    name: kafka_server_replica_manager_partition_count
+    type: GAUGE
+    help: "Number of partitions on this broker"
+  
+  - pattern: kafka.server<type=ReplicaManager, name=LeaderCount><>Value
+    name: kafka_server_replica_manager_leader_count
+    type: GAUGE
+    help: "Number of leader partitions on this broker"
+  
+  # Under Replicated Partitions
+  - pattern: kafka.server<type=ReplicaManager, name=UnderReplicatedPartitions><>Value
+    name: kafka_server_replica_manager_under_replicated_partitions
+    type: GAUGE
+    help: "Number of under-replicated partitions"
+  
+  # Log Flush Stats
+  - pattern: kafka.log<type=LogFlushStats, name=LogFlushRateAndTimeMs><>Mean
+    name: kafka_log_log_flush_rate_and_time_ms_mean
+    type: GAUGE
+    help: "Mean log flush time in milliseconds"
+  
+  # Network Processor Metrics
+  - pattern: kafka.network<type=Processor, name=IdlePercent, networkProcessor=(.+)><>Value
+    name: kafka_network_processor_idle_percent
+    type: GAUGE
+    labels:
+      processor: "$1"
+    help: "Network processor idle percentage"
+  
+  # Controller Metrics
+  - pattern: kafka.controller<type=KafkaController, name=ActiveControllerCount><>Value
+    name: kafka_controller_active_controller_count
+    type: GAUGE
+    help: "Number of active controllers (should be 1)"
+  
+  # AutoBalancer Metrics (if available)
+  - pattern: kafka.autobalancer<type=(.+), name=(.+)><>Value
+    name: kafka_autobalancer_$1_$2
+    type: GAUGE
+    help: "AutoBalancer metric: $1 $2"
+  
+  - pattern: kafka.autobalancer<type=(.+), name=(.+)><>Count
+    name: kafka_autobalancer_$1_$2_total
+    type: COUNTER
+    help: "AutoBalancer counter: $1 $2"

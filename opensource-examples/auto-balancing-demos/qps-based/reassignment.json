@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "partitions": [
+    {"topic": "qps-test", "partition": 4, "replicas": [0]},
+    {"topic": "qps-test", "partition": 5, "replicas": [0]}
+  ]
+}
