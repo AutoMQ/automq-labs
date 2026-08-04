@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "GithubEvent",
+  "namespace": "com.gharchive",
+  "doc": "Top-level structure of Github Event",
+  "fields": [
+    { "name": "id", "type": ["null", "string"], "default": null },
+    { "name": "type", "type": ["null", "string"], "default": null },
+    { "name": "actor_login", "type": ["null", "string"], "default": null },
+    { "name": "repo_name", "type": ["null", "string"], "default": null },
+    { "name": "org_login", "type": ["null", "string"], "default": null },
+    { "name": "created_at", "type": { "type": "long", "logicalType": "timestamp-millis" } }
+  ]
+}

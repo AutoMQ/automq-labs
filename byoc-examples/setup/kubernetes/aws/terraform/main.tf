@@ -54,7 +54,7 @@ resource "aws_eks_node_group" "automq-node-groups" {
   subnet_ids = slice(module.network.private_subnets, 0, 1)
 
   ami_type       = local.node_group.ami_type
-  capacity_type  = "ON_DEMAND" # Use On-Demand instances, can switch to "SPOT" for cost savings
+  capacity_type  = "SPOT" # Use On-Demand instances, can switch to "SPOT" for cost savings
   instance_types = [local.node_group.instance_type]
 
   # Node group auto-scaling configuration
