@@ -1,0 +1,30 @@
+name_prefix = "automq-ec2-demo"
+region      = "us-east-1"
+
+# Copy these values from the AutoMQ BYOC Installation Script.
+environment_id  = "env-REPLACE_ME"
+client_id       = "REPLACE_ME"
+client_secret   = "REPLACE_ME"
+ops_bucket_name = "automq-ops-REPLACE_ME"
+
+vpc_id           = "vpc-REPLACE_ME"
+public_subnet_id  = "subnet-REPLACE_PUBLIC"
+private_subnet_ids_by_zone = {
+  us-east-1a = ["subnet-REPLACE_PRIVATE_A"]
+  us-east-1b = ["subnet-REPLACE_PRIVATE_B"]
+  us-east-1c = ["subnet-REPLACE_PRIVATE_C"]
+}
+
+# Use an exact AMI name and trusted owner supplied by AutoMQ.
+console_ami_name   = "AutoMQ-control-center-REPLACE_ME-x86_64"
+console_ami_owners = ["REPLACE_WITH_AMI_OWNER_ACCOUNT_ID"]
+
+# Replace these documentation CIDRs with your actual public IP/CIDR.
+console_allowed_cidr_blocks = ["203.0.113.10/32"]
+ssh_allowed_cidr_blocks     = ["203.0.113.10/32"]
+
+# Leave empty to create a disposable encrypted data bucket.
+data_bucket_name          = ""
+force_destroy_data_bucket = true
+
+console_instance_type = "t3.large"

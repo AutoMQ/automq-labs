@@ -1,0 +1,10 @@
+#cloud-config
+write_files:
+  - path: /etc/automq-byoc-environment
+    owner: root:root
+    permissions: "0600"
+    encoding: b64
+    content: ${environment_file_base64}
+runcmd:
+  - cat /etc/automq-byoc-environment >> /etc/environment
+  - systemctl restart cmp

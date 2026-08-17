@@ -10,8 +10,9 @@ A comprehensive guide and Terraform scripts to set up a production-ready AutoMQ 
 
 *   **Status:** Available
 
-### EC2
+### [EC2 Custom](ec2-custom/README.md)
 
-*   **Status:** Coming Soon
+Deploy an AutoMQ BYOC Console AMI and create an IAAS AutoMQ Instance directly
+on Amazon EC2 in an existing VPC.
 
-Instructions for deploying AutoMQ directly on EC2 instances are under development.
+*   **Status:** Available

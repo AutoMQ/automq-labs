@@ -1,0 +1,31 @@
+console_endpoint   = "http://REPLACE_WITH_CONSOLE_IP:8080"
+console_access_key = "REPLACE_WITH_CONSOLE_ACCESS_KEY"
+console_secret_key = "REPLACE_WITH_CONSOLE_SECRET_KEY"
+environment_id     = "env-REPLACE_ME"
+
+instance_name        = "automq-ec2-demo"
+instance_description = "AutoMQ EC2 Custom example"
+
+# Use an exact stable version shown as available in your Console.
+automq_version = "5.5.3"
+reserved_aku   = 3
+wal_mode       = "EBSWAL"
+
+private_subnet_ids_by_zone = {
+  us-east-1a = ["subnet-REPLACE_PRIVATE_A"]
+  us-east-1b = ["subnet-REPLACE_PRIVATE_B"]
+  us-east-1c = ["subnet-REPLACE_PRIVATE_C"]
+}
+
+data_bucket_name = "automq-data-REPLACE_ME"
+dns_zone_id       = "Z_REPLACE_ME"
+instance_role_arn = "arn:aws:iam::123456789012:role/automq-data-plane-REPLACE_ME"
+
+authentication_methods   = ["anonymous"]
+transit_encryption_modes = ["plaintext"]
+data_encryption_mode     = "NONE"
+schema_registry_enabled  = false
+
+tags = {
+  environment = "demo"
+}
