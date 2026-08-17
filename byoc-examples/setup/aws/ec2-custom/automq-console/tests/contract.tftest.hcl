@@ -71,6 +71,30 @@ run "console_stack_is_self_contained" {
   }
 
   assert {
+    condition = alltrue([
+      for action in [
+        "iam:GetPolicy",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole",
+        "iam:ListRolePolicies",
+        "s3:GetBucketLocation",
+        "s3:GetBucketTagging",
+        "s3:GetLifecycleConfiguration",
+        "s3:ListBucket",
+      ] : strcontains(aws_iam_policy.console.policy, action)
+    ])
+    error_message = "The Console must be able to validate the Terraform-managed data bucket and data-plane role before instance creation."
+  }
+
+  assert {
+    condition     = output.cluster_role_name == module.automq_role.role_name
+    error_message = "The Cluster stage must receive the AWS role name expected by Console 8.3.16."
+  }
+
+  assert {
     condition     = length(aws_subnet.broker) == 3 && length(output.private_subnet_ids_by_zone) == 3
     error_message = "The quick path must create three private broker subnets across three zones."
   }

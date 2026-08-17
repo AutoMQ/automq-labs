@@ -14,10 +14,11 @@ resource "automq_kafka_instance" "this" {
   version        = var.automq_version
   tags           = var.tags
 
-  # Provider 0.4.5 validates literal partial objects before root variables resolve.
   compute_specs = {
-    reserved_aku = var.reserved_aku
-    pricing_mode = var.reserved_aku >= 3 ? "SubscriptionBased" : null
+    reserved_node_count = var.reserved_node_count
+    instance_types      = [var.broker_instance_type]
+    # Provider 0.4.5 validates literal partial objects before root variables resolve.
+    pricing_mode = var.reserved_node_count >= 3 ? "UsageBased" : null
     deploy_type  = "IAAS"
 
     networks = local.broker_networks
@@ -25,7 +26,7 @@ resource "automq_kafka_instance" "this" {
       bucket_name = var.data_bucket_name
     }] : null
     dns_zone      = var.dns_zone_id
-    instance_role = var.instance_role_arn
+    instance_role = var.instance_role_name
   }
 
   features = {

@@ -43,6 +43,7 @@ variable "environment_id" {
 variable "instance_name" {
   description = "AutoMQ Kafka Instance name"
   type        = string
+  default     = "automq-ec2-demo"
 
   validation {
     condition     = length(trimspace(var.instance_name)) > 0
@@ -59,6 +60,7 @@ variable "instance_description" {
 variable "automq_version" {
   description = "Exact AutoMQ data-plane version already available in the Console"
   type        = string
+  default     = "5.5.3"
 
   validation {
     condition     = length(trimspace(var.automq_version)) > 0
@@ -66,15 +68,26 @@ variable "automq_version" {
   }
 }
 
-variable "reserved_aku" {
-  description = "Reserved AutoMQ Capacity Units"
+variable "reserved_node_count" {
+  description = "Number of EC2 broker nodes for the UsageBased instance"
   type        = number
   default     = 3
   nullable    = false
 
   validation {
-    condition     = var.reserved_aku >= 3 && floor(var.reserved_aku) == var.reserved_aku
-    error_message = "reserved_aku must be an integer greater than or equal to three."
+    condition     = var.reserved_node_count >= 3 && var.reserved_node_count <= 100 && floor(var.reserved_node_count) == var.reserved_node_count
+    error_message = "reserved_node_count must be an integer between three and 100."
+  }
+}
+
+variable "broker_instance_type" {
+  description = "EC2 instance type used by all UsageBased AutoMQ broker nodes"
+  type        = string
+  default     = "m7g.xlarge"
+
+  validation {
+    condition     = trimspace(var.broker_instance_type) != ""
+    error_message = "broker_instance_type must not be empty."
   }
 }
 
@@ -114,13 +127,13 @@ variable "dns_zone_id" {
   }
 }
 
-variable "instance_role_arn" {
-  description = "Dedicated AutoMQ data-plane IAM Role ARN from the automq-console output"
+variable "instance_role_name" {
+  description = "Dedicated AutoMQ data-plane IAM Role name from the automq-console output"
   type        = string
 
   validation {
-    condition     = can(regex("^arn:aws(-[a-z]+)?:iam::[0-9]{12}:role/", var.instance_role_arn))
-    error_message = "instance_role_arn must be an AWS IAM Role ARN, not a Role name or Instance Profile ARN."
+    condition     = can(regex("^[A-Za-z0-9+=,.@_-]{1,64}$", var.instance_role_name))
+    error_message = "instance_role_name must be a valid AWS IAM Role name, not an ARN."
   }
 }
 

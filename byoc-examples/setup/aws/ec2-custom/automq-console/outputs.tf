@@ -57,8 +57,13 @@ output "console_role_arn" {
 }
 
 output "cluster_role_arn" {
-  description = "IAM Role ARN to pass to the AutoMQ IAAS Cluster"
+  description = "IAM Role ARN used for iam:PassRole and policy review"
   value       = module.automq_role.role_arn
+}
+
+output "cluster_role_name" {
+  description = "IAM Role name to pass to the AutoMQ IAAS Cluster"
+  value       = module.automq_role.role_name
 }
 
 output "cluster_instance_profile_arn" {

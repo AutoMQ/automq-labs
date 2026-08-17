@@ -87,7 +87,7 @@ Populate its variables from the `automq-console` state:
 | `private_subnet_ids_by_zone` | `private_subnet_ids_by_zone` |
 | `data_bucket_name` | `data_bucket_name` |
 | `dns_zone_id` | `dns_zone_id` |
-| `instance_role_arn` | `cluster_role_arn` |
+| `instance_role_name` | `cluster_role_name` |
 
 For example, read sensitive values explicitly from the Console directory:
 
@@ -97,17 +97,15 @@ terraform -chdir=../automq-console output -raw console_initial_secret_key
 terraform -chdir=../automq-console output -json private_subnet_ids_by_zone
 ```
 
-Set `automq_version` to an exact data-plane version available in this Console.
-Console image versions and AutoMQ data-plane versions are separate release
-contracts; do not infer one from the other or silently fall back to another
-version. During the live validation of the `8.3.16-aws` Console image, the
-Console reported `5.5.3` as its available AWS data-plane version.
+The default `automq_version` is `5.5.3`, the version returned by the AWS version
+API during live validation of the `8.3.16-aws` Console image. Console image
+versions and AutoMQ data-plane versions are separate release contracts; verify
+the available version again when changing the Console image.
 
-The default Cluster is a three-AKU, subscription-based IAAS deployment using
-EBSWAL with anonymous plaintext access inside the VPC. AKU is still the sizing
-contract for `SubscriptionBased`. Provider `0.4.5` also supports `UsageBased`,
-which instead requires a reserved node count and an EC2 instance type; that is
-not the default contract in this quick example.
+The default Cluster is a three-node, `m7g.xlarge`, usage-based IAAS deployment
+using EBSWAL with anonymous plaintext access inside the VPC. The live BYOC
+environment reports `ON_DEMAND`; `SubscriptionBased` requires an activated
+subscription license and is not the default for this demo.
 
 ## 3. Create and Verify the Cluster
 

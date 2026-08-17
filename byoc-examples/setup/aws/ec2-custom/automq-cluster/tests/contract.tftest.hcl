@@ -13,18 +13,15 @@ variables {
   console_secret_key = "secret-key"
   environment_id     = "env-example"
 
-  instance_name  = "automq-ec2-example"
-  automq_version = "5.5.3"
-
   private_subnet_ids_by_zone = {
     us-east-1c = ["subnet-c"]
     us-east-1a = ["subnet-a"]
     us-east-1b = ["subnet-b"]
   }
 
-  data_bucket_name  = "automq-data-example"
-  dns_zone_id       = "Z0123456789"
-  instance_role_arn = "arn:aws:iam::123456789012:role/automq-data-plane-example"
+  data_bucket_name   = "automq-data-example"
+  dns_zone_id        = "Z0123456789"
+  instance_role_name = "automq-data-plane-example"
 }
 
 run "creates_bucket_scoped_iaas_instance" {
@@ -36,13 +33,17 @@ run "creates_bucket_scoped_iaas_instance" {
   }
 
   assert {
-    condition     = automq_kafka_instance.this.compute_specs.pricing_mode == "SubscriptionBased" && automq_kafka_instance.this.compute_specs.reserved_aku == 3
-    error_message = "The quick path must default to a 3 AKU SubscriptionBased Instance."
+    condition = (
+      automq_kafka_instance.this.compute_specs.pricing_mode == "UsageBased" &&
+      automq_kafka_instance.this.compute_specs.reserved_node_count == 3 &&
+      automq_kafka_instance.this.compute_specs.instance_types[0] == "m7g.xlarge"
+    )
+    error_message = "The quick path must default to a three-node m7g.xlarge UsageBased Instance."
   }
 
   assert {
-    condition     = automq_kafka_instance.this.compute_specs.instance_role == "arn:aws:iam::123456789012:role/automq-data-plane-example"
-    error_message = "The IAAS Instance must use the dedicated data-plane Role ARN."
+    condition     = automq_kafka_instance.this.compute_specs.instance_role == "automq-data-plane-example"
+    error_message = "The IAAS Instance must use the dedicated data-plane Role name expected by Console 8.3.16."
   }
 
   assert {
@@ -61,14 +62,14 @@ run "creates_bucket_scoped_iaas_instance" {
   }
 }
 
-run "role_name_is_rejected" {
+run "role_arn_is_rejected" {
   command = plan
 
   variables {
-    instance_role_arn = "automq-data-plane-example"
+    instance_role_name = "arn:aws:iam::123456789012:role/automq-data-plane-example"
   }
 
-  expect_failures = [var.instance_role_arn]
+  expect_failures = [var.instance_role_name]
 }
 
 run "two_zone_topology_is_rejected" {

@@ -56,6 +56,38 @@ locals {
       Resource = "arn:aws:s3:::${local.ops_bucket_name}/*"
     },
     {
+      Sid    = "ValidateDataBucket"
+      Effect = "Allow"
+      Action = [
+        "s3:GetBucketLocation",
+        "s3:GetBucketTagging",
+        "s3:GetLifecycleConfiguration",
+        "s3:ListBucket",
+      ]
+      Resource = "arn:aws:s3:::${local.data_bucket_name}"
+    },
+    {
+      Sid    = "ValidateDataPlaneRole"
+      Effect = "Allow"
+      Action = [
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole",
+        "iam:ListRolePolicies",
+      ]
+      Resource = module.automq_role.role_arn
+    },
+    {
+      Sid    = "ValidateDataPlanePolicy"
+      Effect = "Allow"
+      Action = [
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+      ]
+      Resource = module.automq_role.policy_arn
+    },
+    {
       Sid    = "ManageTaggedCompute"
       Effect = "Allow"
       Action = [
