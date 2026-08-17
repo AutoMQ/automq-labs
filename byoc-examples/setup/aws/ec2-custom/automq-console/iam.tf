@@ -41,7 +41,7 @@ locals {
         "s3:PutBucketTagging",
         "s3:PutLifecycleConfiguration",
       ]
-      Resource = "arn:aws:s3:::${var.ops_bucket_name}"
+      Resource = "arn:aws:s3:::${local.ops_bucket_name}"
     },
     {
       Sid    = "OpsBucketObjects"
@@ -53,7 +53,7 @@ locals {
         "s3:PutObject",
         "s3:PutObjectTagging",
       ]
-      Resource = "arn:aws:s3:::${var.ops_bucket_name}/*"
+      Resource = "arn:aws:s3:::${local.ops_bucket_name}/*"
     },
     {
       Sid    = "ManageTaggedCompute"
@@ -165,6 +165,11 @@ resource "aws_iam_policy" "console" {
 resource "aws_iam_role_policy_attachment" "console" {
   role       = aws_iam_role.console.name
   policy_arn = aws_iam_policy.console.arn
+}
+
+resource "aws_iam_role_policy_attachment" "console_ssm" {
+  role       = aws_iam_role.console.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
 resource "aws_iam_instance_profile" "console" {

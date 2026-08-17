@@ -1,6 +1,11 @@
 output "environment_id" {
-  description = "AutoMQ BYOC environment ID"
-  value       = var.environment_id
+  description = "AutoMQ BYOC environment ID decoded from CONFIG"
+  value       = local.environment_id
+}
+
+output "region" {
+  description = "AWS Region decoded from CONFIG"
+  value       = local.region
 }
 
 output "console_endpoint" {
@@ -14,8 +19,8 @@ output "console_initial_username" {
 }
 
 output "console_initial_password" {
-  description = "Initial Console password; the AMI uses the EC2 instance ID"
-  value       = aws_instance.console.id
+  description = "Generated initial Console password"
+  value       = random_password.console_initial_password.result
   sensitive   = true
 }
 
@@ -41,20 +46,14 @@ output "console_security_group_id" {
   value       = aws_security_group.console.id
 }
 
+output "console_allowed_cidr_blocks" {
+  description = "CIDRs allowed to reach the Console"
+  value       = local.console_allowed_cidr_blocks
+}
+
 output "console_role_arn" {
   description = "IAM Role ARN attached to the Console EC2 instance"
   value       = aws_iam_role.console.arn
-}
-
-output "console_private_key_path" {
-  description = "Local path containing the generated Console SSH key"
-  value       = local_sensitive_file.console_private_key.filename
-}
-
-output "console_private_key_pem" {
-  description = "Generated Console SSH private key"
-  value       = tls_private_key.console.private_key_pem
-  sensitive   = true
 }
 
 output "cluster_role_arn" {
@@ -73,8 +72,8 @@ output "data_bucket_name" {
 }
 
 output "ops_bucket_name" {
-  description = "S3 ops bucket used by the AutoMQ Console and data plane"
-  value       = var.ops_bucket_name
+  description = "S3 ops bucket decoded from CONFIG and created by this root"
+  value       = local.ops_bucket_name
 }
 
 output "dns_zone_id" {
@@ -89,12 +88,17 @@ output "dns_zone_name" {
 
 output "vpc_id" {
   description = "VPC containing the AutoMQ environment"
-  value       = var.vpc_id
+  value       = aws_vpc.this.id
+}
+
+output "public_subnet_id" {
+  description = "Public subnet containing the AutoMQ Console"
+  value       = aws_subnet.console.id
 }
 
 output "private_subnet_ids_by_zone" {
   description = "Private broker subnet IDs keyed by availability zone"
-  value       = var.private_subnet_ids_by_zone
+  value       = local.private_subnet_ids_by_zone
 }
 
 output "broker_networks" {
@@ -103,6 +107,11 @@ output "broker_networks" {
 }
 
 output "console_ami_id" {
-  description = "Resolved AutoMQ Console AMI ID"
-  value       = data.aws_ami.console.id
+  description = "Resolved Amazon Linux 2023 AMI ID"
+  value       = nonsensitive(data.aws_ssm_parameter.al2023_ami.value)
+}
+
+output "console_image" {
+  description = "AutoMQ BYOC Console image"
+  value       = var.console_image
 }
