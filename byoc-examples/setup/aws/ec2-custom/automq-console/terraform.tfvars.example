@@ -1,10 +1,13 @@
-# Paste the complete Base64 CONFIG value supplied by AutoMQ.
+# Register the AWS environment and copy the complete Base64 CONFIG value from
+# the AutoMQ Cloud installation wizard:
+# https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#register-your-automq-environment
 automq_config = "REPLACE_WITH_AUTOMQ_CONFIG"
 
 # All other inputs have demo defaults. Override only when needed.
 # name_prefix          = "automq-ec2-demo"
 # vpc_cidr             = "10.42.0.0/16"
-# console_image        = "automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws"
+# Use the Console image shown by the same installation wizard when it differs.
+# console_image         = "automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws"
 # console_instance_type = "t3.large"
 
 # By default Terraform detects the caller's public IPv4 address and allows /32.

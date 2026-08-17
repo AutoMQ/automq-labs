@@ -25,13 +25,13 @@ output "console_initial_password" {
 }
 
 output "console_initial_access_key" {
-  description = "Access key used by the AutoMQ Provider"
+  description = "Generated local Console API access key used by the AutoMQ Provider; this is not an AWS access key"
   value       = random_password.console_initial_access_key.result
   sensitive   = true
 }
 
 output "console_initial_secret_key" {
-  description = "Secret key used by the AutoMQ Provider"
+  description = "Generated local Console API secret key used by the AutoMQ Provider; this is not an AWS secret key"
   value       = random_password.console_initial_secret_key.result
   sensitive   = true
 }

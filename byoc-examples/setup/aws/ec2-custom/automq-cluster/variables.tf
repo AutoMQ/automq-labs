@@ -9,7 +9,7 @@ variable "console_endpoint" {
 }
 
 variable "console_access_key" {
-  description = "AutoMQ Console access key from the automq-console output"
+  description = "Local AutoMQ Console API access key from the automq-console output; this is not an AWS access key"
   type        = string
   sensitive   = true
 
@@ -20,7 +20,7 @@ variable "console_access_key" {
 }
 
 variable "console_secret_key" {
-  description = "AutoMQ Console secret key from the automq-console output"
+  description = "Local AutoMQ Console API secret key from the automq-console output; this is not an AWS secret key"
   type        = string
   sensitive   = true
 

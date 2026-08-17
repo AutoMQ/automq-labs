@@ -1,3 +1,5 @@
+# These are local Console API credentials from the automq-console outputs,
+# not AWS credentials or the clientId/clientSecret embedded in CONFIG.
 console_endpoint   = "http://REPLACE_WITH_CONSOLE_IP:8080"
 console_access_key = "REPLACE_WITH_CONSOLE_ACCESS_KEY"
 console_secret_key = "REPLACE_WITH_CONSOLE_SECRET_KEY"
