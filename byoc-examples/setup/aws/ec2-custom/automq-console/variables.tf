@@ -56,8 +56,11 @@ variable "console_image" {
   nullable    = false
 
   validation {
-    condition     = trimspace(var.console_image) != ""
-    error_message = "console_image must not be empty."
+    condition = (
+      trimspace(var.console_image) != "" &&
+      !can(regex("[[:space:]]", var.console_image))
+    )
+    error_message = "console_image must be a non-empty container image reference without whitespace."
   }
 }
 
@@ -68,8 +71,8 @@ variable "console_instance_type" {
   nullable    = false
 
   validation {
-    condition     = trimspace(var.console_instance_type) != ""
-    error_message = "console_instance_type must not be empty."
+    condition     = can(regex("^[a-z0-9][a-z0-9.-]+$", var.console_instance_type))
+    error_message = "console_instance_type must be a valid EC2 instance type name."
   }
 }
 
@@ -95,6 +98,18 @@ variable "data_bucket_name" {
   type        = string
   default     = ""
   nullable    = false
+
+  validation {
+    condition = var.data_bucket_name == "" ? true : (
+      var.data_bucket_name == trimspace(var.data_bucket_name) &&
+      length(var.data_bucket_name) >= 3 &&
+      length(var.data_bucket_name) <= 63 &&
+      can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.data_bucket_name)) &&
+      !strcontains(var.data_bucket_name, "..") &&
+      !can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}$", var.data_bucket_name))
+    )
+    error_message = "data_bucket_name must be empty or a valid 3-63 character S3 bucket name."
+  }
 }
 
 variable "force_destroy_data_bucket" {

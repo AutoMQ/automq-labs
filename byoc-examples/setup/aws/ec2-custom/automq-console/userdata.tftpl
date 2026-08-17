@@ -5,6 +5,21 @@ decode() {
   printf '%s' "$1" | base64 -d
 }
 
+retry() {
+  local max_attempts="$1"
+  shift
+  local attempt=1
+
+  until "$@"; do
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      echo "Command failed after $${max_attempts} attempts: $*" >&2
+      return 1
+    fi
+    sleep "$((attempt * 5))"
+    attempt="$((attempt + 1))"
+  done
+}
+
 AUTOMQ_CONFIG="$(decode '${automq_config_b64}')"
 CONSOLE_IMAGE="$(decode '${console_image_b64}')"
 INITIAL_PASSWORD="$(decode '${initial_password_b64}')"
@@ -13,7 +28,7 @@ INITIAL_SECRET_KEY="$(decode '${initial_secret_key_b64}')"
 DATA_VOLUME_ID="$(decode '${console_data_volume_id_b64}')"
 DATA_VOLUME_SERIAL="$${DATA_VOLUME_ID//-/}"
 
-dnf install -y docker
+retry 5 dnf install -y docker
 systemctl enable --now docker
 
 DATA_DEVICE=""
@@ -57,12 +72,22 @@ install -m 0600 /dev/null /etc/automq-console.env
   printf 'IAAS_SPOT_MODE=NONE\n'
 } > /etc/automq-console.env
 
-docker pull "$CONSOLE_IMAGE"
+retry 5 docker pull "$CONSOLE_IMAGE"
 docker rm -f automq-console >/dev/null 2>&1 || true
 docker run -d \
   --name automq-console \
   --restart unless-stopped \
   --net=host \
+  --log-driver json-file \
+  --log-opt max-size=100m \
+  --log-opt max-file=3 \
   -v /data:/root \
   --env-file /etc/automq-console.env \
   "$CONSOLE_IMAGE"
+
+sleep 5
+if [ "$(docker inspect --format '{{.State.Running}}' automq-console)" != "true" ]; then
+  docker logs automq-console >&2 || true
+  echo "AutoMQ Console container did not remain running" >&2
+  exit 1
+fi

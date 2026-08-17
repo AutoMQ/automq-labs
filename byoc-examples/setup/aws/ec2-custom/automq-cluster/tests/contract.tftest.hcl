@@ -94,3 +94,17 @@ run "tls_without_certificate_configuration_is_rejected" {
 
   expect_failures = [var.transit_encryption_modes]
 }
+
+run "duplicate_broker_network_is_rejected" {
+  command = plan
+
+  variables {
+    broker_networks = [
+      { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
+      { zone = "us-east-1a", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
+      { zone = "us-east-1c", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
+    ]
+  }
+
+  expect_failures = [var.broker_networks]
+}

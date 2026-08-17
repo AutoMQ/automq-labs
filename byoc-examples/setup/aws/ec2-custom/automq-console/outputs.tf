@@ -101,11 +101,6 @@ output "public_subnet_id" {
   value       = aws_subnet.console.id
 }
 
-output "private_subnet_ids_by_zone" {
-  description = "Private broker subnet IDs keyed by availability zone"
-  value       = local.private_subnet_ids_by_zone
-}
-
 output "broker_networks" {
   description = "AutoMQ Provider network payload for the Cluster stage"
   value       = local.broker_networks

@@ -5,7 +5,8 @@
 # instance_name        = "automq-ec2-quickstart"
 # instance_description = "AutoMQ EC2 quick-start instance"
 
-# Defaults validated with Console 8.3.16 on AWS.
+# Defaults validated with Console 8.3.16 on AWS. Confirm automq_version in the
+# running Console's Create Instance workflow when changing console_image.
 # automq_version       = "5.5.3"
 # reserved_node_count  = 3
 # broker_instance_type = "m7g.xlarge"

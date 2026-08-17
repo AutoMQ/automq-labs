@@ -5,6 +5,12 @@ mock_provider "aws" {
     }
   }
 
+  mock_resource "aws_route53_zone" {
+    defaults = {
+      zone_id = "Z0123456789"
+    }
+  }
+
   mock_data "aws_availability_zones" {
     defaults = {
       names = ["us-east-1a", "us-east-1b", "us-east-1c"]
@@ -131,7 +137,7 @@ run "console_stack_is_self_contained" {
   }
 
   assert {
-    condition     = length(aws_subnet.broker) == 3 && length(output.private_subnet_ids_by_zone) == 3
+    condition     = length(aws_subnet.broker) == 3 && length(output.broker_networks) == 3
     error_message = "The quick path must create three private broker subnets across three zones."
   }
 
@@ -153,6 +159,25 @@ run "console_stack_is_self_contained" {
   assert {
     condition     = aws_instance.console.metadata_options[0].http_tokens == "required"
     error_message = "The Console EC2 instance must require IMDSv2 session tokens."
+  }
+
+  assert {
+    condition     = !aws_subnet.console.map_public_ip_on_launch && aws_instance.console.associate_public_ip_address
+    error_message = "Only the Console instance may explicitly request a public address; the public subnet must not assign one to every instance."
+  }
+
+  assert {
+    condition = (
+      strcontains(aws_instance.console.user_data, "retry 5 dnf install -y docker") &&
+      strcontains(aws_instance.console.user_data, "retry 5 docker pull") &&
+      strcontains(aws_instance.console.user_data, "--log-opt max-size=100m")
+    )
+    error_message = "Console bootstrap must retry downloads and bound container log growth."
+  }
+
+  assert {
+    condition     = aws_instance.console.volume_tags["automqEnvironmentID"] == "env-example"
+    error_message = "The Console root EBS volume must carry the environment ownership tags."
   }
 }
 
@@ -197,4 +222,50 @@ run "ipv6_console_allowlist_is_rejected" {
   }
 
   expect_failures = [var.console_allowed_cidr_blocks]
+}
+
+run "invalid_existing_data_bucket_name_is_rejected" {
+  command = plan
+
+  variables {
+    data_bucket_name = "Invalid_Bucket_Name"
+  }
+
+  expect_failures = [var.data_bucket_name]
+}
+
+run "console_image_with_whitespace_is_rejected" {
+  command = plan
+
+  variables {
+    console_image = "automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws latest"
+  }
+
+  expect_failures = [var.console_image]
+}
+
+run "region_without_three_zones_is_rejected" {
+  command = plan
+
+  override_data {
+    target = data.aws_availability_zones.available
+    values = {
+      names = ["us-east-1a", "us-east-1b"]
+    }
+  }
+
+  expect_failures = [data.aws_availability_zones.available]
+}
+
+run "invalid_detected_caller_ip_is_rejected" {
+  command = plan
+
+  override_data {
+    target = data.http.caller_ip[0]
+    values = {
+      response_body = "not-an-ip\n"
+    }
+  }
+
+  expect_failures = [data.http.caller_ip[0]]
 }

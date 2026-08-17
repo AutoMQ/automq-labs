@@ -30,3 +30,23 @@ run "data_plane_policy_is_bucket_scoped" {
     error_message = "The data-plane role must use the expected deterministic name."
   }
 }
+
+run "invalid_bucket_name_is_rejected" {
+  command = plan
+
+  variables {
+    data_bucket_name = "Invalid_Bucket_Name"
+  }
+
+  expect_failures = [var.data_bucket_name]
+}
+
+run "role_name_overflow_is_rejected" {
+  command = plan
+
+  variables {
+    name_prefix = "this-prefix-would-make-the-generated-role-name-too-long"
+  }
+
+  expect_failures = [var.name_prefix]
+}

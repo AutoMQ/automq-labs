@@ -20,6 +20,9 @@ third Terraform state.
 The Console stage can be deployed by itself. Running `terraform apply` in the
 Cluster root is the step that creates the AutoMQ data-plane nodes.
 
+This layout intentionally uses one NAT Gateway and one public Console. It is a
+compact evaluation topology, not a highly available network design.
+
 ## Prerequisites
 
 - Terraform 1.5.7 or later.
@@ -27,6 +30,17 @@ Cluster root is the step that creates the AutoMQ data-plane nodes.
 - AWS credentials with permission to create the resources listed above.
 - An AutoMQ Cloud account and a new AWS BYOC environment.
 - An AWS Region with at least three available Availability Zones.
+- Network access from the machine running Terraform to the Console on TCP
+  8080. The default allowlist works when both Terraform stages run from the
+  same public IPv4 address.
+
+The Terraform caller needs create, read, update, and delete permissions for
+the VPC/EC2, EIP/NAT, EBS, IAM Role/Policy/Instance Profile, S3 bucket, and
+Route 53 resources in this example, plus read access to the public AL2023 SSM
+AMI parameter. These are deployment permissions; Terraform creates a separate,
+more limited runtime role for the Console. The machine running Terraform also
+needs outbound HTTPS access to the Terraform Registry and, unless an explicit
+allowlist is configured, `checkip.amazonaws.com`.
 
 No existing VPC, subnet, Console AMI, SSH key, Environment ID input, or
 separate AutoMQ Cloud client ID and secret inputs are required.
@@ -49,6 +63,10 @@ instructions:
    command. This revision defaults to
    `automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws`. If the wizard
    shows a different image, set `console_image` to the exact value it shows.
+
+Use metadata from one environment throughout both Terraform stages. Do not
+combine a `CONFIG`, Environment ID, or Console image copied from different
+environment records.
 
 The Environment ID is displayed on the AutoMQ Cloud environment page and is
 also the `environmentId` field inside `CONFIG`. The Console root decodes it and
@@ -82,7 +100,8 @@ cp terraform.tfvars.example terraform.tfvars
 
 Set `automq_config` in `terraform.tfvars`. Set `console_image` as well when the
 installation wizard shows an image different from the default. All other
-inputs have working evaluation defaults.
+inputs have working evaluation defaults. Changing the image also requires a
+review of the version-specific IAM contract described below.
 
 ```bash
 terraform init
@@ -104,6 +123,11 @@ login, Console `8.3.16-aws` redirects the initial `admin` user to
 **Reset Password**. Set a new password of 8-16 characters containing a letter,
 a number, and a special character. The Terraform-generated initial password is
 a one-time bootstrap credential and stops working after the reset.
+
+The Console security group allows the public IPv4 detected during the latest
+Terraform plan. If the browser or the later Cluster Terraform stage runs from
+a different VPN, proxy, CI runner, or office network, set
+`console_allowed_cidr_blocks` explicitly and apply the Console root again.
 
 On **System Initialization**, select **EC2 Mode Minimal Permissions**, then
 select **Authorization confirmed**. The IAM actions in `automq-console/iam.tf`
@@ -177,6 +201,11 @@ data-plane versions are separate release contracts. The default data-plane
 version was live-validated with Console `8.3.16-aws`; select an exact version
 available in your Console when using another image.
 
+To confirm the available data-plane version, open **Create Instance** in the
+running Console and use an AWS version shown there. Do not infer
+`automq_version` from the Console container tag; the two products use separate
+version lines.
+
 Review the plan carefully. The following apply creates billable data-plane
 resources:
 
@@ -216,7 +245,7 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
 | `console_allowed_cidr_blocks` | Terraform caller's public IPv4 `/32` | Set an explicit allowlist when the browser exits through another IP; avoid `0.0.0.0/0` |
 | `console_instance_type` | `t3.large` | Meets the documented minimum of 2 vCPU and 8 GiB memory |
 | `vpc_cidr` | `10.42.0.0/16` | A new VPC is created; accepted sizes are `/16` through `/20` |
-| `data_bucket_name` | Generated bucket | Set an existing bucket name to keep it outside this Terraform ownership boundary |
+| `data_bucket_name` | Generated bucket | An override must name a bucket that already exists in the same AWS account and Region; Terraform will not manage that bucket |
 | `automq_version` | `5.5.3` | Must be an exact data-plane version available in the Console |
 | `broker_instance_type` | `m7g.xlarge` | Used by every broker node |
 | `reserved_node_count` | `3` | Accepted range is 3-100 nodes |
@@ -228,10 +257,21 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
   to the Terraform caller's public IPv4 `/32`. For a durable deployment, put
   the Console behind an HTTPS-capable load balancer or reverse proxy and
   restrict origin access.
+- The Console instance explicitly receives a public address and an EIP. The
+  public subnet itself does not automatically assign public IPs to other
+  instances.
 - Kafka defaults to anonymous plaintext access, but only on the private VPC
   networks. Do not expose these endpoints publicly. Configure authentication
   and encryption appropriate for production outside this quick-start.
 - The Console EC2 instance requires IMDSv2 and has no SSH ingress.
+- The Console security group permits unrestricted outbound traffic because the
+  installation needs dynamic AWS API, AL2023 package repository, AutoMQ Cloud,
+  and container registry endpoints. Replace this with approved egress paths or
+  private endpoints for a controlled production network.
+- Module-created S3 buckets use SSE-S3, and EBS volumes use AWS-managed
+  encryption keys. This quick-start does not create customer-managed KMS keys,
+  VPC Flow Logs, S3 access-log buckets, or S3 versioning. Add controls required
+  by your organization's production baseline separately.
 - Terraform state contains `CONFIG`, the initial admin password, and the
   Console API keys. Use encrypted remote state with tightly restricted access.
   Do not commit state, plans, `terraform.tfvars`, or generated auto tfvars.
@@ -259,7 +299,8 @@ review it before using another Console release.
 **The Cluster provider returns an authentication error.** Confirm that the
 Console is ready, then re-run `./configure-from-console.sh`. Do not substitute
 AWS keys or the `clientId` and `clientSecret` from `CONFIG` for the generated
-Console API keys.
+Console API keys. Also confirm that the machine running Cluster Terraform is in
+`console_allowed_cidr_blocks`.
 
 **The requested AutoMQ version is unavailable.** Choose an exact data-plane
 version exposed by the running Console. Do not derive `automq_version` from the
@@ -277,6 +318,10 @@ two-root layout. Destroy it with the old revision before switching, or use new
 backend keys or workspaces. Do not point an existing flat state at these
 directories and apply it in place.
 
+Use a separate state for each AutoMQ Environment ID. Replacing `automq_config`
+with metadata from another environment while retaining the Console data volume
+can mix persistent Console metadata with the wrong control-plane identity.
+
 Destroy the Cluster state first so no data-plane nodes depend on IAM, DNS,
 subnets, or buckets owned by the Console state:
 
@@ -289,5 +334,6 @@ terraform destroy
 ```
 
 A data bucket supplied through `data_bucket_name` is not created or deleted by
-this example. Module-created buckets can lose all stored objects during destroy
+this example. Destroying the Console root deletes its persistent Console EBS
+volume. Module-created buckets can also lose all stored objects during destroy
 when their `force_destroy` setting is `true`.

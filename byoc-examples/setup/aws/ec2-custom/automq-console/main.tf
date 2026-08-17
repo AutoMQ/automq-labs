@@ -21,6 +21,13 @@ resource "random_password" "console_initial_secret_key" {
 
 data "aws_availability_zones" "available" {
   state = "available"
+
+  lifecycle {
+    postcondition {
+      condition     = length(self.names) >= 3
+      error_message = "The AWS Region from CONFIG must have at least three available Availability Zones."
+    }
+  }
 }
 
 data "aws_ssm_parameter" "al2023_ami" {
@@ -30,6 +37,16 @@ data "aws_ssm_parameter" "al2023_ami" {
 data "http" "caller_ip" {
   count = var.console_allowed_cidr_blocks == null ? 1 : 0
   url   = "https://checkip.amazonaws.com"
+
+  lifecycle {
+    postcondition {
+      condition = (
+        can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}$", trimspace(self.response_body))) &&
+        can(cidrhost("${trimspace(self.response_body)}/32", 0))
+      )
+      error_message = "Automatic Console allowlist detection did not return a valid public IPv4 address; set console_allowed_cidr_blocks explicitly."
+    }
+  }
 }
 
 locals {
@@ -42,7 +59,11 @@ locals {
   name_suffix        = "${var.name_prefix}-${random_string.suffix.result}"
   data_bucket_name   = trimspace(var.data_bucket_name) != "" ? var.data_bucket_name : "automq-data-${local.region}-${local.name_suffix}"
   create_data_bucket = trimspace(var.data_bucket_name) == ""
-  availability_zones = slice(data.aws_availability_zones.available.names, 0, 3)
+  availability_zones = slice(
+    data.aws_availability_zones.available.names,
+    0,
+    min(3, length(data.aws_availability_zones.available.names)),
+  )
   console_allowed_cidr_blocks = var.console_allowed_cidr_blocks == null ? [
     "${trimspace(data.http.caller_ip[0].response_body)}/32"
   ] : var.console_allowed_cidr_blocks
@@ -84,7 +105,7 @@ resource "aws_subnet" "console" {
   vpc_id                  = aws_vpc.this.id
   availability_zone       = local.availability_zones[0]
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, 0)
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = merge(local.common_tags, {
     Name = "automq-console-${local.name_suffix}"
@@ -93,7 +114,7 @@ resource "aws_subnet" "console" {
 }
 
 resource "aws_subnet" "broker" {
-  count = 3
+  count = length(local.availability_zones)
 
   vpc_id                  = aws_vpc.this.id
   availability_zone       = local.availability_zones[count.index]
@@ -159,7 +180,7 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "broker" {
-  count = 3
+  count = length(local.availability_zones)
 
   subnet_id      = aws_subnet.broker[count.index].id
   route_table_id = aws_route_table.private.id
@@ -300,6 +321,10 @@ resource "aws_instance" "console" {
   iam_instance_profile        = aws_iam_instance_profile.console.name
   associate_public_ip_address = true
   user_data_replace_on_change = true
+
+  volume_tags = merge(local.common_tags, {
+    Name = "automq-console-root-${local.name_suffix}"
+  })
 
   root_block_device {
     volume_size           = 30

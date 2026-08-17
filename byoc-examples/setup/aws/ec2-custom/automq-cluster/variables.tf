@@ -99,8 +99,8 @@ variable "broker_instance_type" {
   nullable    = false
 
   validation {
-    condition     = trimspace(var.broker_instance_type) != ""
-    error_message = "broker_instance_type must not be empty."
+    condition     = can(regex("^[a-z0-9][a-z0-9.-]+$", var.broker_instance_type))
+    error_message = "broker_instance_type must be a valid EC2 instance type name."
   }
 }
 
@@ -115,14 +115,16 @@ variable "broker_networks" {
   validation {
     condition = (
       contains([1, 3], length(var.broker_networks)) &&
+      length(distinct([for network in var.broker_networks : network.zone])) == length(var.broker_networks) &&
+      length(distinct(flatten([for network in var.broker_networks : network.subnets]))) == length(var.broker_networks) &&
       alltrue([
         for network in var.broker_networks :
         trimspace(network.zone) != "" &&
         length(network.subnets) == 1 &&
-        try(can(regex("^subnet-[0-9a-fA-F]+$", network.subnets[0])), false)
+        try(can(regex("^subnet-([0-9a-f]{8}|[0-9a-f]{17})$", network.subnets[0])), false)
       ])
     )
-    error_message = "broker_networks must contain one or three zones and exactly one valid AWS subnet ID per zone."
+    error_message = "broker_networks must contain one or three unique zones and exactly one unique valid AWS subnet ID per zone."
   }
 }
 
@@ -132,8 +134,13 @@ variable "data_bucket_name" {
   nullable    = false
 
   validation {
-    condition     = length(trimspace(var.data_bucket_name)) > 0
-    error_message = "data_bucket_name must be the non-empty bucket name from the automq-console output."
+    condition = (
+      length(var.data_bucket_name) >= 3 &&
+      length(var.data_bucket_name) <= 63 &&
+      can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.data_bucket_name)) &&
+      !strcontains(var.data_bucket_name, "..")
+    )
+    error_message = "data_bucket_name must be the valid S3 bucket name from the automq-console output."
   }
 }
 
