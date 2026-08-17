@@ -6,6 +6,10 @@ terraform {
       source  = "automq/automq"
       version = "= 0.4.5"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.5"
+    }
   }
 }
 

@@ -1,4 +1,27 @@
+data "http" "console_capabilities" {
+  url                = "${trimsuffix(var.console_endpoint, "/")}/auth/login"
+  request_timeout_ms = 15000
+}
+
+locals {
+  usage_based_pricing_available = can(regex(
+    "\"usageBasedPricingAvailable\"\\s*:\\s*true",
+    data.http.console_capabilities.response_body,
+  ))
+}
+
+resource "terraform_data" "usage_based_subscription_preflight" {
+  lifecycle {
+    precondition {
+      condition     = data.http.console_capabilities.status_code == 200 && local.usage_based_pricing_available
+      error_message = "The Console reports that Usage Based billing is unavailable. In AutoMQ Cloud, open Billing > Overview and activate a valid Free Trial or AWS Marketplace payment method before creating an Instance."
+    }
+  }
+}
+
 resource "automq_kafka_instance" "this" {
+  depends_on = [terraform_data.usage_based_subscription_preflight]
+
   environment_id = var.environment_id
   name           = var.instance_name
   description    = var.instance_description

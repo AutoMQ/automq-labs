@@ -29,6 +29,8 @@ compact evaluation topology, not a highly available network design.
 - `jq` for transferring the Console outputs to the Cluster root.
 - AWS credentials with permission to create the resources listed above.
 - An AutoMQ Cloud account and a new AWS BYOC environment.
+- A valid AutoMQ Cloud Usage Based subscription: either an unexpired Free
+  Trial with remaining credit or an active AWS Marketplace payment method.
 - An AWS Region with at least three available Availability Zones.
 - Network access from the machine running Terraform to the Console on TCP
   8080. The default allowlist works when both Terraform stages run from the
@@ -215,6 +217,17 @@ terraform plan
 terraform apply
 ```
 
+The Cluster plan first checks the running Console's
+`usageBasedPricingAvailable` capability. If the check fails, open
+**AutoMQ Cloud > Billing > Overview** and activate a valid Free Trial or link an
+AWS Marketplace payment method by following the official
+[BYOC Billing Instructions](https://docs.automq.com/automq-cloud/subscriptions-and-billings/byoc-env-billings/billing-instructions-for-byoc).
+An Environment state of **Active** only means that its Console registered
+successfully. Likewise, the Console Settings label **Usage Based Subscription:
+Active** indicates that the feature is enabled in that Console release; it does
+not prove that the Organization currently has valid credit or an active payment
+method.
+
 Inspect the Instance state and endpoints:
 
 ```bash
@@ -301,6 +314,14 @@ Console is ready, then re-run `./configure-from-console.sh`. Do not substitute
 AWS keys or the `clientId` and `clientSecret` from `CONFIG` for the generated
 Console API keys. Also confirm that the machine running Cluster Terraform is in
 `console_allowed_cidr_blocks`.
+
+**The plan reports that Usage Based billing is unavailable.** Open
+**AutoMQ Cloud > Billing > Overview**. The Organization needs either an
+unexpired Free Trial with remaining credit or an active AWS Marketplace payment
+method. After activation, allow up to one minute for the Console to refresh its
+subscription status, then run `terraform plan` again. Without the preflight,
+the Console rejects Instance creation with
+`403 Instance.NoAvailableSubscription`.
 
 **The requested AutoMQ version is unavailable.** Choose an exact data-plane
 version exposed by the running Console. Do not derive `automq_version` from the

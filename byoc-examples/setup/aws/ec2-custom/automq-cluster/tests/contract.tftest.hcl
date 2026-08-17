@@ -7,6 +7,17 @@ mock_provider "automq" {
   }
 }
 
+mock_provider "http" {
+  mock_data "http" {
+    defaults = {
+      status_code   = 200
+      response_body = <<-HTML
+        <script>window.__AUTOMQ_GLOBAL_DATA__ = {"usageBasedPricingEnabled":true,"usageBasedPricingAvailable":true};</script>
+      HTML
+    }
+  }
+}
+
 variables {
   console_endpoint   = "http://console.example:8080"
   console_access_key = "access-key"
@@ -107,4 +118,20 @@ run "duplicate_broker_network_is_rejected" {
   }
 
   expect_failures = [var.broker_networks]
+}
+
+run "unavailable_usage_based_subscription_is_rejected" {
+  command = plan
+
+  override_data {
+    target = data.http.console_capabilities
+    values = {
+      status_code   = 200
+      response_body = <<-HTML
+        <script>window.__AUTOMQ_GLOBAL_DATA__ = {"usageBasedPricingEnabled":true,"usageBasedPricingAvailable":false};</script>
+      HTML
+    }
+  }
+
+  expect_failures = [terraform_data.usage_based_subscription_preflight]
 }
