@@ -69,6 +69,16 @@ contains a letter, a number, and a special character. The Terraform
 `console_initial_password` output is a one-time bootstrap credential and no
 longer works after this reset; store the new password outside Terraform state.
 
+On **System Initialization**, select **EC2 Mode Minimal Permissions** before
+clicking **Authorization confirmed**. Terraform attaches two Console policies
+that implement this image's EC2 initialization contract. Console `8.3.16-aws`
+includes FSx and EFS actions in that contract because EC2 mode supports NFS WAL
+options even though this demo's default Cluster uses EBSWAL. The EC2 minimal
+contract does not grant EKS access or permission to create and delete IAM roles
+and policies. `iam:PassRole` uses the wildcard resource required by the Console
+check, but is restricted to roles passed to the EC2 service. The separate data
+plane role remains bucket-scoped.
+
 To inspect startup without opening SSH, get `console_instance_id` from the
 outputs and connect with Session Manager. The bootstrap log is
 `/var/log/cloud-init-output.log`, and the container name is `automq-console`.

@@ -66,13 +66,27 @@ run "console_stack_is_self_contained" {
   }
 
   assert {
-    condition     = strcontains(aws_iam_policy.console.policy, module.automq_role.role_arn)
-    error_message = "The Console PassRole permission must reference the dedicated data-plane role."
+    condition = one([
+      for statement in jsondecode(aws_iam_policy.console.policy).Statement : statement
+      if statement.Sid == "PassAutoMQDataPlaneRole"
+      ]).Resource == "*" && one([
+      for statement in jsondecode(aws_iam_policy.console.policy).Statement : statement
+      if statement.Sid == "PassAutoMQDataPlaneRole"
+    ]).Condition.StringLike["iam:PassedToService"] == "ec2.amazonaws.com*"
+    error_message = "The Console PassRole permission must satisfy the EC2 initialization check and restrict the target service to EC2."
   }
 
   assert {
     condition = alltrue([
       for action in [
+        "autoscaling:CreateOrUpdateTags",
+        "autoscaling:DeleteTags",
+        "ec2:DeleteTags",
+        "elasticfilesystem:CreateFileSystem",
+        "elasticfilesystem:DeleteFileSystem",
+        "fsx:CreateFileSystem",
+        "fsx:DeleteFileSystem",
+        "iam:GetInstanceProfile",
         "iam:GetPolicy",
         "iam:GetRole",
         "iam:GetRolePolicy",
@@ -80,13 +94,35 @@ run "console_stack_is_self_contained" {
         "iam:ListAttachedRolePolicies",
         "iam:ListInstanceProfilesForRole",
         "iam:ListRolePolicies",
+        "iam:ListRoles",
+        "route53:ListHostedZonesByVpc",
         "s3:GetBucketLocation",
         "s3:GetBucketTagging",
         "s3:GetLifecycleConfiguration",
+        "s3:ListAllMyBuckets",
         "s3:ListBucket",
-      ] : strcontains(aws_iam_policy.console.policy, action)
+        "sts:AssumeRole",
+      ] : strcontains("${aws_iam_policy.console.policy}${aws_iam_policy.console_compute.policy}", action)
     ])
-    error_message = "The Console must be able to validate the Terraform-managed data bucket and data-plane role before instance creation."
+    error_message = "The Console policies must satisfy the Console 8.3.16 EC2 minimal initialization and instance-validation contracts."
+  }
+
+  assert {
+    condition     = aws_iam_policy.console.name != aws_iam_policy.console_compute.name
+    error_message = "The Console contract must be split across managed policies to remain below the AWS policy size limit."
+  }
+
+  assert {
+    condition = alltrue([
+      for action in [
+        "eks:",
+        "iam:CreatePolicy",
+        "iam:CreateRole",
+        "iam:DeletePolicy",
+        "iam:DeleteRole",
+      ] : !strcontains("${aws_iam_policy.console.policy}${aws_iam_policy.console_compute.policy}", action)
+    ])
+    error_message = "The EC2 minimal contract must not include EKS access or IAM role and policy lifecycle permissions from the default policy set."
   }
 
   assert {

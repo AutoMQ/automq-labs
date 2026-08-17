@@ -322,6 +322,7 @@ resource "aws_instance" "console" {
 
   depends_on = [
     aws_iam_role_policy_attachment.console,
+    aws_iam_role_policy_attachment.console_compute,
     aws_iam_role_policy_attachment.console_ssm,
     aws_nat_gateway.this,
     aws_s3_bucket.ops,
