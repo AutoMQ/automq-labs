@@ -302,9 +302,15 @@ resource "aws_instance" "console" {
   user_data_replace_on_change = true
 
   root_block_device {
-    volume_size = 30
-    volume_type = "gp3"
-    encrypted   = true
+    volume_size           = 30
+    volume_type           = "gp3"
+    encrypted             = true
+    delete_on_termination = true
+  }
+
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
   }
 
   user_data = templatefile("${path.module}/userdata.tftpl", {

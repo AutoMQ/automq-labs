@@ -1,12 +1,3 @@
-locals {
-  broker_networks = [
-    for zone in sort(keys(var.private_subnet_ids_by_zone)) : {
-      zone    = zone
-      subnets = var.private_subnet_ids_by_zone[zone]
-    }
-  ]
-}
-
 resource "automq_kafka_instance" "this" {
   environment_id = var.environment_id
   name           = var.instance_name
@@ -17,11 +8,14 @@ resource "automq_kafka_instance" "this" {
   compute_specs = {
     reserved_node_count = var.reserved_node_count
     instance_types      = [var.broker_instance_type]
-    # Provider 0.4.5 validates literal partial objects before root variables resolve.
+    # Keep both UsageBased fields unknown until the node count resolves so
+    # Provider 0.4.5 validates the complete sizing tuple.
     pricing_mode = var.reserved_node_count >= 3 ? "UsageBased" : null
     deploy_type  = "IAAS"
 
-    networks = local.broker_networks
+    networks = var.broker_networks
+    # Keep the object unknown until the bucket input resolves; Provider 0.4.5
+    # otherwise validates bucket_name before root variables are available.
     data_buckets = trimspace(var.data_bucket_name) != "" ? [{
       bucket_name = var.data_bucket_name
     }] : null

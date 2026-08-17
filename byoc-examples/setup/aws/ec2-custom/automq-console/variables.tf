@@ -1,7 +1,8 @@
 variable "automq_config" {
-  description = "Base64-encoded AutoMQ BYOC CONFIG value from the installation configuration"
+  description = "Complete Base64-encoded AutoMQ BYOC CONFIG value from the AutoMQ Cloud installation wizard"
   type        = string
   sensitive   = true
+  nullable    = false
 
   validation {
     condition = can(alltrue([
@@ -20,7 +21,8 @@ variable "automq_config" {
 variable "name_prefix" {
   description = "Short lowercase prefix used for AWS resource names"
   type        = string
-  default     = "automq-ec2-demo"
+  default     = "automq-ec2-quickstart"
+  nullable    = false
 
   validation {
     condition = (
@@ -33,13 +35,17 @@ variable "name_prefix" {
 }
 
 variable "vpc_cidr" {
-  description = "CIDR for the demo VPC"
+  description = "IPv4 CIDR for the quick-start VPC; /16 through /20 creates valid AWS subnets after subdivision"
   type        = string
   default     = "10.42.0.0/16"
+  nullable    = false
 
   validation {
-    condition     = can(cidrsubnet(var.vpc_cidr, 8, 0))
-    error_message = "vpc_cidr must be a valid IPv4 CIDR with room for /24 subnets."
+    condition = (
+      can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/(1[6-9]|20)$", var.vpc_cidr)) &&
+      can(cidrhost(var.vpc_cidr, 0))
+    )
+    error_message = "vpc_cidr must be a valid IPv4 CIDR with a prefix length from /16 through /20."
   }
 }
 
@@ -47,6 +53,7 @@ variable "console_image" {
   description = "AutoMQ BYOC Console container image"
   type        = string
   default     = "automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws"
+  nullable    = false
 
   validation {
     condition     = trimspace(var.console_image) != ""
@@ -58,6 +65,12 @@ variable "console_instance_type" {
   description = "EC2 instance type for the AutoMQ Console"
   type        = string
   default     = "t3.large"
+  nullable    = false
+
+  validation {
+    condition     = trimspace(var.console_instance_type) != ""
+    error_message = "console_instance_type must not be empty."
+  }
 }
 
 variable "console_allowed_cidr_blocks" {
@@ -68,7 +81,9 @@ variable "console_allowed_cidr_blocks" {
   validation {
     condition = var.console_allowed_cidr_blocks == null ? true : (
       length(var.console_allowed_cidr_blocks) > 0 && alltrue([
-        for cidr in var.console_allowed_cidr_blocks : can(cidrhost(cidr, 0))
+        for cidr in var.console_allowed_cidr_blocks :
+        can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$", cidr)) &&
+        can(cidrhost(cidr, 0))
       ])
     )
     error_message = "console_allowed_cidr_blocks must be null or contain at least one valid IPv4 CIDR."
@@ -76,25 +91,29 @@ variable "console_allowed_cidr_blocks" {
 }
 
 variable "data_bucket_name" {
-  description = "Existing AutoMQ data bucket; leave empty to create a disposable bucket"
+  description = "Existing AutoMQ data bucket name; leave empty to create a module-managed bucket"
   type        = string
   default     = ""
+  nullable    = false
 }
 
 variable "force_destroy_data_bucket" {
-  description = "Delete objects from the module-created data bucket during destroy"
+  description = "Allow Terraform destroy to delete all objects from the module-created data bucket"
   type        = bool
   default     = true
+  nullable    = false
 }
 
 variable "force_destroy_ops_bucket" {
-  description = "Delete objects from the module-created ops bucket during destroy"
+  description = "Allow Terraform destroy to delete all objects from the module-created ops bucket"
   type        = bool
   default     = true
+  nullable    = false
 }
 
 variable "tags" {
   description = "Additional tags applied to AWS resources"
   type        = map(string)
   default     = {}
+  nullable    = false
 }

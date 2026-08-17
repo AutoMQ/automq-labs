@@ -1,12 +1,9 @@
-# These are local Console API credentials from the automq-console outputs,
-# not AWS credentials or the clientId/clientSecret embedded in CONFIG.
-console_endpoint   = "http://REPLACE_WITH_CONSOLE_IP:8080"
-console_access_key = "REPLACE_WITH_CONSOLE_ACCESS_KEY"
-console_secret_key = "REPLACE_WITH_CONSOLE_SECRET_KEY"
-environment_id     = "env-REPLACE_ME"
+# First run ./configure-from-console.sh. It writes the required Console outputs
+# to the ignored console.auto.tfvars.json file. This file contains optional
+# Cluster overrides only.
 
-# instance_name        = "automq-ec2-demo"
-# instance_description = "AutoMQ EC2 Custom example"
+# instance_name        = "automq-ec2-quickstart"
+# instance_description = "AutoMQ EC2 quick-start instance"
 
 # Defaults validated with Console 8.3.16 on AWS.
 # automq_version       = "5.5.3"
@@ -14,21 +11,11 @@ environment_id     = "env-REPLACE_ME"
 # broker_instance_type = "m7g.xlarge"
 # wal_mode             = "EBSWAL"
 
-private_subnet_ids_by_zone = {
-  us-east-1a = ["subnet-REPLACE_PRIVATE_A"]
-  us-east-1b = ["subnet-REPLACE_PRIVATE_B"]
-  us-east-1c = ["subnet-REPLACE_PRIVATE_C"]
-}
+# authentication_methods   = ["anonymous"]
+# transit_encryption_modes = ["plaintext"]
+# data_encryption_mode     = "NONE"
+# schema_registry_enabled  = false
 
-data_bucket_name = "automq-data-REPLACE_ME"
-dns_zone_id       = "Z_REPLACE_ME"
-instance_role_name = "automq-data-plane-REPLACE_ME"
-
-authentication_methods   = ["anonymous"]
-transit_encryption_modes = ["plaintext"]
-data_encryption_mode     = "NONE"
-schema_registry_enabled  = false
-
-tags = {
-  environment = "demo"
-}
+# tags = {
+#   purpose = "evaluation"
+# }

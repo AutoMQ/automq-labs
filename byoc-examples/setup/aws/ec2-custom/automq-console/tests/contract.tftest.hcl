@@ -149,6 +149,11 @@ run "console_stack_is_self_contained" {
     condition     = output.console_image == "automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws"
     error_message = "The quick path must use the reviewed AutoMQ Console image by default."
   }
+
+  assert {
+    condition     = aws_instance.console.metadata_options[0].http_tokens == "required"
+    error_message = "The Console EC2 instance must require IMDSv2 session tokens."
+  }
 }
 
 run "explicit_console_allowlist_overrides_detection" {
@@ -169,6 +174,26 @@ run "empty_console_allowlist_is_rejected" {
 
   variables {
     console_allowed_cidr_blocks = []
+  }
+
+  expect_failures = [var.console_allowed_cidr_blocks]
+}
+
+run "vpc_without_subnet_capacity_is_rejected" {
+  command = plan
+
+  variables {
+    vpc_cidr = "10.42.0.0/24"
+  }
+
+  expect_failures = [var.vpc_cidr]
+}
+
+run "ipv6_console_allowlist_is_rejected" {
+  command = plan
+
+  variables {
+    console_allowed_cidr_blocks = ["2001:db8::/32"]
   }
 
   expect_failures = [var.console_allowed_cidr_blocks]

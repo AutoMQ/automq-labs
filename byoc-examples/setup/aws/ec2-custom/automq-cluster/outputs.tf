@@ -14,6 +14,6 @@ output "instance_endpoints" {
 }
 
 output "broker_networks" {
-  description = "Deterministically ordered network payload used for the IAAS Instance"
-  value       = local.broker_networks
+  description = "Network placement used for the IAAS Instance"
+  value       = var.broker_networks
 }

@@ -3,8 +3,8 @@
 # https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#register-your-automq-environment
 automq_config = "REPLACE_WITH_AUTOMQ_CONFIG"
 
-# All other inputs have demo defaults. Override only when needed.
-# name_prefix          = "automq-ec2-demo"
+# All other inputs have evaluation-ready defaults. Override only when needed.
+# name_prefix          = "automq-ec2-quickstart"
 # vpc_cidr             = "10.42.0.0/16"
 # Use the Console image shown by the same installation wizard when it differs.
 # console_image         = "automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws"
@@ -13,7 +13,7 @@ automq_config = "REPLACE_WITH_AUTOMQ_CONFIG"
 # By default Terraform detects the caller's public IPv4 address and allows /32.
 # console_allowed_cidr_blocks = ["203.0.113.10/32"]
 
-# Leave empty to create a disposable encrypted data bucket.
+# Leave empty to create a module-managed encrypted data bucket.
 # data_bucket_name          = ""
 # force_destroy_data_bucket = true
 # force_destroy_ops_bucket  = true
