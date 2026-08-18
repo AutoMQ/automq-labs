@@ -8,6 +8,7 @@ resource "helm_release" "autoscaler" {
   namespace  = "kube-system"
   repository = "https://kubernetes.github.io/autoscaler"
   chart      = "cluster-autoscaler"
+  version    = "9.59.0"
 
   dependency_update = true
   values = [
@@ -21,6 +22,13 @@ resource "helm_release" "autoscaler" {
       }
     )
   ]
+
+  # Keep Cluster Autoscaler on the same minor version as the EKS control plane.
+  # Chart 9.59.0 defaults to v1.35.0 while the v1.36 image is already released.
+  set {
+    name  = "image.tag"
+    value = "v1.36.1"
+  }
 
   timeout = 600
 
