@@ -80,18 +80,6 @@ variable "automq_version" {
   }
 }
 
-variable "reserved_node_count" {
-  description = "Number of EC2 broker nodes for the UsageBased instance"
-  type        = number
-  default     = 3
-  nullable    = false
-
-  validation {
-    condition     = var.reserved_node_count >= 3 && var.reserved_node_count <= 100 && floor(var.reserved_node_count) == var.reserved_node_count
-    error_message = "reserved_node_count must be an integer between three and 100."
-  }
-}
-
 variable "broker_instance_type" {
   description = "EC2 instance type used by all UsageBased AutoMQ broker nodes"
   type        = string

@@ -46,7 +46,7 @@ run "creates_bucket_scoped_iaas_instance" {
       automq_kafka_instance.this.compute_specs.reserved_node_count == 3 &&
       automq_kafka_instance.this.compute_specs.instance_types[0] == "m7g.xlarge"
     )
-    error_message = "The quick path must default to a three-node m7g.xlarge UsageBased Instance."
+    error_message = "The quick path must create a three-node m7g.xlarge UsageBased Instance."
   }
 
   assert {

@@ -356,6 +356,11 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
 
 ## Common Customizations
 
+The quick-start fixes `pricing_mode` to `UsageBased` and
+`reserved_node_count` to `3`. They are not Terraform inputs in this example;
+use a separate deployment configuration when a different pricing mode or node
+count is required.
+
 | Input | Default | Notes |
 | --- | --- | --- |
 | `console_image` | `automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws` | Prefer the exact image shown by the environment installation wizard |
@@ -365,7 +370,6 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
 | `data_bucket_name` | Generated bucket | An override must name a bucket that already exists in the same AWS account and Region; Terraform will not manage that bucket |
 | `automq_version` | `5.5.3` | Must be an exact data-plane version available in the Console |
 | `broker_instance_type` | `m7g.xlarge` | Used by every broker node |
-| `reserved_node_count` | `3` | Accepted range is 3-100 nodes |
 | `availability_zone_count` | `3` | Select `1` for single AZ or `3` for three AZs |
 | `wal_mode` | `S3WAL` | `EBSWAL` requires one AZ; `FSWAL` uses EFS and requires three AZs |
 | `efs_wal_throughput_mibps_per_file_system` | `10` | Used only by EFS-backed `FSWAL`; accepted range is 10-1024 MiB/s |

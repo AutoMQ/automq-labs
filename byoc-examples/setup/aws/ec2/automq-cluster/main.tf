@@ -31,13 +31,10 @@ resource "automq_kafka_instance" "this" {
   tags           = var.tags
 
   compute_specs = {
-    reserved_node_count = var.reserved_node_count
+    reserved_node_count = 3
     instance_types      = [var.broker_instance_type]
-    # Provider 0.4.6 treats an unknown reserved_node_count as missing during
-    # terraform validate. This expression defers pricing_mode with that input;
-    # variable validation enforces 3-100, so apply always resolves UsageBased.
-    pricing_mode = var.reserved_node_count >= 3 ? "UsageBased" : null
-    deploy_type  = "IAAS"
+    pricing_mode        = "UsageBased"
+    deploy_type         = "IAAS"
 
     networks = local.selected_broker_networks
     # Keep the object unknown until the bucket input resolves; Provider 0.4.6
