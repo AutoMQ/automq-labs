@@ -21,6 +21,7 @@ resource "helm_release" "autoscaler" {
       }
     )
   ]
+  version = "9.51.0"
 
   timeout = 600
 
