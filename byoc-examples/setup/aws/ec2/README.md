@@ -217,6 +217,12 @@ grant EKS access or IAM role and policy lifecycle permissions. The Console and
 data-plane nodes use separate IAM roles; the data-plane role is scoped to this
 environment's S3 buckets and private hosted zone.
 
+The AutoMQ Provider allows `data_buckets`, `dns_zone`, and `instance_role` to
+be omitted when the Console manages those resources. This quick-start does not
+use that mode. Terraform creates all three resources and passes their IDs to
+the Cluster because the Console-managed path requires broader IAM, DNS, and
+data-bucket lifecycle permissions than the selected EC2 minimal policy.
+
 SSH ingress is not opened. For host diagnostics, get the instance ID and use
 AWS Systems Manager Session Manager:
 
@@ -318,16 +324,13 @@ terraform plan
 terraform apply
 ```
 
-The Cluster plan first checks the running Console's
-`usageBasedPricingAvailable` capability. If the check fails, open
-**AutoMQ Cloud > Billing > Overview** and activate a valid Free Trial or link an
-AWS Marketplace payment method by following the official
+The Cluster plan checks that the running Console returns HTTP 200 from its
+login endpoint. This verifies reachability only; subscription eligibility is
+evaluated by the Console when the Provider submits the Instance request. If the
+Provider reports that no Usage Based subscription is available, open **AutoMQ
+Cloud > Billing > Overview** and activate a valid Free Trial or link an AWS
+Marketplace payment method by following the official
 [BYOC Billing Instructions](https://docs.automq.com/automq-cloud/subscriptions-and-billings/byoc-env-billings/billing-instructions-for-byoc).
-An Environment state of **Active** only means that its Console registered
-successfully. Likewise, the Console Settings label **Usage Based Subscription:
-Active** indicates that the feature is enabled in that Console release; it does
-not prove that the Organization currently has valid credit or an active payment
-method.
 
 Inspect the Instance state and endpoints:
 
@@ -424,13 +427,11 @@ AWS keys or the `clientId` and `clientSecret` from `CONFIG` for the generated
 Console API keys. Also confirm that the machine running Cluster Terraform is in
 `console_allowed_cidr_blocks`.
 
-**The plan reports that Usage Based billing is unavailable.** Open
-**AutoMQ Cloud > Billing > Overview**. The Organization needs either an
-unexpired Free Trial with remaining credit or an active AWS Marketplace payment
-method. After activation, allow up to one minute for the Console to refresh its
-subscription status, then run `terraform plan` again. Without the preflight,
-the Console rejects Instance creation with
-`403 Instance.NoAvailableSubscription`.
+**Instance creation returns `Instance.NoAvailableSubscription`.** Open **AutoMQ
+Cloud > Billing > Overview**. The Organization needs either an unexpired Free
+Trial with remaining credit or an active AWS Marketplace payment method. After
+activation, allow up to one minute for the Console to refresh its subscription
+status, then run `terraform apply` again.
 
 **The requested AutoMQ version is unavailable.** Choose an exact data-plane
 version exposed by the running Console. Do not derive `automq_version` from the

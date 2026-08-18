@@ -182,9 +182,12 @@ run "console_stack_is_self_contained" {
     condition = (
       strcontains(aws_instance.console.user_data, "retry 5 dnf install -y docker") &&
       strcontains(aws_instance.console.user_data, "retry 5 docker pull") &&
-      strcontains(aws_instance.console.user_data, "--log-opt max-size=100m")
+      strcontains(aws_instance.console.user_data, "--log-opt max-size=100m") &&
+      strcontains(aws_instance.console.user_data, "CLOUD_PROVIDER=aws") &&
+      !strcontains(aws_instance.console.user_data, "ENABLE_USER_MANAGED_IAM") &&
+      !strcontains(aws_instance.console.user_data, "IAAS_SPOT_MODE")
     )
-    error_message = "Console bootstrap must retry downloads and bound container log growth."
+    error_message = "Console bootstrap must retry downloads, bound container log growth, and match the current Home Docker environment contract."
   }
 
   assert {

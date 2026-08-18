@@ -7,10 +7,16 @@ on:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
+      - '**/*.tftest.hcl'
+      - 'byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh'
+      - '.github/workflows/terraform-validate.yml'
   pull_request:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
+      - '**/*.tftest.hcl'
+      - 'byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh'
+      - '.github/workflows/terraform-validate.yml'
 
 jobs:
   terraform-validate:
@@ -40,7 +46,7 @@ jobs:
           echo "  $counter. $dir"
           counter=$((counter + 1))
         done
-        
+
         # Validate each module
         counter=1
         for dir in $modules; do
@@ -54,5 +60,56 @@ jobs:
           echo "::endgroup::"
           counter=$((counter + 1))
         done
-        
 
+  ec2-terraform-contract:
+    name: 'EC2 Terraform Contract (${{ matrix.name }})'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Console
+            directory: byoc-examples/setup/aws/ec2/automq-console
+          - name: Cluster
+            directory: byoc-examples/setup/aws/ec2/automq-cluster
+          - name: Data Plane Role
+            directory: byoc-examples/setup/aws/ec2/modules/automq-role
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.11.4
+
+    - name: Initialize
+      working-directory: ${{ matrix.directory }}
+      run: terraform init -backend=false -input=false
+
+    - name: Validate
+      working-directory: ${{ matrix.directory }}
+      run: terraform validate
+
+    - name: Run contract tests
+      working-directory: ${{ matrix.directory }}
+      run: terraform test
+
+  ec2-helper-script:
+    name: 'EC2 Helper Script'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install ShellCheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends --yes shellcheck
+
+    - name: Validate script
+      run: |
+        bash -n byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh
+        shellcheck byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh

@@ -55,7 +55,7 @@
     </g>
     <text id="label-cluster-root" x="744" y="144" dominant-baseline="central" font-weight="700" font-size="18" fill="#0066FF">automq-cluster</text>
     <circle cx="708" cy="184" r="3" fill="#0066FF"/>
-    <text x="720" y="184" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">AutoMQ Provider 0.4.5</text>
+    <text x="720" y="184" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">AutoMQ Provider 0.4.6</text>
     <circle cx="708" cy="208" r="3" fill="#0066FF"/>
     <text x="720" y="208" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">Console API creates Instance</text>
     <circle cx="708" cy="232" r="3" fill="#0066FF"/>

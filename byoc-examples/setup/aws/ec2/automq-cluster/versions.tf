@@ -4,7 +4,7 @@ terraform {
   required_providers {
     automq = {
       source  = "automq/automq"
-      version = "= 0.4.5"
+      version = "= 0.4.6"
     }
     http = {
       source  = "hashicorp/http"

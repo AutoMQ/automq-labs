@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+# Bridge outputs from the independently applied Console state into the Cluster
+# root. This script does not run Terraform tests or create Cluster resources.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 CONSOLE_DIR="${1:-${SCRIPT_DIR}/../automq-console}"

@@ -141,7 +141,7 @@ variable "availability_zone_count" {
 }
 
 variable "data_bucket_name" {
-  description = "S3 data bucket from the automq-console output"
+  description = "Terraform-owned S3 data bucket from the automq-console output; required by this EC2 minimal-permissions quick-start"
   type        = string
   nullable    = false
 
@@ -157,7 +157,7 @@ variable "data_bucket_name" {
 }
 
 variable "dns_zone_id" {
-  description = "Private Route 53 hosted zone ID from the automq-console output"
+  description = "Terraform-owned private Route 53 hosted zone ID from the automq-console output; required by this EC2 minimal-permissions quick-start"
   type        = string
   nullable    = false
 
@@ -168,7 +168,7 @@ variable "dns_zone_id" {
 }
 
 variable "instance_role_name" {
-  description = "Dedicated AutoMQ data-plane IAM Role name from the automq-console output"
+  description = "Terraform-owned AutoMQ data-plane IAM Role name from the automq-console output; required by this EC2 minimal-permissions quick-start"
   type        = string
   nullable    = false
 

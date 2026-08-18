@@ -68,8 +68,6 @@ install -m 0600 /dev/null /etc/automq-console.env
   printf 'CONSOLE_INITIAL_ACCESS_KEY=%s\n' "$INITIAL_ACCESS_KEY"
   printf 'CONSOLE_INITIAL_SECRET_KEY=%s\n' "$INITIAL_SECRET_KEY"
   printf 'CLOUD_PROVIDER=aws\n'
-  printf 'ENABLE_USER_MANAGED_IAM=true\n'
-  printf 'IAAS_SPOT_MODE=NONE\n'
 } > /etc/automq-console.env
 
 retry 5 docker pull "$CONSOLE_IMAGE"
