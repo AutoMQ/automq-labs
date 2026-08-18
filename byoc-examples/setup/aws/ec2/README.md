@@ -9,6 +9,7 @@ architecture.
 
 Before starting, make sure you meet the [prerequisites](#prerequisites). This
 path uses the evaluation defaults and creates billable AWS resources.
+The default Cluster uses three Availability Zones and S3 WAL.
 
 1. Follow [Register Your AutoMQ Environment](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#register-your-automq-environment)
    to create an AWS BYOC environment. Copy the complete Base64 value after
@@ -209,8 +210,9 @@ shown by System Initialization in Console `8.3.16-aws`. They are not a generic
 administrator policy. Because that contract belongs to a specific Console
 release, review and retest the IAM policies whenever `console_image` changes.
 
-The reviewed contract includes FSx and EFS actions because EC2 mode supports
-NFS WAL options, although this quick-start defaults to EBSWAL. It does not
+The reviewed contract includes FSx and EFS actions because the Console's EC2
+permission check covers both NFS WAL implementations. This quick-start exposes
+only the validated EFS configuration and does not support FSx WAL. It does not
 grant EKS access or IAM role and policy lifecycle permissions. The Console and
 data-plane nodes use separate IAM roles; the data-plane role is scoped to this
 environment's S3 buckets and private hosted zone.
@@ -268,11 +270,39 @@ cp terraform.tfvars.example terraform.tfvars
 
 ### 4. Create and Verify the AutoMQ Instance
 
-The defaults create a three-node, `m7g.xlarge`, usage-based IAAS Instance with
-AutoMQ data-plane version `5.5.3` and EBSWAL. Console image versions and AutoMQ
-data-plane versions are separate release contracts. The default data-plane
-version was live-validated with Console `8.3.16-aws`; select an exact version
-available in your Console when using another image.
+The defaults create a three-node, `m7g.xlarge`, three-AZ, usage-based IAAS
+Instance with AutoMQ data-plane version `5.5.3` and S3 WAL. Console image
+versions and AutoMQ data-plane versions are separate release contracts. The
+default data-plane version was live-validated with Console `8.3.16-aws`; select
+an exact version available in your Console when using another image.
+The default three-AZ S3 WAL path and the three-AZ EFS WAL path were both
+live-created to `Running` and destroyed with this Console version.
+
+The WAL mode must match the selected topology:
+
+- The default `availability_zone_count = 3` supports `S3WAL` and EFS-backed
+  `FSWAL`.
+- `EBSWAL` requires `availability_zone_count = 1` in this quick-start.
+- EFS WAL uses one `EFS_PROVISIONED` file system. FSx for NetApp ONTAP WAL is
+  not supported or validated by this example.
+
+To create a three-AZ EFS WAL Instance, add the following to
+`automq-cluster/terraform.tfvars`:
+
+```hcl
+wal_mode                                  = "FSWAL"
+efs_wal_throughput_mibps_per_file_system = 10
+```
+
+To create a single-AZ EBS WAL Instance instead:
+
+```hcl
+availability_zone_count = 1
+wal_mode                = "EBSWAL"
+```
+
+Changing the WAL mode or selected Availability Zone count replaces the AutoMQ
+Instance. Review the plan before applying either change.
 
 To confirm the available data-plane version, open **Create Instance** in the
 running Console and use an AWS version shown there. Do not infer
@@ -333,7 +363,9 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
 | `automq_version` | `5.5.3` | Must be an exact data-plane version available in the Console |
 | `broker_instance_type` | `m7g.xlarge` | Used by every broker node |
 | `reserved_node_count` | `3` | Accepted range is 3-100 nodes |
-| `wal_mode` | `EBSWAL` | `S3WAL` is also accepted by this quick-start |
+| `availability_zone_count` | `3` | Select `1` for single AZ or `3` for three AZs |
+| `wal_mode` | `S3WAL` | `EBSWAL` requires one AZ; `FSWAL` uses EFS and requires three AZs |
+| `efs_wal_throughput_mibps_per_file_system` | `10` | Used only by EFS-backed `FSWAL`; accepted range is 10-1024 MiB/s |
 
 ## Security and Cost Boundaries
 
@@ -366,8 +398,9 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
 - Applying the Console stage incurs charges for a NAT Gateway, public IPv4
   addresses, a `t3.large` instance, EBS volumes, Route 53, S3, and data
   transfer. Applying the Cluster stage adds at least three broker instances and
-  their storage. S3 Gateway VPC Endpoints have no hourly or data-processing
-  charge. Consult the AWS Pricing Calculator for the selected Region.
+  their storage. EFS WAL also creates a provisioned-throughput EFS file system.
+  S3 Gateway VPC Endpoints have no hourly or data-processing charge. Consult
+  the AWS Pricing Calculator for the selected Region.
 - Module-created data and ops buckets default to `force_destroy = true` so
   evaluation cleanup succeeds. Set the corresponding variables to `false` when
   object retention is more important than one-command teardown.
@@ -402,6 +435,10 @@ the Console rejects Instance creation with
 **The requested AutoMQ version is unavailable.** Choose an exact data-plane
 version exposed by the running Console. Do not derive `automq_version` from the
 Console container tag; they use independent version numbers.
+
+**The plan rejects the WAL and Availability Zone combination.** Use single-AZ
+`EBSWAL`, or use `S3WAL` or EFS-backed `FSWAL` for a three-AZ Instance. This
+example does not support FSx WAL.
 
 **The ops bucket already exists or is owned by another account.** Each new
 AutoMQ Cloud environment supplies an ops bucket name in `CONFIG`. Use a newly

@@ -128,6 +128,18 @@ variable "broker_networks" {
   }
 }
 
+variable "availability_zone_count" {
+  description = "Number of Availability Zones used by the AutoMQ brokers; choose one or three"
+  type        = number
+  default     = 3
+  nullable    = false
+
+  validation {
+    condition     = contains([1, 3], var.availability_zone_count)
+    error_message = "availability_zone_count must be 1 or 3."
+  }
+}
+
 variable "data_bucket_name" {
   description = "S3 data bucket from the automq-console output"
   type        = string
@@ -169,12 +181,28 @@ variable "instance_role_name" {
 variable "wal_mode" {
   description = "Write-ahead log mode for the quick-start instance"
   type        = string
-  default     = "EBSWAL"
+  default     = "S3WAL"
   nullable    = false
 
   validation {
-    condition     = contains(["EBSWAL", "S3WAL"], upper(var.wal_mode))
-    error_message = "wal_mode must be EBSWAL or S3WAL in this quick-start."
+    condition     = contains(["EBSWAL", "S3WAL", "FSWAL"], upper(var.wal_mode))
+    error_message = "wal_mode must be EBSWAL, S3WAL, or FSWAL in this quick-start. FSWAL uses Amazon EFS; FSx WAL is not supported."
+  }
+}
+
+variable "efs_wal_throughput_mibps_per_file_system" {
+  description = "Provisioned Amazon EFS throughput in MiB/s when wal_mode is FSWAL"
+  type        = number
+  default     = 10
+  nullable    = false
+
+  validation {
+    condition = (
+      floor(var.efs_wal_throughput_mibps_per_file_system) == var.efs_wal_throughput_mibps_per_file_system &&
+      var.efs_wal_throughput_mibps_per_file_system >= 10 &&
+      var.efs_wal_throughput_mibps_per_file_system <= 1024
+    )
+    error_message = "efs_wal_throughput_mibps_per_file_system must be an integer between 10 and 1024."
   }
 }
 

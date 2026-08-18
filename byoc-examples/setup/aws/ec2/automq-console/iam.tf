@@ -17,7 +17,8 @@ resource "aws_iam_role" "console" {
 }
 
 # This policy mirrors Console 8.3.16 System Initialization ->
-# EC2 Mode Minimal Permissions. Revalidate it before changing console_image.
+# EC2 Mode Minimal Permissions, including the EFS actions used by FSWAL.
+# Revalidate it before changing console_image.
 locals {
   console_core_policy_statements = [
     {

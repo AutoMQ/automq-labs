@@ -10,7 +10,16 @@
 # automq_version       = "5.5.3"
 # reserved_node_count  = 3
 # broker_instance_type = "m7g.xlarge"
-# wal_mode             = "EBSWAL"
+# availability_zone_count = 3
+# wal_mode                  = "S3WAL"
+
+# For a three-AZ Amazon EFS WAL Instance:
+# wal_mode                                  = "FSWAL"
+# efs_wal_throughput_mibps_per_file_system = 10
+
+# For a single-AZ EBS WAL Instance:
+# availability_zone_count = 1
+# wal_mode                = "EBSWAL"
 
 # authentication_methods   = ["anonymous"]
 # transit_encryption_modes = ["plaintext"]

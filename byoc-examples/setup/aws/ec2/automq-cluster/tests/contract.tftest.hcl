@@ -68,9 +68,82 @@ run "creates_bucket_scoped_iaas_instance" {
   }
 
   assert {
-    condition     = automq_kafka_instance.this.features.wal_mode == "EBSWAL"
-    error_message = "The quick path must default to EBSWAL."
+    condition = (
+      automq_kafka_instance.this.features.wal_mode == "S3WAL" &&
+      length(automq_kafka_instance.this.compute_specs.networks) == 3
+    )
+    error_message = "The quick path must default to a three-AZ S3WAL Instance."
   }
+}
+
+run "creates_single_az_ebs_wal_instance" {
+  command = apply
+
+  variables {
+    availability_zone_count = 1
+    wal_mode                = "EBSWAL"
+  }
+
+  assert {
+    condition = (
+      automq_kafka_instance.this.features.wal_mode == "EBSWAL" &&
+      length(automq_kafka_instance.this.compute_specs.networks) == 1 &&
+      automq_kafka_instance.this.compute_specs.networks[0].zone == "us-east-1a"
+    )
+    error_message = "EBSWAL must use exactly one broker Availability Zone."
+  }
+}
+
+run "creates_three_az_efs_wal_instance" {
+  command = apply
+
+  variables {
+    wal_mode                                 = "FSWAL"
+    efs_wal_throughput_mibps_per_file_system = 64
+  }
+
+  assert {
+    condition = (
+      automq_kafka_instance.this.features.wal_mode == "FSWAL" &&
+      length(automq_kafka_instance.this.compute_specs.networks) == 3 &&
+      automq_kafka_instance.this.compute_specs.file_system_param.file_system_type == "EFS_PROVISIONED" &&
+      automq_kafka_instance.this.compute_specs.file_system_param.file_system_count == 1 &&
+      automq_kafka_instance.this.compute_specs.file_system_param.throughput_mibps_per_file_system == 64
+    )
+    error_message = "FSWAL must create one provisioned-throughput EFS file system for a three-AZ Instance."
+  }
+}
+
+run "multi_az_ebs_wal_is_rejected" {
+  command = plan
+
+  variables {
+    wal_mode = "EBSWAL"
+  }
+
+  expect_failures = [automq_kafka_instance.this]
+}
+
+run "single_az_efs_wal_is_rejected" {
+  command = plan
+
+  variables {
+    availability_zone_count = 1
+    wal_mode                = "FSWAL"
+  }
+
+  expect_failures = [automq_kafka_instance.this]
+}
+
+run "invalid_efs_wal_throughput_is_rejected" {
+  command = plan
+
+  variables {
+    wal_mode                                 = "FSWAL"
+    efs_wal_throughput_mibps_per_file_system = 9
+  }
+
+  expect_failures = [var.efs_wal_throughput_mibps_per_file_system]
 }
 
 run "role_arn_is_rejected" {

@@ -15,5 +15,5 @@ output "instance_endpoints" {
 
 output "broker_networks" {
   description = "Network placement used for the IAAS Instance"
-  value       = var.broker_networks
+  value       = local.selected_broker_networks
 }

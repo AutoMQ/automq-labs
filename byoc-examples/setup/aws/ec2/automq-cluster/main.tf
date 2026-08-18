@@ -8,6 +8,12 @@ locals {
     "\"usageBasedPricingAvailable\"\\s*:\\s*true",
     data.http.console_capabilities.response_body,
   ))
+  normalized_wal_mode = upper(var.wal_mode)
+  selected_broker_networks = slice(
+    var.broker_networks,
+    0,
+    min(var.availability_zone_count, length(var.broker_networks)),
+  )
 }
 
 resource "terraform_data" "usage_based_subscription_preflight" {
@@ -36,7 +42,7 @@ resource "automq_kafka_instance" "this" {
     pricing_mode = var.reserved_node_count >= 3 ? "UsageBased" : null
     deploy_type  = "IAAS"
 
-    networks = var.broker_networks
+    networks = local.selected_broker_networks
     # Keep the object unknown until the bucket input resolves; Provider 0.4.5
     # otherwise validates bucket_name before root variables are available.
     data_buckets = trimspace(var.data_bucket_name) != "" ? [{
@@ -44,10 +50,15 @@ resource "automq_kafka_instance" "this" {
     }] : null
     dns_zone      = var.dns_zone_id
     instance_role = var.instance_role_name
+    file_system_param = local.normalized_wal_mode == "FSWAL" ? {
+      file_system_type                 = "EFS_PROVISIONED"
+      throughput_mibps_per_file_system = var.efs_wal_throughput_mibps_per_file_system
+      file_system_count                = 1
+    } : null
   }
 
   features = {
-    wal_mode         = upper(var.wal_mode)
+    wal_mode         = local.normalized_wal_mode
     instance_configs = var.instance_configs
 
     security = {
@@ -57,6 +68,23 @@ resource "automq_kafka_instance" "this" {
     }
 
     schema_registry_enabled = var.schema_registry_enabled
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(local.selected_broker_networks) == var.availability_zone_count
+      error_message = "broker_networks does not contain enough networks for availability_zone_count. Run configure-from-console.sh again or provide one network for single-AZ and three networks for multi-AZ deployment."
+    }
+
+    precondition {
+      condition     = local.normalized_wal_mode != "EBSWAL" || var.availability_zone_count == 1
+      error_message = "EBSWAL is supported only with availability_zone_count = 1 in this quick-start. Use S3WAL or FSWAL for a three-AZ deployment."
+    }
+
+    precondition {
+      condition     = local.normalized_wal_mode != "FSWAL" || var.availability_zone_count == 3
+      error_message = "FSWAL with EFS requires availability_zone_count = 3 in this quick-start."
+    }
   }
 
   timeouts {
