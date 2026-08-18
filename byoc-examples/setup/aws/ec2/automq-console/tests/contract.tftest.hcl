@@ -142,6 +142,18 @@ run "console_stack_is_self_contained" {
   }
 
   assert {
+    condition = (
+      aws_vpc_endpoint.s3.vpc_endpoint_type == "Gateway" &&
+      aws_vpc_endpoint.s3.service_name == "com.amazonaws.us-east-1.s3" &&
+      toset(aws_vpc_endpoint.s3.route_table_ids) == toset([
+        aws_route_table.public.id,
+        aws_route_table.private.id,
+      ])
+    )
+    error_message = "Console and broker S3 traffic must use a Gateway VPC Endpoint associated with both route tables."
+  }
+
+  assert {
     condition     = length(aws_vpc_security_group_ingress_rule.console_ui) == 1 && output.console_allowed_cidr_blocks[0] == "203.0.113.10/32"
     error_message = "The default Console ingress must be restricted to the detected caller IPv4 address."
   }

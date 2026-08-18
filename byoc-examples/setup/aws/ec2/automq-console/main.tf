@@ -186,6 +186,23 @@ resource "aws_route_table_association" "broker" {
   route_table_id = aws_route_table.private.id
 }
 
+# The S3 prefix-list routes installed by this endpoint take precedence over
+# the public and private default routes, keeping Console and broker S3 traffic
+# on the AWS network instead of sending it through the IGW or NAT Gateway.
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.this.id
+  service_name      = "com.amazonaws.${local.region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids = [
+    aws_route_table.public.id,
+    aws_route_table.private.id,
+  ]
+
+  tags = merge(local.common_tags, {
+    Name = "automq-s3-${local.name_suffix}"
+  })
+}
+
 resource "aws_s3_bucket" "ops" {
   bucket        = local.ops_bucket_name
   force_destroy = var.force_destroy_ops_bucket

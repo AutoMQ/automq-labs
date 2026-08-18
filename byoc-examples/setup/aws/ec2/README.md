@@ -5,13 +5,24 @@ AutoMQ data plane in a new AWS VPC. It is designed for evaluation and rapid
 validation. The default HTTP and Kafka security settings are not a production
 architecture.
 
+## Architecture
+
+![AWS EC2 BYOC architecture showing the public Console, three private broker subnets, private DNS, IAM roles, and S3 traffic through a Gateway VPC Endpoint](images/aws-ec2-architecture.svg)
+
+The Console is the control plane inside the customer VPC. It provisions and
+manages the three AutoMQ brokers in private subnets. Both route tables are
+associated with the S3 Gateway VPC Endpoint, so Console and broker access to
+the data and ops buckets uses the regional AWS private route. The NAT Gateway
+remains available for container registries, package repositories, AutoMQ
+Cloud, and other external APIs.
+
 ## What This Creates
 
 The example has two Terraform root modules with independent state files:
 
 | Stage | Terraform root | Resources |
 | --- | --- | --- |
-| Console and AWS foundation | `automq-console` | A VPC, one public and three private subnets across three Availability Zones, an internet gateway, a NAT Gateway, S3 buckets, a private Route 53 zone, separate Console and data-plane IAM roles, and an Amazon Linux 2023 EC2 instance running the AutoMQ BYOC Console container |
+| Console and AWS foundation | `automq-console` | A VPC, one public and three private subnets across three Availability Zones, an internet gateway, a NAT Gateway, an S3 Gateway VPC Endpoint, S3 buckets, a private Route 53 zone, separate Console and data-plane IAM roles, and an Amazon Linux 2023 EC2 instance running the AutoMQ BYOC Console container |
 | AutoMQ data plane | `automq-cluster` | A three-node IAAS AutoMQ Instance created through the local Console API |
 
 `modules/automq-role` is called by `automq-console`; do not deploy it as a
@@ -19,6 +30,12 @@ third Terraform state.
 
 The Console stage can be deployed by itself. Running `terraform apply` in the
 Cluster root is the step that creates the AutoMQ data-plane nodes.
+
+![Two-stage Terraform deployment showing Console-owned AWS resources, the local output handoff, and the independently managed AutoMQ Cluster state](images/terraform-deployment-flow.svg)
+
+The two roots deliberately keep separate state. The handoff script copies only
+the required Console outputs into a local, Git-ignored auto tfvars file; it
+does not merge the state files or create the Cluster itself.
 
 This layout intentionally uses one NAT Gateway and one public Console. It is a
 compact evaluation topology, not a highly available network design.
@@ -37,12 +54,12 @@ compact evaluation topology, not a highly available network design.
   same public IPv4 address.
 
 The Terraform caller needs create, read, update, and delete permissions for
-the VPC/EC2, EIP/NAT, EBS, IAM Role/Policy/Instance Profile, S3 bucket, and
-Route 53 resources in this example, plus read access to the public AL2023 SSM
-AMI parameter. These are deployment permissions; Terraform creates a separate,
-more limited runtime role for the Console. The machine running Terraform also
-needs outbound HTTPS access to the Terraform Registry and, unless an explicit
-allowlist is configured, `checkip.amazonaws.com`.
+the VPC/EC2, VPC Endpoint, EIP/NAT, EBS, IAM Role/Policy/Instance Profile, S3
+bucket, and Route 53 resources in this example, plus read access to the public
+AL2023 SSM AMI parameter. These are deployment permissions; Terraform creates
+a separate, more limited runtime role for the Console. The machine running
+Terraform also needs outbound HTTPS access to the Terraform Registry and,
+unless an explicit allowlist is configured, `checkip.amazonaws.com`.
 
 No existing VPC, subnet, Console AMI, SSH key, Environment ID input, or
 separate AutoMQ Cloud client ID and secret inputs are required.
@@ -280,7 +297,11 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
 - The Console security group permits unrestricted outbound traffic because the
   installation needs dynamic AWS API, AL2023 package repository, AutoMQ Cloud,
   and container registry endpoints. Replace this with approved egress paths or
-  private endpoints for a controlled production network.
+  private endpoints for a controlled production network. S3 is the exception:
+  the public and private route tables use the S3 Gateway VPC Endpoint, so S3
+  traffic does not traverse the IGW or NAT Gateway. The endpoint uses its
+  default policy; the Console and data-plane IAM roles continue to enforce the
+  bucket access boundaries.
 - Module-created S3 buckets use SSE-S3, and EBS volumes use AWS-managed
   encryption keys. This quick-start does not create customer-managed KMS keys,
   VPC Flow Logs, S3 access-log buckets, or S3 versioning. Add controls required
@@ -291,7 +312,8 @@ kafka-console-consumer.sh --bootstrap-server <bootstrap-servers> \
 - Applying the Console stage incurs charges for a NAT Gateway, public IPv4
   addresses, a `t3.large` instance, EBS volumes, Route 53, S3, and data
   transfer. Applying the Cluster stage adds at least three broker instances and
-  their storage. Consult the AWS Pricing Calculator for the selected Region.
+  their storage. S3 Gateway VPC Endpoints have no hourly or data-processing
+  charge. Consult the AWS Pricing Calculator for the selected Region.
 - Module-created data and ops buckets default to `force_destroy = true` so
   evaluation cleanup succeeds. Set the corresponding variables to `false` when
   object retention is more important than one-command teardown.

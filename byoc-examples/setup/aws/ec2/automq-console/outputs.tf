@@ -101,6 +101,11 @@ output "public_subnet_id" {
   value       = aws_subnet.console.id
 }
 
+output "s3_vpc_endpoint_id" {
+  description = "S3 Gateway VPC Endpoint used by the Console and broker route tables"
+  value       = aws_vpc_endpoint.s3.id
+}
+
 output "broker_networks" {
   description = "AutoMQ Provider network payload for the Cluster stage"
   value       = local.broker_networks

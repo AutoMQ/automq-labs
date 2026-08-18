@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-labelledby="architecture-title architecture-desc" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif">
+  <title id="architecture-title">AutoMQ BYOC architecture on Amazon EC2</title>
+  <desc id="architecture-desc">An AWS Region contains a VPC with a public AutoMQ Console, three brokers in private Availability Zones, private Route 53, separate IAM roles, and an S3 Gateway VPC Endpoint that routes Console and broker traffic privately to data and operations buckets.</desc>
+  <defs>
+    <filter id="ec2-architecture-shadow-sm" x="-4%" y="-4%" width="108%" height="116%">
+      <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#000000" flood-opacity="0.06"/>
+    </filter>
+    <marker id="ec2-architecture-control-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 3, 0 6" fill="#333333"/>
+    </marker>
+    <marker id="ec2-architecture-data-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 3, 0 6" fill="#0066FF"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="720" fill="#FFFFFF"/>
+  <text x="40" y="32" dominant-baseline="central" font-weight="700" font-size="24" fill="#333333">AutoMQ BYOC on Amazon EC2</text>
+
+  <g id="card-automq-cloud">
+    <rect x="40" y="128" width="184" height="96" rx="8" fill="#FFFFFF" stroke="#E0E0E0" filter="url(#ec2-architecture-shadow-sm)"/>
+    <g transform="translate(64,150)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <path d="M6,30 a10,10 0 0,1 0,-12 a8,8 0 0,1 15,-2 a10,10 0 0,1 9,14 z"/>
+    </g>
+    <text id="label-automq-cloud" x="112" y="160" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">AutoMQ Cloud</text>
+    <text x="112" y="184" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">Control plane</text>
+  </g>
+
+  <g id="card-operator">
+    <rect x="40" y="280" width="184" height="112" rx="8" fill="#FFFFFF" stroke="#E0E0E0" filter="url(#ec2-architecture-shadow-sm)"/>
+    <g transform="translate(64,302)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="2" y="2" width="32" height="22" rx="3"/>
+      <line x1="12" y1="29" x2="24" y2="29"/>
+      <line x1="18" y1="24" x2="18" y2="29"/>
+    </g>
+    <text id="label-operator" x="132" y="344" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="12" fill="#333333">Terraform / browser</text>
+    <text x="132" y="368" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">AWS + Console APIs</text>
+  </g>
+
+  <rect id="container-aws-region" x="264" y="72" width="896" height="616" rx="12" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1.5"/>
+  <text id="label-aws-region" x="288" y="92" dominant-baseline="central" font-weight="600" font-size="14" fill="#333333">AWS Region</text>
+
+  <rect id="container-vpc" x="296" y="112" width="680" height="536" rx="12" fill="#FFFFFF" stroke="#0066FF" stroke-width="1.5"/>
+  <text id="label-vpc" x="320" y="136" dominant-baseline="central" font-weight="600" font-size="14" fill="#0066FF">VPC 10.42.0.0/16</text>
+
+  <g id="container-public-subnet">
+    <rect x="328" y="152" width="616" height="136" rx="8" fill="#0066FF" fill-opacity="0.04" stroke="#E0E0E0" stroke-dasharray="8 4"/>
+    <text id="label-public-subnet" x="352" y="168" dominant-baseline="central" font-weight="600" font-size="12" fill="#333333">Public subnet</text>
+  </g>
+
+  <g id="card-internet-nat">
+    <rect x="360" y="184" width="160" height="72" rx="8" fill="#FFFFFF" stroke="#E0E0E0" filter="url(#ec2-architecture-shadow-sm)"/>
+    <g transform="translate(376,200)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0,12 h24 M18,6 l6,6 -6,6"/>
+      <path d="M24,28 H0 M6,22 l-6,6 6,6"/>
+    </g>
+    <text x="416" y="208" dominant-baseline="central" font-weight="600" font-size="12" fill="#333333">Internet gateway</text>
+    <text x="416" y="232" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">NAT: other egress</text>
+  </g>
+
+  <g id="card-console">
+    <rect x="584" y="168" width="296" height="96" rx="8" fill="#FFFFFF" stroke="#0066FF" stroke-width="2" filter="url(#ec2-architecture-shadow-sm)"/>
+    <g transform="translate(608,192)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="2" y="2" width="36" height="24" rx="3"/>
+      <line x1="14" y1="30" x2="26" y2="30"/>
+      <line x1="20" y1="26" x2="20" y2="30"/>
+    </g>
+    <text id="label-console" x="664" y="196" dominant-baseline="central" font-weight="700" font-size="16" fill="#0066FF">AutoMQ BYOC Console</text>
+    <text x="664" y="220" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">Amazon Linux 2023 EC2 + EBS</text>
+    <text x="664" y="244" dominant-baseline="central" font-weight="500" font-size="11" fill="#333333">EIP :8080 / Console IAM Role</text>
+  </g>
+
+  <g id="card-s3-endpoint">
+    <rect x="744" y="312" width="200" height="48" rx="8" fill="#0066FF" fill-opacity="0.10" stroke="#0066FF"/>
+    <text id="label-s3-endpoint" x="844" y="328" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="13" fill="#0066FF">S3 Gateway Endpoint</text>
+    <text x="844" y="346" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="10" fill="#333333">Public + private route tables</text>
+  </g>
+
+  <g id="container-private-data-plane">
+    <rect x="328" y="376" width="616" height="224" rx="8" fill="#0066FF" fill-opacity="0.04" stroke="#0066FF" stroke-width="1.5" stroke-dasharray="8 4"/>
+    <text id="label-private-data-plane" x="352" y="396" dominant-baseline="central" font-weight="600" font-size="12" fill="#333333">Private subnets across 3 AZs</text>
+  </g>
+
+  <g id="card-broker-a">
+    <rect x="360" y="416" width="160" height="88" rx="8" fill="#FFFFFF" stroke="#0066FF" filter="url(#ec2-architecture-shadow-sm)"/>
+    <g transform="translate(376,449)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="0" width="32" height="11" rx="2"/>
+      <rect x="0" y="15" width="32" height="11" rx="2"/>
+      <circle cx="7" cy="5.5" r="1.5" fill="#333333"/>
+      <circle cx="7" cy="20.5" r="1.5" fill="#333333"/>
+    </g>
+    <text x="440" y="440" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 1</text>
+    <text x="440" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">AZ A / m7g.xlarge</text>
+    <text x="440" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
+  </g>
+
+  <g id="card-broker-b">
+    <rect x="552" y="416" width="160" height="88" rx="8" fill="#FFFFFF" stroke="#0066FF" filter="url(#ec2-architecture-shadow-sm)"/>
+    <g transform="translate(568,449)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="0" width="32" height="11" rx="2"/>
+      <rect x="0" y="15" width="32" height="11" rx="2"/>
+      <circle cx="7" cy="5.5" r="1.5" fill="#333333"/>
+      <circle cx="7" cy="20.5" r="1.5" fill="#333333"/>
+    </g>
+    <text x="632" y="440" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 2</text>
+    <text x="632" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">AZ B / m7g.xlarge</text>
+    <text x="632" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
+  </g>
+
+  <g id="card-broker-c">
+    <rect x="744" y="416" width="160" height="88" rx="8" fill="#FFFFFF" stroke="#0066FF" filter="url(#ec2-architecture-shadow-sm)"/>
+    <g transform="translate(760,449)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="0" width="32" height="11" rx="2"/>
+      <rect x="0" y="15" width="32" height="11" rx="2"/>
+      <circle cx="7" cy="5.5" r="1.5" fill="#333333"/>
+      <circle cx="7" cy="20.5" r="1.5" fill="#333333"/>
+    </g>
+    <text x="824" y="440" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 3</text>
+    <text x="824" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">AZ C / m7g.xlarge</text>
+    <text x="824" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
+  </g>
+
+  <g id="card-private-dns">
+    <rect x="360" y="520" width="240" height="48" rx="8" fill="#FFFFFF" stroke="#E0E0E0"/>
+    <g transform="translate(376,532)" fill="none" stroke="#333333" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M2,12 h20 M12,2 c5,5 5,15 0,20 M12,2 c-5,5 -5,15 0,20"/>
+    </g>
+    <text x="416" y="544" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Private Route 53 zone</text>
+  </g>
+
+  <g id="card-data-plane-iam">
+    <rect x="624" y="520" width="240" height="48" rx="8" fill="#FFFFFF" stroke="#E0E0E0"/>
+    <g transform="translate(640,531)" fill="none" stroke="#333333" stroke-width="2">
+      <path d="M12,2 L22,7 v8 c0,7 -10,11 -10,11 S2,22 2,15 V7 z"/>
+    </g>
+    <text x="680" y="544" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Data-plane IAM Role</text>
+  </g>
+
+  <g id="card-s3-buckets">
+    <rect x="1008" y="248" width="120" height="176" rx="8" fill="#FFFFFF" stroke="#0066FF" stroke-width="1.5" filter="url(#ec2-architecture-shadow-sm)"/>
+    <text id="label-s3-buckets" x="1068" y="272" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="14" fill="#0066FF">Amazon S3</text>
+    <g transform="translate(1048,292)" fill="none" stroke="#333333" stroke-width="2">
+      <ellipse cx="20" cy="6" rx="20" ry="6"/>
+      <path d="M0,6 v28 a20,6 0 0,0 40,0 v-28"/>
+      <path d="M0,20 a20,6 0 0,0 40,0"/>
+    </g>
+    <text x="1068" y="344" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="12" fill="#333333">Data bucket</text>
+    <line x1="1024" y1="364" x2="1112" y2="364" stroke="#E0E0E0"/>
+    <g transform="translate(1052,376)" fill="none" stroke="#333333" stroke-width="2">
+      <path d="M4,16 a8,8 0 0,1 0,-10 a7,7 0 0,1 13,-1 a8,8 0 0,1 7,11 z"/>
+    </g>
+    <text x="1068" y="408" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="12" fill="#333333">Ops bucket</text>
+  </g>
+
+  <path id="arrow-cloud-console" d="M620,168 C520,72 360,64 224,152" fill="none" stroke="#333333" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ec2-architecture-control-arrow)"/>
+  <path id="arrow-operator-console" d="M224,336 C360,336 480,304 560,256 L584,240" fill="none" stroke="#333333" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ec2-architecture-control-arrow)"/>
+  <line id="arrow-console-brokers" x1="648" y1="264" x2="648" y2="416" stroke="#333333" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#ec2-architecture-control-arrow)"/>
+
+  <line id="arrow-console-s3-endpoint" x1="844" y1="264" x2="844" y2="312" stroke="#0066FF" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#ec2-architecture-data-arrow)"/>
+  <path id="arrow-brokers-s3-endpoint" d="M904,460 C968,460 968,360 944,336" fill="none" stroke="#0066FF" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#ec2-architecture-data-arrow)"/>
+  <line id="arrow-endpoint-s3" x1="944" y1="336" x2="1008" y2="336" stroke="#0066FF" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#ec2-architecture-data-arrow)"/>
+
+  <g id="legend-control" transform="translate(304,668)">
+    <line x1="0" y1="0" x2="40" y2="0" stroke="#333333" stroke-width="1.5" stroke-dasharray="6 4"/>
+    <text x="52" y="0" dominant-baseline="central" font-weight="500" font-size="11" fill="#333333">Control and provisioning</text>
+  </g>
+  <g id="legend-data" transform="translate(512,668)">
+    <line x1="0" y1="0" x2="40" y2="0" stroke="#0066FF" stroke-width="2.5" stroke-dasharray="8 5"/>
+    <text x="52" y="0" dominant-baseline="central" font-weight="500" font-size="11" fill="#333333">Private S3 data path</text>
+  </g>
+</svg>

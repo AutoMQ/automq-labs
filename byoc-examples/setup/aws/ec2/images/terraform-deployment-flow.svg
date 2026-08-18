@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" role="img" aria-labelledby="deployment-flow-title deployment-flow-desc" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif">
+  <title id="deployment-flow-title">Two-stage Terraform deployment flow</title>
+  <desc id="deployment-flow-desc">The automq-console Terraform root owns the AWS foundation state, a local script transfers eight validated outputs into a protected auto tfvars file, and the independent automq-cluster root uses the AutoMQ Provider and Console API to create three private brokers.</desc>
+  <defs>
+    <filter id="deployment-flow-shadow-sm" x="-4%" y="-4%" width="108%" height="116%">
+      <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#000000" flood-opacity="0.06"/>
+    </filter>
+    <marker id="deployment-flow-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 3, 0 6" fill="#0066FF"/>
+    </marker>
+  </defs>
+
+  <rect width="1000" height="360" fill="#FFFFFF"/>
+  <text x="40" y="32" dominant-baseline="central" font-weight="700" font-size="24" fill="#333333">Two Terraform states, one explicit handoff</text>
+
+  <g id="card-console-root">
+    <rect x="40" y="80" width="280" height="216" rx="8" fill="#FFFFFF" stroke="#0066FF" stroke-width="1.5" filter="url(#deployment-flow-shadow-sm)"/>
+    <rect x="64" y="100" width="72" height="24" rx="12" fill="#0066FF" fill-opacity="0.10"/>
+    <text id="badge-console-state" x="100" y="112" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="10" fill="#0066FF">STATE 1</text>
+    <g transform="translate(64,136)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="10,0 2,8 10,16"/>
+      <polyline points="18,0 26,8 18,16"/>
+    </g>
+    <text id="label-console-root" x="104" y="144" dominant-baseline="central" font-weight="700" font-size="18" fill="#0066FF">automq-console</text>
+    <circle cx="68" cy="184" r="3" fill="#0066FF"/>
+    <text x="80" y="184" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">VPC, routes, S3 endpoint</text>
+    <circle cx="68" cy="208" r="3" fill="#0066FF"/>
+    <text x="80" y="208" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">Console EC2 + persistent EBS</text>
+    <circle cx="68" cy="232" r="3" fill="#0066FF"/>
+    <text x="80" y="232" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">Buckets, private DNS, IAM</text>
+    <line x1="64" y1="252" x2="296" y2="252" stroke="#E0E0E0"/>
+    <text x="64" y="272" dominant-baseline="central" font-weight="600" font-size="11" fill="#333333">Owns the AWS foundation state</text>
+  </g>
+
+  <g id="card-output-handoff">
+    <rect x="384" y="112" width="232" height="152" rx="8" fill="#0066FF" fill-opacity="0.04" stroke="#E0E0E0" filter="url(#deployment-flow-shadow-sm)"/>
+    <rect x="464" y="128" width="72" height="24" rx="12" fill="#0066FF" fill-opacity="0.10"/>
+    <text id="badge-local-handoff" x="500" y="140" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="10" fill="#0066FF">LOCAL</text>
+    <text id="label-output-handoff" x="500" y="168" text-anchor="middle" dominant-baseline="central" font-weight="700" font-size="16" fill="#333333">Output handoff</text>
+    <text x="500" y="192" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">configure-from-console.sh</text>
+    <line x1="408" y1="208" x2="592" y2="208" stroke="#E0E0E0"/>
+    <text x="500" y="228" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="11" fill="#333333">8 validated outputs</text>
+    <text x="500" y="248" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="11" fill="#0066FF">0600 / Git ignored</text>
+  </g>
+
+  <g id="card-cluster-root">
+    <rect x="680" y="80" width="280" height="216" rx="8" fill="#FFFFFF" stroke="#0066FF" stroke-width="1.5" filter="url(#deployment-flow-shadow-sm)"/>
+    <rect x="704" y="100" width="72" height="24" rx="12" fill="#0066FF" fill-opacity="0.10"/>
+    <text id="badge-cluster-state" x="740" y="112" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="10" fill="#0066FF">STATE 2</text>
+    <g transform="translate(704,136)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="0" width="28" height="8" rx="2"/>
+      <rect x="0" y="12" width="28" height="8" rx="2"/>
+      <circle cx="6" cy="4" r="1.5" fill="#333333"/>
+      <circle cx="6" cy="16" r="1.5" fill="#333333"/>
+    </g>
+    <text id="label-cluster-root" x="744" y="144" dominant-baseline="central" font-weight="700" font-size="18" fill="#0066FF">automq-cluster</text>
+    <circle cx="708" cy="184" r="3" fill="#0066FF"/>
+    <text x="720" y="184" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">AutoMQ Provider 0.4.5</text>
+    <circle cx="708" cy="208" r="3" fill="#0066FF"/>
+    <text x="720" y="208" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">Console API creates Instance</text>
+    <circle cx="708" cy="232" r="3" fill="#0066FF"/>
+    <text x="720" y="232" dominant-baseline="central" font-weight="400" font-size="12" fill="#333333">Three private EC2 brokers</text>
+    <line x1="704" y1="252" x2="936" y2="252" stroke="#E0E0E0"/>
+    <text x="704" y="272" dominant-baseline="central" font-weight="600" font-size="11" fill="#333333">Owns the AutoMQ Instance state</text>
+  </g>
+
+  <text x="352" y="168" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#333333">outputs</text>
+  <line id="arrow-console-handoff" x1="320" y1="188" x2="384" y2="188" stroke="#0066FF" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#deployment-flow-arrowhead)"/>
+  <text x="648" y="168" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#333333">tfvars</text>
+  <line id="arrow-handoff-cluster" x1="616" y1="188" x2="680" y2="188" stroke="#0066FF" stroke-width="2.5" stroke-dasharray="8 5" marker-end="url(#deployment-flow-arrowhead)"/>
+</svg>
