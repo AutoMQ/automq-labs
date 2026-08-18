@@ -50,6 +50,16 @@ module "vpc" {
   enable_nat_gateway = true
   single_nat_gateway = true
 
+  private_subnet_tags = var.karpenter_discovery_tag != "" ? {
+    "karpenter.sh/discovery" = var.karpenter_discovery_tag
+  } : {}
+
+  private_subnet_tags_per_az = var.karpenter_discovery_tag != "" ? {
+    for idx, az in slice(data.aws_availability_zones.available_azs.names, 0, 3) : az => {
+      "karpenter.sh/zone" = az
+    }
+  } : {}
+
   tags = local.tags
 }
 
