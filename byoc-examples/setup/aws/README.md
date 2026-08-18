@@ -11,7 +11,7 @@ AutoMQ cluster on Amazon Elastic Kubernetes Service (EKS).
 
 * **Status:** Available
 
-### [EC2 Custom](ec2-custom/README.md)
+### [Amazon EC2](ec2/README.md)
 
 Provision a self-contained AWS quick-start environment, run the AutoMQ BYOC
 Console container on Amazon EC2, and create an AutoMQ data plane across three

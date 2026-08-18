@@ -1,16 +1,16 @@
-name: AWS EC2 Custom
+name: AWS EC2
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'byoc-examples/setup/aws/ec2-custom/**'
-      - '.github/workflows/aws-ec2-custom.yml'
+      - 'byoc-examples/setup/aws/ec2/**'
+      - '.github/workflows/aws-ec2.yml'
   pull_request:
     paths:
-      - 'byoc-examples/setup/aws/ec2-custom/**'
-      - '.github/workflows/aws-ec2-custom.yml'
+      - 'byoc-examples/setup/aws/ec2/**'
+      - '.github/workflows/aws-ec2.yml'
 
 jobs:
   terraform-contract:
@@ -21,11 +21,11 @@ jobs:
       matrix:
         include:
           - name: Console
-            directory: byoc-examples/setup/aws/ec2-custom/automq-console
+            directory: byoc-examples/setup/aws/ec2/automq-console
           - name: Cluster
-            directory: byoc-examples/setup/aws/ec2-custom/automq-cluster
+            directory: byoc-examples/setup/aws/ec2/automq-cluster
           - name: Data Plane Role
-            directory: byoc-examples/setup/aws/ec2-custom/modules/automq-role
+            directory: byoc-examples/setup/aws/ec2/modules/automq-role
 
     steps:
     - name: Checkout code
@@ -63,5 +63,5 @@ jobs:
 
     - name: Validate script
       run: |
-        bash -n byoc-examples/setup/aws/ec2-custom/automq-cluster/configure-from-console.sh
-        shellcheck byoc-examples/setup/aws/ec2-custom/automq-cluster/configure-from-console.sh
+        bash -n byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh
+        shellcheck byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh

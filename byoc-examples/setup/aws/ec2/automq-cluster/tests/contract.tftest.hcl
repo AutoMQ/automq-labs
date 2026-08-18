@@ -40,7 +40,7 @@ run "creates_bucket_scoped_iaas_instance" {
 
   assert {
     condition     = automq_kafka_instance.this.compute_specs.deploy_type == "IAAS"
-    error_message = "The EC2 Custom example must always create an IAAS Instance."
+    error_message = "The AWS EC2 example must always create an IAAS Instance."
   }
 
   assert {
