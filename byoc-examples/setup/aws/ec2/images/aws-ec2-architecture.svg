@@ -82,41 +82,41 @@
 
   <g id="card-broker-a">
     <rect x="360" y="416" width="160" height="88" rx="8" fill="#FFFFFF" stroke="#0066FF" filter="url(#ec2-architecture-shadow-sm)"/>
-    <g transform="translate(376,449)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
-      <rect x="0" y="0" width="32" height="11" rx="2"/>
-      <rect x="0" y="15" width="32" height="11" rx="2"/>
-      <circle cx="7" cy="5.5" r="1.5" fill="#333333"/>
-      <circle cx="7" cy="20.5" r="1.5" fill="#333333"/>
+    <g id="icon-broker-a" transform="translate(392,432)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="0" width="24" height="6" rx="2"/>
+      <rect x="0" y="10" width="24" height="6" rx="2"/>
+      <circle cx="5" cy="3" r="1" fill="#333333"/>
+      <circle cx="5" cy="13" r="1" fill="#333333"/>
     </g>
-    <text x="440" y="440" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 1</text>
-    <text x="440" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">AZ A / m7g.xlarge</text>
-    <text x="440" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
+    <text id="label-broker-a" x="424" y="440" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 1</text>
+    <text id="label-broker-a-spec" x="440" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="10" fill="#333333">AZ A / m7g.xlarge</text>
+    <text id="label-broker-a-subnet" x="440" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
   </g>
 
   <g id="card-broker-b">
     <rect x="552" y="416" width="160" height="88" rx="8" fill="#FFFFFF" stroke="#0066FF" filter="url(#ec2-architecture-shadow-sm)"/>
-    <g transform="translate(568,449)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
-      <rect x="0" y="0" width="32" height="11" rx="2"/>
-      <rect x="0" y="15" width="32" height="11" rx="2"/>
-      <circle cx="7" cy="5.5" r="1.5" fill="#333333"/>
-      <circle cx="7" cy="20.5" r="1.5" fill="#333333"/>
+    <g id="icon-broker-b" transform="translate(584,432)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="0" width="24" height="6" rx="2"/>
+      <rect x="0" y="10" width="24" height="6" rx="2"/>
+      <circle cx="5" cy="3" r="1" fill="#333333"/>
+      <circle cx="5" cy="13" r="1" fill="#333333"/>
     </g>
-    <text x="632" y="440" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 2</text>
-    <text x="632" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">AZ B / m7g.xlarge</text>
-    <text x="632" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
+    <text id="label-broker-b" x="616" y="440" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 2</text>
+    <text id="label-broker-b-spec" x="632" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="10" fill="#333333">AZ B / m7g.xlarge</text>
+    <text id="label-broker-b-subnet" x="632" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
   </g>
 
   <g id="card-broker-c">
     <rect x="744" y="416" width="160" height="88" rx="8" fill="#FFFFFF" stroke="#0066FF" filter="url(#ec2-architecture-shadow-sm)"/>
-    <g transform="translate(760,449)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
-      <rect x="0" y="0" width="32" height="11" rx="2"/>
-      <rect x="0" y="15" width="32" height="11" rx="2"/>
-      <circle cx="7" cy="5.5" r="1.5" fill="#333333"/>
-      <circle cx="7" cy="20.5" r="1.5" fill="#333333"/>
+    <g id="icon-broker-c" transform="translate(776,432)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round">
+      <rect x="0" y="0" width="24" height="6" rx="2"/>
+      <rect x="0" y="10" width="24" height="6" rx="2"/>
+      <circle cx="5" cy="3" r="1" fill="#333333"/>
+      <circle cx="5" cy="13" r="1" fill="#333333"/>
     </g>
-    <text x="824" y="440" text-anchor="middle" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 3</text>
-    <text x="824" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="11" fill="#333333">AZ C / m7g.xlarge</text>
-    <text x="824" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
+    <text id="label-broker-c" x="808" y="440" dominant-baseline="central" font-weight="600" font-size="13" fill="#333333">Broker 3</text>
+    <text id="label-broker-c-spec" x="824" y="462" text-anchor="middle" dominant-baseline="central" font-weight="400" font-size="10" fill="#333333">AZ C / m7g.xlarge</text>
+    <text id="label-broker-c-subnet" x="824" y="484" text-anchor="middle" dominant-baseline="central" font-weight="500" font-size="10" fill="#0066FF">Private subnet</text>
   </g>
 
   <g id="card-private-dns">
