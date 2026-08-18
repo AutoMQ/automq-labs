@@ -5,6 +5,58 @@ AutoMQ data plane in a new AWS VPC. It is designed for evaluation and rapid
 validation. The default HTTP and Kafka security settings are not a production
 architecture.
 
+## Quick Start
+
+Before starting, make sure you meet the [prerequisites](#prerequisites). This
+path uses the evaluation defaults and creates billable AWS resources.
+
+1. Follow [Register Your AutoMQ Environment](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#register-your-automq-environment)
+   to create an AWS BYOC environment. Copy the complete Base64 value after
+   `CONFIG=` from its EC2 installation command.
+2. Configure and deploy the Console:
+
+   ```bash
+   cd automq-console
+   cp terraform.tfvars.example terraform.tfvars
+   # Set automq_config in terraform.tfvars to the complete CONFIG value.
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+3. Get the Console URL and initial login, then wait for the login page to
+   respond:
+
+   ```bash
+   terraform output -raw console_endpoint
+   terraform output -raw console_initial_username
+   terraform output -raw console_initial_password
+   ```
+
+   Sign in, reset the initial password when prompted, and on **System
+   Initialization** select **EC2 Mode Minimal Permissions** followed by
+   **Authorization confirmed**.
+4. Transfer the Console outputs and create the AutoMQ Cluster:
+
+   ```bash
+   cd ../automq-cluster
+   ./configure-from-console.sh
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+5. Inspect the created Instance:
+
+   ```bash
+   terraform output -raw instance_id
+   terraform output -raw instance_status
+   terraform output -json instance_endpoints
+   ```
+
+Continue with the [detailed walkthrough](#detailed-walkthrough) for credential
+handling, version selection, validation, and operational guidance.
+
 ## Architecture
 
 ![AWS EC2 BYOC architecture showing the public Console, three private broker subnets, private DNS, IAM roles, and S3 traffic through a Gateway VPC Endpoint](images/aws-ec2-architecture.svg)
@@ -64,7 +116,9 @@ unless an explicit allowlist is configured, `checkip.amazonaws.com`.
 No existing VPC, subnet, Console AMI, SSH key, Environment ID input, or
 separate AutoMQ Cloud client ID and secret inputs are required.
 
-## 1. Get the Environment Metadata
+## Detailed Walkthrough
+
+### 1. Get the Environment Metadata
 
 Follow the official
 [Register Your AutoMQ Environment](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#register-your-automq-environment)
@@ -108,7 +162,7 @@ These credentials have separate purposes:
 The Console API access and secret keys are not AWS access keys and are not the
 AutoMQ Cloud `clientId` and `clientSecret` embedded in `CONFIG`.
 
-## 2. Deploy and Initialize the Console
+### 2. Deploy and Initialize the Console
 
 From this directory:
 
@@ -171,7 +225,7 @@ terraform output -raw console_instance_id
 The bootstrap log is `/var/log/cloud-init-output.log`, and the container name
 is `automq-console`.
 
-## 3. Transfer the Console Configuration
+### 3. Transfer the Console Configuration
 
 After the Console is usable and System Initialization succeeds, generate the
 Cluster inputs from the Console Terraform state:
@@ -212,7 +266,7 @@ Optional Cluster overrides can be placed in `terraform.tfvars`:
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-## 4. Create and Verify the AutoMQ Instance
+### 4. Create and Verify the AutoMQ Instance
 
 The defaults create a three-node, `m7g.xlarge`, usage-based IAAS Instance with
 AutoMQ data-plane version `5.5.3` and EBSWAL. Console image versions and AutoMQ
