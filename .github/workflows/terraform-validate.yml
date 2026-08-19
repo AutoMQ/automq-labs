@@ -28,15 +28,17 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
-    - name: Validate Terraform modules
+    - name: Validate and test Terraform modules
       run: |
         set +e  # Continue on error to validate all modules
         failed=0
+        test_failed=0
         
         # Find all Terraform module directories (exclude .terraform and .git)
         echo "📋 Finding Terraform modules to validate..."
         modules=$(find . -type d \( -name ".terraform" -o -name ".git" \) -prune -o \
           -name "*.tf" -type f -print | xargs dirname | sort -u | grep -v "/\.terraform")
+        module_count=$(printf '%s\n' "$modules" | wc -l | tr -d ' ')
         
         # List all modules
         counter=1
@@ -54,38 +56,14 @@ jobs:
           if ! terraform validate; then
             failed=1
           fi
+          if [ -n "$(find tests -maxdepth 1 -type f -name '*.tftest.hcl' -print -quit 2>/dev/null)" ]; then
+            if ! terraform test; then
+              test_failed=1
+            fi
+          fi
           cd "${{ github.workspace }}"
           echo "::endgroup::"
           counter=$((counter + 1))
         done
 
-  ec2-terraform-contract:
-    name: 'EC2 Terraform Contract (${{ matrix.name }})'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Console
-            directory: byoc-examples/setup/aws/ec2/automq-console
-          - name: Cluster
-            directory: byoc-examples/setup/aws/ec2/automq-cluster
-          - name: Data Plane Role
-            directory: byoc-examples/setup/aws/ec2/modules/automq-role
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.11.4
-
-    - name: Initialize
-      working-directory: ${{ matrix.directory }}
-      run: terraform init -backend=false -input=false
-
-    - name: Run contract tests
-      working-directory: ${{ matrix.directory }}
-      run: terraform test
+        exit "$test_failed"
