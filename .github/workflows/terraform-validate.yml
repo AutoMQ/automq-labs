@@ -7,10 +7,14 @@ on:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
+      - '**/*.tftest.hcl'
+      - '.github/workflows/terraform-validate.yml'
   pull_request:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
+      - '**/*.tftest.hcl'
+      - '.github/workflows/terraform-validate.yml'
 
 jobs:
   terraform-validate:
@@ -24,15 +28,17 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
-    - name: Validate Terraform modules
+    - name: Validate and test Terraform modules
       run: |
         set +e  # Continue on error to validate all modules
         failed=0
+        test_failed=0
         
         # Find all Terraform module directories (exclude .terraform and .git)
         echo "📋 Finding Terraform modules to validate..."
         modules=$(find . -type d \( -name ".terraform" -o -name ".git" \) -prune -o \
           -name "*.tf" -type f -print | xargs dirname | sort -u | grep -v "/\.terraform")
+        module_count=$(printf '%s\n' "$modules" | wc -l | tr -d ' ')
         
         # List all modules
         counter=1
@@ -40,7 +46,7 @@ jobs:
           echo "  $counter. $dir"
           counter=$((counter + 1))
         done
-        
+
         # Validate each module
         counter=1
         for dir in $modules; do
@@ -50,9 +56,14 @@ jobs:
           if ! terraform validate; then
             failed=1
           fi
+          if [ -n "$(find tests -maxdepth 1 -type f -name '*.tftest.hcl' -print -quit 2>/dev/null)" ]; then
+            if ! terraform test; then
+              test_failed=1
+            fi
+          fi
           cd "${{ github.workspace }}"
           echo "::endgroup::"
           counter=$((counter + 1))
         done
-        
 
+        exit "$test_failed"

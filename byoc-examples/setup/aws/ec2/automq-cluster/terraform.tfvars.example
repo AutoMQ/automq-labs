@@ -1,0 +1,30 @@
+# The Cluster reads ../automq-console/terraform.tfstate by default.
+# Set console_state_path only when the local Console state is elsewhere.
+# console_state_path = "/path/to/automq-console/terraform.tfstate"
+
+# instance_name        = "automq-ec2-quickstart"
+# instance_description = "AutoMQ EC2 quick-start instance"
+
+# Defaults validated with Console 8.3.16 on AWS. Confirm automq_version in the
+# running Console's Create Instance workflow when changing console_image.
+# automq_version       = "5.5.3"
+# broker_instance_type = "m7g.xlarge"
+# availability_zone_count = 3
+# wal_mode                  = "S3WAL"
+
+# For a three-AZ Amazon EFS WAL Instance:
+# wal_mode                                  = "FSWAL"
+# efs_wal_throughput_mibps_per_file_system = 10
+
+# For a single-AZ EBS WAL Instance:
+# availability_zone_count = 1
+# wal_mode                = "EBSWAL"
+
+# authentication_methods   = ["anonymous"]
+# transit_encryption_modes = ["plaintext"]
+# data_encryption_mode     = "NONE"
+# schema_registry_enabled  = false
+
+# tags = {
+#   purpose = "evaluation"
+# }
