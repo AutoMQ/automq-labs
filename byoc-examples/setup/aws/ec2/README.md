@@ -37,11 +37,11 @@ The default Cluster uses three Availability Zones and S3 WAL.
    Sign in, reset the initial password when prompted, and on **System
    Initialization** select **EC2 Mode Minimal Permissions** followed by
    **Authorization confirmed**.
-4. Transfer the Console outputs and create the AutoMQ Cluster:
+4. Create the AutoMQ Cluster. Terraform reads the adjacent Console state
+   directly:
 
    ```bash
    cd ../automq-cluster
-   ./configure-from-console.sh
    terraform init
    terraform plan
    terraform apply
@@ -84,11 +84,12 @@ third Terraform state.
 The Console stage can be deployed by itself. Running `terraform apply` in the
 Cluster root is the step that creates the AutoMQ data-plane nodes.
 
-![Two-stage Terraform deployment showing Console-owned AWS resources, the local output handoff, and the independently managed AutoMQ Cluster state](images/terraform-deployment-flow.svg)
+![Two-stage Terraform deployment showing Console-owned AWS resources, Terraform remote-state output reading, and the independently managed AutoMQ Cluster state](images/terraform-deployment-flow.svg)
 
-The two roots deliberately keep separate state. The handoff script copies only
-the required Console outputs into a local, Git-ignored auto tfvars file; it
-does not merge the state files or create the Cluster itself.
+The two roots deliberately keep separate state. The Cluster root uses
+Terraform's built-in `terraform_remote_state` data source to read the required
+Console outputs. It does not copy those values into a generated tfvars file or
+merge the two state files.
 
 This layout intentionally uses one NAT Gateway and one public Console. It is a
 compact evaluation topology, not a highly available network design.
@@ -96,7 +97,6 @@ compact evaluation topology, not a highly available network design.
 ## Prerequisites
 
 - Terraform 1.5.7 or later.
-- `jq` for transferring the Console outputs to the Cluster root.
 - AWS credentials with permission to create the resources listed above.
 - An AutoMQ Cloud account and a new AWS BYOC environment.
 - A valid AutoMQ Cloud Usage Based subscription: either an unexpired Free
@@ -233,40 +233,41 @@ terraform output -raw console_instance_id
 The bootstrap log is `/var/log/cloud-init-output.log`, and the container name
 is `automq-console`.
 
-### 3. Transfer the Console Configuration
+### 3. Read the Console State
 
-After the Console is usable and System Initialization succeeds, generate the
-Cluster inputs from the Console Terraform state:
+After the Console is usable and System Initialization succeeds, change to the
+Cluster root:
 
 ```bash
 cd ../automq-cluster
-./configure-from-console.sh
 ```
 
-The script reads the local `automq-console` outputs and writes
-`console.auto.tfvars.json` with file mode `0600`. The file is ignored by Git
-and contains the Console API credentials, Environment ID, broker networks,
-data bucket, private DNS zone, and data-plane IAM role. Re-run the script after
-replacing the Console or changing its foundation resources.
+The built-in `terraform_remote_state` data source reads
+`../automq-console/terraform.tfstate` by default. Terraform resolves the
+Console API credentials, Environment ID, broker networks, data bucket,
+private DNS zone, and data-plane IAM role during each Cluster plan. Replacing
+the Console or changing its foundation resources therefore does not require a
+separate copy step.
 
-To read a Console state in another location, pass its directory explicitly:
+If the local Console state is in another location, set `console_state_path` in
+`automq-cluster/terraform.tfvars`:
 
-```bash
-./configure-from-console.sh /path/to/automq-console
+```hcl
+console_state_path = "/path/to/automq-console/terraform.tfstate"
 ```
 
-For reference, the script applies this mapping:
+For reference, Terraform applies this mapping:
 
-| `automq-cluster` input | `automq-console` output |
+| Cluster value | `automq-console` output |
 | --- | --- |
-| `console_endpoint` | `console_endpoint` |
-| `console_access_key` | `console_initial_access_key` |
-| `console_secret_key` | `console_initial_secret_key` |
-| `environment_id` | `environment_id` |
-| `broker_networks` | `broker_networks` |
-| `data_bucket_name` | `data_bucket_name` |
-| `dns_zone_id` | `dns_zone_id` |
-| `instance_role_name` | `cluster_role_name` |
+| AutoMQ Provider endpoint | `console_endpoint` |
+| AutoMQ Provider access key | `console_initial_access_key` |
+| AutoMQ Provider secret key | `console_initial_secret_key` |
+| Instance Environment ID | `environment_id` |
+| Instance networks | `broker_networks` |
+| Instance data bucket | `data_bucket_name` |
+| Instance private DNS zone | `dns_zone_id` |
+| Instance IAM role name | `cluster_role_name` |
 
 Optional Cluster overrides can be placed in `terraform.tfvars`:
 
@@ -399,9 +400,12 @@ count is required.
   encryption keys. This quick-start does not create customer-managed KMS keys,
   VPC Flow Logs, S3 access-log buckets, or S3 versioning. Add controls required
   by your organization's production baseline separately.
-- Terraform state contains `CONFIG`, the initial admin password, and the
-  Console API keys. Use encrypted remote state with tightly restricted access.
-  Do not commit state, plans, `terraform.tfvars`, or generated auto tfvars.
+- The Console state contains `CONFIG`, the initial admin password, and the
+  Console API keys. The Cluster root reads Console outputs through
+  `terraform_remote_state`, so both state files require tightly restricted
+  access. This quick-start defaults to local state; use an encrypted remote
+  backend and update the remote-state backend configuration together for a
+  durable deployment. Do not commit state, plans, or `terraform.tfvars`.
 - Applying the Console stage incurs charges for a NAT Gateway, public IPv4
   addresses, a `t3.large` instance, EBS volumes, Route 53, S3, and data
   transfer. Applying the Cluster stage adds at least three broker instances and
@@ -425,11 +429,15 @@ public IP changed or your browser uses a different VPN or proxy exit, set
 `console_image`. The included IAM contract is pinned to Console `8.3.16-aws`;
 review it before using another Console release.
 
+**Terraform cannot read the Console state.** Apply `automq-console` first. If
+its local state is not at `../automq-console/terraform.tfstate`, set
+`console_state_path` to the correct file before planning the Cluster.
+
 **The Cluster provider returns an authentication error.** Confirm that the
-Console is ready, then re-run `./configure-from-console.sh`. Do not substitute
-AWS keys or the `clientId` and `clientSecret` from `CONFIG` for the generated
-Console API keys. Also confirm that the machine running Cluster Terraform is in
-`console_allowed_cidr_blocks`.
+Console is ready and that the Cluster reads the current Console state. Do not
+substitute AWS keys or the `clientId` and `clientSecret` from `CONFIG` for the
+generated Console API keys. Also confirm that the machine running Cluster
+Terraform is in `console_allowed_cidr_blocks`.
 
 **Instance creation returns `Instance.NoAvailableSubscription`.** Open **AutoMQ
 Cloud > Billing > Overview**. The Organization needs either an unexpired Free

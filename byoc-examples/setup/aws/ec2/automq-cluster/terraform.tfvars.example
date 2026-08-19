@@ -1,6 +1,6 @@
-# First run ./configure-from-console.sh. It writes the required Console outputs
-# to the ignored console.auto.tfvars.json file. This file contains optional
-# Cluster overrides only.
+# The Cluster reads ../automq-console/terraform.tfstate by default.
+# Set console_state_path only when the local Console state is elsewhere.
+# console_state_path = "/path/to/automq-console/terraform.tfstate"
 
 # instance_name        = "automq-ec2-quickstart"
 # instance_description = "AutoMQ EC2 quick-start instance"

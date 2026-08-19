@@ -1,46 +1,12 @@
-variable "console_endpoint" {
-  description = "AutoMQ Console endpoint from the automq-console output"
+variable "console_state_path" {
+  description = "Path to the local automq-console Terraform state, relative to the automq-cluster working directory or absolute"
   type        = string
+  default     = "../automq-console/terraform.tfstate"
   nullable    = false
 
   validation {
-    condition     = can(regex("^https?://[^[:space:]]+$", var.console_endpoint))
-    error_message = "console_endpoint must be a non-empty HTTP or HTTPS URL."
-  }
-}
-
-variable "console_access_key" {
-  description = "Local AutoMQ Console API access key from the automq-console output; this is not an AWS access key"
-  type        = string
-  sensitive   = true
-  nullable    = false
-
-  validation {
-    condition     = length(trimspace(var.console_access_key)) > 0
-    error_message = "console_access_key must not be empty."
-  }
-}
-
-variable "console_secret_key" {
-  description = "Local AutoMQ Console API secret key from the automq-console output; this is not an AWS secret key"
-  type        = string
-  sensitive   = true
-  nullable    = false
-
-  validation {
-    condition     = length(trimspace(var.console_secret_key)) > 0
-    error_message = "console_secret_key must not be empty."
-  }
-}
-
-variable "environment_id" {
-  description = "AutoMQ BYOC environment ID from the automq-console output"
-  type        = string
-  nullable    = false
-
-  validation {
-    condition     = can(regex("^env-[A-Za-z0-9]+$", var.environment_id))
-    error_message = "environment_id must use the AutoMQ environment ID format env-<identifier>."
+    condition     = length(trimspace(var.console_state_path)) > 0
+    error_message = "console_state_path must not be empty."
   }
 }
 
@@ -92,30 +58,6 @@ variable "broker_instance_type" {
   }
 }
 
-variable "broker_networks" {
-  description = "Private broker network placement from the automq-console broker_networks output"
-  type = list(object({
-    zone    = string
-    subnets = list(string)
-  }))
-  nullable = false
-
-  validation {
-    condition = (
-      contains([1, 3], length(var.broker_networks)) &&
-      length(distinct([for network in var.broker_networks : network.zone])) == length(var.broker_networks) &&
-      length(distinct(flatten([for network in var.broker_networks : network.subnets]))) == length(var.broker_networks) &&
-      alltrue([
-        for network in var.broker_networks :
-        trimspace(network.zone) != "" &&
-        length(network.subnets) == 1 &&
-        try(can(regex("^subnet-([0-9a-f]{8}|[0-9a-f]{17})$", network.subnets[0])), false)
-      ])
-    )
-    error_message = "broker_networks must contain one or three unique zones and exactly one unique valid AWS subnet ID per zone."
-  }
-}
-
 variable "availability_zone_count" {
   description = "Number of Availability Zones used by the AutoMQ brokers; choose one or three"
   type        = number
@@ -125,44 +67,6 @@ variable "availability_zone_count" {
   validation {
     condition     = contains([1, 3], var.availability_zone_count)
     error_message = "availability_zone_count must be 1 or 3."
-  }
-}
-
-variable "data_bucket_name" {
-  description = "Terraform-owned S3 data bucket from the automq-console output; required by this EC2 minimal-permissions quick-start"
-  type        = string
-  nullable    = false
-
-  validation {
-    condition = (
-      length(var.data_bucket_name) >= 3 &&
-      length(var.data_bucket_name) <= 63 &&
-      can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.data_bucket_name)) &&
-      !strcontains(var.data_bucket_name, "..")
-    )
-    error_message = "data_bucket_name must be the valid S3 bucket name from the automq-console output."
-  }
-}
-
-variable "dns_zone_id" {
-  description = "Terraform-owned private Route 53 hosted zone ID from the automq-console output; required by this EC2 minimal-permissions quick-start"
-  type        = string
-  nullable    = false
-
-  validation {
-    condition     = can(regex("^Z[A-Z0-9]+$", var.dns_zone_id))
-    error_message = "dns_zone_id must be a valid Route 53 hosted zone ID beginning with Z."
-  }
-}
-
-variable "instance_role_name" {
-  description = "Terraform-owned AutoMQ data-plane IAM Role name from the automq-console output; required by this EC2 minimal-permissions quick-start"
-  type        = string
-  nullable    = false
-
-  validation {
-    condition     = can(regex("^[A-Za-z0-9+=,.@_-]{1,64}$", var.instance_role_name))
-    error_message = "instance_role_name must be a valid AWS IAM Role name, not an ARN."
   }
 }
 

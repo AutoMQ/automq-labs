@@ -8,14 +8,12 @@ on:
       - '**/*.tf'
       - '**/*.tfvars'
       - '**/*.tftest.hcl'
-      - 'byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh'
       - '.github/workflows/terraform-validate.yml'
   pull_request:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
       - '**/*.tftest.hcl'
-      - 'byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh'
       - '.github/workflows/terraform-validate.yml'
 
 jobs:
@@ -95,21 +93,3 @@ jobs:
     - name: Run contract tests
       working-directory: ${{ matrix.directory }}
       run: terraform test
-
-  ec2-helper-script:
-    name: 'EC2 Helper Script'
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install ShellCheck
-      run: |
-        sudo apt-get update
-        sudo apt-get install --no-install-recommends --yes shellcheck
-
-    - name: Validate script
-      run: |
-        bash -n byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh
-        shellcheck byoc-examples/setup/aws/ec2/automq-cluster/configure-from-console.sh

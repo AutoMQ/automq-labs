@@ -15,21 +15,24 @@ mock_provider "http" {
   }
 }
 
-variables {
-  console_endpoint   = "http://console.example:8080"
-  console_access_key = "access-key"
-  console_secret_key = "secret-key"
-  environment_id     = "env-example"
-
-  broker_networks = [
-    { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
-    { zone = "us-east-1b", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
-    { zone = "us-east-1c", subnets = ["subnet-ccccccccccccccccc"] },
-  ]
-
-  data_bucket_name   = "automq-data-example"
-  dns_zone_id        = "Z0123456789"
-  instance_role_name = "automq-data-plane-example"
+override_data {
+  target = data.terraform_remote_state.console
+  values = {
+    outputs = {
+      console_endpoint           = "http://console.example:8080"
+      console_initial_access_key = "access-key"
+      console_initial_secret_key = "secret-key"
+      environment_id             = "env-example"
+      broker_networks = [
+        { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
+        { zone = "us-east-1b", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
+        { zone = "us-east-1c", subnets = ["subnet-ccccccccccccccccc"] },
+      ]
+      data_bucket_name  = "automq-data-example"
+      dns_zone_id       = "Z0123456789"
+      cluster_role_name = "automq-data-plane-example"
+    }
+  }
 }
 
 run "creates_bucket_scoped_iaas_instance" {
@@ -38,6 +41,11 @@ run "creates_bucket_scoped_iaas_instance" {
   assert {
     condition     = automq_kafka_instance.this.compute_specs.deploy_type == "IAAS"
     error_message = "The AWS EC2 example must always create an IAAS Instance."
+  }
+
+  assert {
+    condition     = automq_kafka_instance.this.environment_id == "env-example"
+    error_message = "The IAAS Instance must use the Environment ID read from the Console state."
   }
 
   assert {
@@ -146,24 +154,52 @@ run "invalid_efs_wal_throughput_is_rejected" {
 run "role_arn_is_rejected" {
   command = plan
 
-  variables {
-    instance_role_name = "arn:aws:iam::123456789012:role/automq-data-plane-example"
+  override_data {
+    target = data.terraform_remote_state.console
+    values = {
+      outputs = {
+        console_endpoint           = "http://console.example:8080"
+        console_initial_access_key = "access-key"
+        console_initial_secret_key = "secret-key"
+        environment_id             = "env-example"
+        broker_networks = [
+          { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
+          { zone = "us-east-1b", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
+          { zone = "us-east-1c", subnets = ["subnet-ccccccccccccccccc"] },
+        ]
+        data_bucket_name  = "automq-data-example"
+        dns_zone_id       = "Z0123456789"
+        cluster_role_name = "arn:aws:iam::123456789012:role/automq-data-plane-example"
+      }
+    }
   }
 
-  expect_failures = [var.instance_role_name]
+  expect_failures = [terraform_data.console_health_preflight]
 }
 
 run "two_zone_topology_is_rejected" {
   command = plan
 
-  variables {
-    broker_networks = [
-      { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
-      { zone = "us-east-1b", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
-    ]
+  override_data {
+    target = data.terraform_remote_state.console
+    values = {
+      outputs = {
+        console_endpoint           = "http://console.example:8080"
+        console_initial_access_key = "access-key"
+        console_initial_secret_key = "secret-key"
+        environment_id             = "env-example"
+        broker_networks = [
+          { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
+          { zone = "us-east-1b", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
+        ]
+        data_bucket_name  = "automq-data-example"
+        dns_zone_id       = "Z0123456789"
+        cluster_role_name = "automq-data-plane-example"
+      }
+    }
   }
 
-  expect_failures = [var.broker_networks]
+  expect_failures = [terraform_data.console_health_preflight]
 }
 
 run "tls_without_certificate_configuration_is_rejected" {
@@ -179,26 +215,48 @@ run "tls_without_certificate_configuration_is_rejected" {
 run "duplicate_broker_network_is_rejected" {
   command = plan
 
-  variables {
-    broker_networks = [
-      { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
-      { zone = "us-east-1a", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
-      { zone = "us-east-1c", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
-    ]
+  override_data {
+    target = data.terraform_remote_state.console
+    values = {
+      outputs = {
+        console_endpoint           = "http://console.example:8080"
+        console_initial_access_key = "access-key"
+        console_initial_secret_key = "secret-key"
+        environment_id             = "env-example"
+        broker_networks = [
+          { zone = "us-east-1a", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
+          { zone = "us-east-1a", subnets = ["subnet-bbbbbbbbbbbbbbbbb"] },
+          { zone = "us-east-1c", subnets = ["subnet-aaaaaaaaaaaaaaaaa"] },
+        ]
+        data_bucket_name  = "automq-data-example"
+        dns_zone_id       = "Z0123456789"
+        cluster_role_name = "automq-data-plane-example"
+      }
+    }
   }
 
-  expect_failures = [var.broker_networks]
+  expect_failures = [terraform_data.console_health_preflight]
 }
 
 run "unhealthy_console_is_rejected" {
   command = plan
 
   override_data {
-    target = data.http.console_capabilities
+    target = data.http.console_capabilities[0]
     values = {
       status_code = 503
     }
   }
 
   expect_failures = [terraform_data.console_health_preflight]
+}
+
+run "empty_console_state_path_is_rejected" {
+  command = plan
+
+  variables {
+    console_state_path = " "
+  }
+
+  expect_failures = [var.console_state_path]
 }

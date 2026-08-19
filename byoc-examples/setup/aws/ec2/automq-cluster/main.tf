@@ -1,21 +1,28 @@
 data "http" "console_capabilities" {
-  url                = "${trimsuffix(var.console_endpoint, "/")}/auth/login"
+  count = local.console_endpoint_valid ? 1 : 0
+
+  url                = "${trimsuffix(local.console_endpoint, "/")}/auth/login"
   request_timeout_ms = 15000
 }
 
 locals {
   normalized_wal_mode = upper(var.wal_mode)
   selected_broker_networks = slice(
-    var.broker_networks,
+    local.broker_networks,
     0,
-    min(var.availability_zone_count, length(var.broker_networks)),
+    min(var.availability_zone_count, length(local.broker_networks)),
   )
 }
 
 resource "terraform_data" "console_health_preflight" {
   lifecycle {
     precondition {
-      condition     = data.http.console_capabilities.status_code == 200
+      condition     = local.console_state_valid
+      error_message = "The Console state is missing or contains invalid Cluster outputs. Apply the automq-console root first, or set console_state_path to its current local state file."
+    }
+
+    precondition {
+      condition     = !local.console_endpoint_valid || try(data.http.console_capabilities[0].status_code == 200, false)
       error_message = "AutoMQ Console health check failed. The /auth/login endpoint must return HTTP 200 before Terraform creates an Instance."
     }
   }
@@ -24,7 +31,7 @@ resource "terraform_data" "console_health_preflight" {
 resource "automq_kafka_instance" "this" {
   depends_on = [terraform_data.console_health_preflight]
 
-  environment_id = var.environment_id
+  environment_id = local.environment_id
   name           = var.instance_name
   description    = var.instance_description
   version        = var.automq_version
@@ -39,11 +46,11 @@ resource "automq_kafka_instance" "this" {
     networks = local.selected_broker_networks
     # Keep the object unknown until the bucket input resolves; Provider 0.4.6
     # otherwise validates bucket_name before root variables are available.
-    data_buckets = trimspace(var.data_bucket_name) != "" ? [{
-      bucket_name = var.data_bucket_name
+    data_buckets = trimspace(local.data_bucket_name) != "" ? [{
+      bucket_name = local.data_bucket_name
     }] : null
-    dns_zone      = var.dns_zone_id
-    instance_role = var.instance_role_name
+    dns_zone      = local.dns_zone_id
+    instance_role = local.instance_role_name
     file_system_param = local.normalized_wal_mode == "FSWAL" ? {
       file_system_type                 = "EFS_PROVISIONED"
       throughput_mibps_per_file_system = var.efs_wal_throughput_mibps_per_file_system
@@ -67,7 +74,7 @@ resource "automq_kafka_instance" "this" {
   lifecycle {
     precondition {
       condition     = length(local.selected_broker_networks) == var.availability_zone_count
-      error_message = "broker_networks does not contain enough networks for availability_zone_count. Run configure-from-console.sh again or provide one network for single-AZ and three networks for multi-AZ deployment."
+      error_message = "The Console state output broker_networks does not contain enough networks for availability_zone_count. Use one network for single-AZ and three networks for multi-AZ deployment."
     }
 
     precondition {

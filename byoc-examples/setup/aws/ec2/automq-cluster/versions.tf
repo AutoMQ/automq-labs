@@ -14,7 +14,7 @@ terraform {
 }
 
 provider "automq" {
-  automq_byoc_endpoint      = var.console_endpoint
-  automq_byoc_access_key_id = var.console_access_key
-  automq_byoc_secret_key    = var.console_secret_key
+  automq_byoc_endpoint      = local.console_endpoint_valid ? local.console_endpoint : "http://127.0.0.1"
+  automq_byoc_access_key_id = local.console_access_key_valid ? local.console_access_key : "missing-console-state"
+  automq_byoc_secret_key    = local.console_secret_key_valid ? local.console_secret_key : "missing-console-state"
 }
