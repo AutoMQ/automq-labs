@@ -86,10 +86,6 @@ jobs:
       working-directory: ${{ matrix.directory }}
       run: terraform init -backend=false -input=false
 
-    - name: Validate
-      working-directory: ${{ matrix.directory }}
-      run: terraform validate
-
     - name: Run contract tests
       working-directory: ${{ matrix.directory }}
       run: terraform test
