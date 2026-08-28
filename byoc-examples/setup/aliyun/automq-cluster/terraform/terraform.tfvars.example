@@ -1,0 +1,45 @@
+# AutoMQ Provider credentials
+automq_byoc_endpoint      = "http://REPLACE_ME_AUTOMQ_ENDPOINT:8080"
+automq_byoc_access_key_id = "REPLACE_ME_AUTOMQ_ACCESS_KEY_ID"
+automq_byoc_secret_key    = "REPLACE_ME_AUTOMQ_SECRET_KEY"
+
+# Elastic Pool
+environment_id       = "REPLACE_ME_AUTOMQ_ENVIRONMENT_ID"
+instance_name        = "aliyun-elastic-pool-example"
+instance_description = "VMIS Elastic Pool on Alibaba Cloud"
+automq_version       = "5.5.2"
+pricing_mode         = "SubscriptionBased"
+reserved_aku         = 3
+
+# A VSwitch ID is the subnet ID expected by the AutoMQ Provider. Keep each
+# VSwitch aligned with its availability zone.
+networks = [
+  {
+    zone    = "cn-hangzhou-h"
+    subnets = ["REPLACE_ME_VSWITCH_ID_AZ_H"]
+  },
+  {
+    zone    = "cn-hangzhou-i"
+    subnets = ["REPLACE_ME_VSWITCH_ID_AZ_I"]
+  },
+  {
+    zone    = "cn-hangzhou-j"
+    subnets = ["REPLACE_ME_VSWITCH_ID_AZ_J"]
+  },
+]
+
+# Existing Alibaba Cloud resources
+security_group_ids = ["REPLACE_ME_EXISTING_SECURITY_GROUP_ID"]
+data_buckets = [
+  {
+    bucket_name = "REPLACE_ME_EXISTING_OSS_DATA_BUCKET"
+  },
+]
+dns_zone_id        = "REPLACE_ME_EXISTING_PRIVATEZONE_ID"
+ram_role_name      = "REPLACE_ME_EXISTING_RAM_ROLE_NAME"
+
+# The example requires exactly two custom tags.
+tags = {
+  environment = "production"
+  owner       = "platform-team"
+}
