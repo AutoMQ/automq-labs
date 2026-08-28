@@ -8,3 +8,4 @@ This directory provides guides and Terraform scripts for deploying AutoMQ on var
 *   [**Azure**](azure/README.md): Deploy AutoMQ on Microsoft Azure. (*Coming Soon*)
 *   [**Tencent Cloud**](tencentcloud/README.md): Deploy AutoMQ on Tencent Cloud. (**Available**)
 *   [**GCP**](./gcp/README.md): Deploy AutoMQ on Google Cloud Platform. (**Available**)
+*   [**Alibaba Cloud**](./aliyun/README.md): Create an AutoMQ Instance in an existing Alibaba Cloud BYOC environment. (**Available**)
