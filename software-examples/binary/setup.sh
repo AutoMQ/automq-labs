@@ -255,7 +255,7 @@ create_minio_compose() {
     cat > minio/docker-compose.yml << 'MINIO_EOF'
 services:
   minio:
-    image: minio/minio:latest
+    image: pgsty/silo:RELEASE.2026-09-03T13-18-01Z
     container_name: automq-minio
     ports:
       - "9000:9000"
@@ -273,7 +273,7 @@ services:
       retries: 5
 
   minio-init:
-    image: minio/mc:latest
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     container_name: automq-minio-init
     depends_on:
       minio:
