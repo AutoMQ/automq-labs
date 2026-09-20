@@ -91,6 +91,10 @@ resource "azurerm_kubernetes_cluster" "this" {
   oidc_issuer_enabled               = true
   workload_identity_enabled         = true
 
+  node_provisioning_profile {
+    mode = "Manual"
+  }
+
   azure_active_directory_role_based_access_control {
     azure_rbac_enabled = true
     tenant_id          = data.azurerm_client_config.current.tenant_id
