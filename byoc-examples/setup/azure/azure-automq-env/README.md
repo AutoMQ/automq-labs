@@ -7,7 +7,8 @@ VM image.
 
 ## What This Creates
 
-- A Resource Group in the Azure region encoded in AutoMQ `CONFIG`.
+- A Resource Group in `location`, which must match the Azure region encoded in
+  AutoMQ `CONFIG`.
 - An AKS cluster with Microsoft Entra integration, Azure RBAC, OIDC issuer, and
   Azure Workload Identity enabled.
 - A dedicated three-zone AutoMQ node pool with the
@@ -18,7 +19,7 @@ VM image.
 - Separate Console and Data Plane user-assigned managed identities.
 - The Ops Storage Account and Container named by
   `CONFIG.opsBucket.bucketName`.
-- A Terraform-provided data bucket and Private DNS Zone that can be used as
+- A Terraform-provided data container and Private DNS Zone that can be used as
   customer-provided Instance resources.
 
 This example grants broad subscription-level Console permissions so the 8.x
@@ -27,7 +28,7 @@ evaluation, not as a production IAM baseline.
 
 ## Prerequisites
 
-- Terraform 1.5.7 or later.
+- Terraform 1.3 or later.
 - Azure credentials allowed to create the resources and role assignments in
   this example.
 - An existing VNet with separate Console and AKS subnets.
@@ -53,8 +54,8 @@ must not overlap the VNet or either subnet.
      edit it.
    - `console_image` to the exact image shown in the same installation
      command.
-   - The Azure subscription, Resource Group, VNet, subnet, service CIDR, and
-     trusted Console ingress values.
+   - The Azure subscription, matching region, Resource Group, VNet, subnet,
+     service CIDR, and existing `env_prefix` inputs.
 
 3. Deploy:
 
@@ -67,9 +68,9 @@ must not overlap the VNet or either subnet.
 4. Get the Console login:
 
    ```bash
-   terraform output -raw console_endpoint
-   terraform output -raw console_initial_username
-   terraform output -raw console_initial_password
+   terraform output -raw automq_console_endpoint
+   terraform output -raw automq_console_username
+   terraform output -raw automq_console_password
    ```
 
 The VM becoming `Running` does not mean the Console is ready. Wait for the
@@ -86,18 +87,16 @@ In the Console, create a K8S Instance using:
 - Scheduling taint: `dedicated=automq:NoSchedule`
 - Scheduling label: `automq-node-group=<automq_nodepool_name>`
 
-The shortest 8.x path is to let the Console manage the Instance Data Bucket,
-Private DNS Zone, and Data Plane Identity. The Terraform-provided
-`data_bucket_id`, `dns_zone_id`, and `workload_identity_id` outputs are
-customer-provided candidates; using the UAMI also requires the matching
-Kubernetes ServiceAccount and Federated Identity Credential.
+The `data_bucket_id`, `dns_zone_id`, and `workload_identity_id` outputs are
+customer-provided Instance resources. Using the UAMI also requires the
+matching Kubernetes ServiceAccount and Federated Identity Credential.
 
 ## Important Outputs
 
 | Output | Meaning |
 | --- | --- |
-| `console_endpoint` | AutoMQ Console URL |
-| `console_initial_password` | One-time initial admin password |
+| `automq_console_endpoint` | AutoMQ Console URL |
+| `automq_console_password` | One-time initial admin password |
 | `console_initial_access_key` / `console_initial_secret_key` | Initial local Console API credentials |
 | `kubernetes_cluster_id` | AKS full ARM ID |
 | `automq_nodepool_name` | Dedicated AutoMQ node pool |
@@ -126,8 +125,8 @@ sudo docker logs --tail 200 automq-console
 
 ## Security and State
 
-- Restrict `console_allowed_cidr_blocks`; do not use `0.0.0.0/0` outside a
-  disposable environment.
+- The original example interface keeps ports 22 and 8080 open. Restrict the
+  Network Security Group before using it outside a disposable environment.
 - The Console endpoint is plain HTTP on port 8080. Add HTTPS and a controlled
   ingress layer for durable use.
 - Terraform state contains `CONFIG`, the initial password, API credentials,

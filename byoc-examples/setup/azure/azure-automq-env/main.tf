@@ -1,22 +1,21 @@
 terraform {
-  required_version = ">= 1.5.7, < 2.0.0"
-
+  required_version = ">= 1.3.0"
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
       version = ">= 5.0"
     }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.5"
-    }
     random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
+      source = "hashicorp/random"
     }
     tls = {
-      source  = "hashicorp/tls"
-      version = "~> 4.0"
+      source = "hashicorp/tls"
+    }
+    local = {
+      source = "hashicorp/local"
+    }
+    null = {
+      source = "hashicorp/null"
     }
   }
 }
@@ -26,6 +25,7 @@ provider "azurerm" {
   subscription_id = var.subscription_id
 }
 
+# Unique suffix to avoid name collisions when creating resources
 resource "random_string" "suffix" {
   length  = 4
   upper   = false
@@ -33,34 +33,51 @@ resource "random_string" "suffix" {
 }
 
 locals {
-  automq_config      = jsondecode(base64decode(var.automq_config))
-  environment_id     = nonsensitive(local.automq_config.environmentId)
-  location           = nonsensitive(local.automq_config.region)
-  ops_bucket_id      = nonsensitive(local.automq_config.opsBucket.bucketName)
-  name_suffix        = "${var.name_prefix}-${random_string.suffix.result}"
-  availability_zones = ["1", "2", "3"]
+  automq_config        = jsondecode(base64decode(var.automq_config))
+  ops_bucket_parts     = split(":", nonsensitive(local.automq_config.opsBucket.bucketName))
+  name_suffix          = "${var.env_prefix}-${random_string.suffix.result}"
+  storage_account_name = local.ops_bucket_parts[0]
+  ops_container_name   = local.ops_bucket_parts[1]
+  data_container_name  = "automq-data-${local.name_suffix}"
 }
 
-resource "azurerm_resource_group" "this" {
+# Resource group created for all managed resources
+resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
-  location = local.location
+  location = var.location
+
+  lifecycle {
+    precondition {
+      condition     = lower(var.location) == lower(nonsensitive(local.automq_config.region))
+      error_message = "location must match the Azure region encoded in automq_config."
+    }
+  }
 }
 
 module "aks" {
   source = "./modules/aks"
 
-  location                = local.location
-  resource_group_name     = azurerm_resource_group.this.name
+  location                = var.location
+  resource_group_name     = azurerm_resource_group.rg.name
   aks_name                = "aks-${local.name_suffix}"
   kubernetes_version      = var.kubernetes_version
   subnet_id               = var.private_subnet_id
-  dns_prefix              = "${var.name_prefix}-dns"
+  dns_prefix              = "${var.env_prefix}-dns"
   service_cidr            = var.service_cidr
   dns_service_ip          = var.dns_service_ip
+  kubeconfig_path         = var.kubeconfig_path
   subscription_id         = var.subscription_id
   kubernetes_pricing_tier = var.kubernetes_pricing_tier
   private_access_only     = var.private_access_only
-  availability_zones      = local.availability_zones
+}
+
+module "iam" {
+  source = "./modules/iam"
+
+  location            = var.location
+  resource_group_name = azurerm_resource_group.rg.name
+  subscription_id     = var.subscription_id
+  name_suffix         = local.name_suffix
 }
 
 module "nodepool_automq" {
@@ -75,129 +92,110 @@ module "nodepool_automq" {
   node_count            = var.nodepool.node_count
   spot                  = var.nodepool.spot
   orchestrator_version  = module.aks.kubernetes_version
-  availability_zones    = local.availability_zones
 }
 
 module "automq_console" {
   source = "./modules/automq-console"
 
-  location                    = local.location
-  resource_group_name         = azurerm_resource_group.this.name
-  vnet_id                     = var.vnet_id
-  subnet_id                   = var.public_subnet_id
-  automq_config               = var.automq_config
-  console_image               = var.console_image
-  vm_size                     = var.console_vm_size
-  subscription_id             = var.subscription_id
-  ops_bucket_id               = local.ops_bucket_id
-  kubernetes_cluster_id       = module.aks.kubernetes_cluster_id
-  console_allowed_cidr_blocks = var.console_allowed_cidr_blocks
-  private_access_only         = var.private_access_only
-}
-
-output "environment_id" {
-  description = "AutoMQ BYOC environment ID decoded from CONFIG."
-  value       = local.environment_id
-}
-
-output "region" {
-  description = "Azure region decoded from CONFIG."
-  value       = local.location
+  location             = var.location
+  resource_group_name  = azurerm_resource_group.rg.name
+  vnet_id              = var.vnet_id
+  subnet_id            = var.public_subnet_id
+  storage_account_name = local.storage_account_name
+  ops_container_name   = local.ops_container_name
+  data_container_name  = local.data_container_name
+  automq_config        = var.automq_config
+  console_image        = var.console_image
+  vm_size              = var.automq_console_vm_size
+  cluster_identity_id  = module.iam.workload_identity_id
+  subscription_id      = var.subscription_id
+  private_access_only  = var.private_access_only
 }
 
 output "resource_group_name" {
-  value = azurerm_resource_group.this.name
+  value = azurerm_resource_group.rg.name
 }
 
 output "aks_name" {
   value = module.aks.aks_name
 }
 
-output "kubernetes_cluster_id" {
-  description = "AKS cluster full ARM ID used when creating an Instance."
-  value       = module.aks.kubernetes_cluster_id
-}
-
 output "automq_nodepool_name" {
   value = module.nodepool_automq.nodepool_name
 }
 
-output "automq_nodepool_vm_size" {
-  value = module.nodepool_automq.vm_size
-}
-
-output "private_subnet_id" {
-  description = "AKS workload subnet full ARM ID used by the Instance load balancer."
-  value       = var.private_subnet_id
-}
-
-output "console_endpoint" {
+output "automq_console_endpoint" {
   value = module.automq_console.console_endpoint
 }
 
-output "console_initial_username" {
-  value = "admin"
+output "automq_console_username" {
+  value = module.automq_console.console_initial_username
 }
 
-output "console_initial_password" {
+output "automq_console_password" {
   sensitive = true
   value     = module.automq_console.console_initial_password
 }
 
 output "console_initial_access_key" {
-  description = "Local Console API access key used by the AutoMQ provider."
-  sensitive   = true
-  value       = module.automq_console.console_initial_access_key
+  sensitive = true
+  value     = module.automq_console.console_initial_access_key
 }
 
 output "console_initial_secret_key" {
-  description = "Local Console API secret key used by the AutoMQ provider."
-  sensitive   = true
-  value       = module.automq_console.console_initial_secret_key
+  sensitive = true
+  value     = module.automq_console.console_initial_secret_key
 }
 
-output "console_vm_id" {
-  value = module.automq_console.console_vm_id
+output "kubernetes_cluster_id" {
+  value = module.aks.kubernetes_cluster_id
 }
 
-output "console_identity_id" {
-  description = "Console UAMI full ARM ID."
-  value       = module.automq_console.console_identity_id
-}
-
-output "ops_bucket_id" {
-  description = "Canonical Azure logical Ops Bucket ID in storageAccount:container form."
-  value       = local.ops_bucket_id
-}
-
-output "ops_bucket_endpoint" {
-  value = module.automq_console.ops_bucket_endpoint
-}
-
-output "data_bucket_id" {
-  description = "Canonical Azure logical data Bucket ID in storageAccount:container form."
-  value       = module.automq_console.data_bucket_id
-}
-
-output "data_bucket_endpoint" {
-  value = module.automq_console.data_bucket_endpoint
-}
-
-output "dns_zone_id" {
-  description = "Private DNS Zone full ARM ID."
-  value       = module.automq_console.dns_zone_id
+output "private_subnet_id" {
+  value = var.private_subnet_id
 }
 
 output "dns_zone_name" {
   value = module.automq_console.dns_zone_name
 }
 
-output "workload_identity_id" {
-  description = "Terraform-provided Data Plane UAMI full ARM ID."
-  value       = module.automq_console.workload_identity_id
+output "dns_zone_id" {
+  value = module.automq_console.dns_zone_id
 }
 
-output "workload_identity_client_id" {
-  description = "Terraform-provided Data Plane UAMI client ID."
-  value       = module.automq_console.workload_identity_client_id
+
+output "data_bucket_endpoint" {
+  value = module.automq_console.data_bucket_endpoint
+}
+
+output "nodepool_identity_client_id" {
+  description = "Managed Identity Client ID associated with the AutoMQ AKS node pool"
+  value       = module.iam.workload_identity_client_id
+}
+
+output "storage_account_name" {
+  description = "The name of the storage account."
+  value       = local.storage_account_name
+}
+
+output "automq_data_bucket" {
+  description = "The name of the automq-data container."
+  value       = local.data_container_name
+}
+
+output "automq_ops_bucket" {
+  description = "The name of the automq-ops container."
+  value       = local.ops_container_name
+}
+
+output "ops_bucket_id" {
+  value = "${local.storage_account_name}:${local.ops_container_name}"
+}
+
+output "data_bucket_id" {
+  value = "${local.storage_account_name}:${local.data_container_name}"
+}
+
+output "workload_identity_id" {
+  value = module.iam.workload_identity_id
 }

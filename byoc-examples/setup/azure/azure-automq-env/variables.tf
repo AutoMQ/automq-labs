@@ -37,35 +37,30 @@ variable "console_image" {
 variable "subscription_id" {
   description = "Azure subscription ID"
   type        = string
+}
 
-  validation {
-    condition     = can(regex("^[0-9a-fA-F-]{36}$", var.subscription_id))
-    error_message = "subscription_id must be an Azure subscription UUID."
-  }
+variable "location" {
+  description = "Azure region for all resources"
+  type        = string
 }
 
 variable "resource_group_name" {
-  description = "Resource Group created for this quick-start"
+  description = "Resource group name to create/use for all resources"
   type        = string
 }
 
 variable "vnet_id" {
-  description = "Existing VNet full ARM ID"
+  description = "Existing virtual network ID"
   type        = string
-
-  validation {
-    condition     = can(regex("(?i)^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft.Network/virtualNetworks/[^/]+$", trimspace(var.vnet_id)))
-    error_message = "vnet_id must be a full VNet ARM ID."
-  }
 }
 
 variable "public_subnet_id" {
-  description = "Existing subnet full ARM ID for the Console VM"
+  description = "Existing public subnet ID"
   type        = string
 }
 
 variable "private_subnet_id" {
-  description = "Existing subnet full ARM ID for AKS nodes and load balancers"
+  description = "Existing private subnet ID"
   type        = string
 }
 
@@ -76,34 +71,36 @@ variable "kubernetes_version" {
 }
 
 variable "kubernetes_pricing_tier" {
-  description = "AKS pricing tier"
   type        = string
+  description = "AKS pricing tier"
   default     = "Free"
 }
 
 variable "service_cidr" {
-  description = "Non-overlapping private CIDR for Kubernetes services"
+  description = "CIDR range for Kubernetes ClusterIP services; must be a private, non-overlapping range outside the AKS VNet and subnets."
   type        = string
+
 }
 
 variable "dns_service_ip" {
-  description = "CoreDNS IP within service_cidr"
+  description = "Cluster DNS service IP (CoreDNS) allocated from service_cidr; must be a single, unused IP within the service CIDR range."
   type        = string
+
 }
 
-variable "name_prefix" {
-  description = "Short lowercase prefix used for Azure resource names"
+variable "kubeconfig_path" {
+  description = "Local path to write kubeconfig file"
   type        = string
-  default     = "automq"
+  default     = "~/.kube/automq-aks-config"
+}
 
-  validation {
-    condition     = can(regex("^[a-z0-9][a-z0-9-]{1,14}[a-z0-9]$", var.name_prefix))
-    error_message = "name_prefix must be 3-16 lowercase letters, numbers, or hyphens and cannot start or end with a hyphen."
-  }
+variable "env_prefix" {
+  description = "Short prefix used for naming resources"
+  type        = string
 }
 
 variable "nodepool" {
-  description = "Dedicated AutoMQ AKS node pool"
+  description = "Configuration for the AutoMQ user node pool"
   type = object({
     name       = string
     vm_size    = string
@@ -122,27 +119,14 @@ variable "nodepool" {
   }
 }
 
-variable "console_vm_size" {
-  description = "Azure VM size for the AutoMQ Console"
+variable "automq_console_vm_size" {
+  description = "VM size for AutoMQ console"
   type        = string
-  default     = "Standard_D2s_v5"
-}
-
-variable "console_allowed_cidr_blocks" {
-  description = "IPv4 CIDRs allowed to access Console TCP 8080 and SSH TCP 22"
-  type        = list(string)
-  nullable    = false
-
-  validation {
-    condition = length(var.console_allowed_cidr_blocks) > 0 && length(var.console_allowed_cidr_blocks) < 1000 && alltrue([
-      for cidr in var.console_allowed_cidr_blocks : can(cidrhost(cidr, 0)) && can(regex("^([0-9]{1,3}\\.){3}[0-9]{1,3}/", cidr))
-    ])
-    error_message = "console_allowed_cidr_blocks must contain 1-999 valid IPv4 CIDRs."
-  }
+  default     = "Standard_D2s_v3"
 }
 
 variable "private_access_only" {
-  description = "Disable public IPs for the AKS API server and Console VM"
+  description = "If true, the AKS API server and AutoMQ console will not have public IPs. Access will be restricted to the VNet."
   type        = bool
   default     = false
 }

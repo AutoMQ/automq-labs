@@ -1,26 +1,26 @@
 variable "kubernetes_cluster_id" {
   type        = string
-  description = "AKS cluster full ARM ID"
+  description = "ID of the AKS cluster"
 }
 
 variable "subnet_id" {
   type        = string
-  description = "AKS node subnet full ARM ID"
+  description = "Subnet ID for the node pool"
 }
 
 variable "nodepool_name" {
   type        = string
-  description = "AutoMQ node pool name"
+  description = "Name of the AutoMQ node pool"
 
   validation {
     condition     = length(var.nodepool_name) <= 12 && can(regex("^[a-z0-9]+$", var.nodepool_name))
-    error_message = "nodepool_name must be 1-12 lowercase alphanumeric characters."
+    error_message = "nodepool_name must be 1-12 lowercase alphanumeric characters (AKS agent pool naming constraint)."
   }
 }
 
 variable "vm_size" {
   type        = string
-  description = "Azure VM size for nodes"
+  description = "VM size for nodes"
 }
 
 variable "min_count" {
@@ -40,17 +40,14 @@ variable "node_count" {
 
 variable "spot" {
   type        = bool
-  description = "Use Spot nodes"
+  description = "Use spot nodes"
+  default     = false
 }
 
 variable "orchestrator_version" {
   type        = string
-  description = "Kubernetes version aligned with the cluster"
-}
-
-variable "availability_zones" {
-  type        = list(string)
-  description = "Azure availability zones used by this node pool"
+  description = "Kubernetes version to align with the cluster"
+  default     = null
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "automq" {
@@ -58,7 +55,8 @@ resource "azurerm_kubernetes_cluster_node_pool" "automq" {
   kubernetes_cluster_id = var.kubernetes_cluster_id
   vm_size               = var.vm_size
   vnet_subnet_id        = var.subnet_id
-  orchestrator_version  = var.orchestrator_version
+
+  orchestrator_version = var.orchestrator_version
 
   auto_scaling_enabled = true
   min_count            = var.min_count
@@ -66,12 +64,15 @@ resource "azurerm_kubernetes_cluster_node_pool" "automq" {
   node_count           = var.node_count
 
   temporary_name_for_rotation = "automqtmp"
-  priority                    = var.spot ? "Spot" : "Regular"
-  eviction_policy             = var.spot ? "Delete" : null
-  spot_max_price              = var.spot ? -1 : null
-  zones                       = var.availability_zones
-  node_taints                 = ["dedicated=automq:NoSchedule"]
-  node_labels                 = { automq-node-group = var.nodepool_name }
+
+  priority        = var.spot ? "Spot" : "Regular"
+  eviction_policy = var.spot ? "Delete" : null
+  spot_max_price  = var.spot ? -1 : null
+
+  zones = [1, 2, 3]
+
+  node_taints = ["dedicated=automq:NoSchedule"]
+  node_labels = { automq-node-group = var.nodepool_name }
 
   upgrade_settings {
     max_surge = "33%"
@@ -84,8 +85,4 @@ resource "azurerm_kubernetes_cluster_node_pool" "automq" {
 
 output "nodepool_name" {
   value = azurerm_kubernetes_cluster_node_pool.automq.name
-}
-
-output "vm_size" {
-  value = azurerm_kubernetes_cluster_node_pool.automq.vm_size
 }

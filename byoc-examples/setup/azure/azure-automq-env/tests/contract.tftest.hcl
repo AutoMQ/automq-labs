@@ -41,23 +41,24 @@ variables {
       bucketName = "amqopstest:ops"
     }
   }))
-  console_image               = "automq.azurecr.io/automq/automq-byoc-console:8.3.0-azure"
-  subscription_id             = "00000000-0000-0000-0000-000000000000"
-  resource_group_name         = "automq-test"
-  vnet_id                     = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq"
-  public_subnet_id            = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq/subnets/console"
-  private_subnet_id           = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq/subnets/workload"
-  service_cidr                = "172.2.0.0/16"
-  dns_service_ip              = "172.2.0.10"
-  console_allowed_cidr_blocks = ["203.0.113.10/32"]
+  console_image       = "automq.azurecr.io/automq/automq-byoc-console:8.3.0-azure"
+  subscription_id     = "00000000-0000-0000-0000-000000000000"
+  location            = "eastus"
+  resource_group_name = "automq-test"
+  env_prefix          = "automq"
+  vnet_id             = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq"
+  public_subnet_id    = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq/subnets/console"
+  private_subnet_id   = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq/subnets/workload"
+  service_cidr        = "172.2.0.0/16"
+  dns_service_ip      = "172.2.0.10"
 }
 
 run "azure_8x_contract" {
   command = plan
 
   assert {
-    condition     = output.environment_id == "env-example" && output.region == "eastus"
-    error_message = "Environment ID and region must be decoded from CONFIG."
+    condition     = output.storage_account_name == "amqopstest" && output.automq_ops_bucket == "ops"
+    error_message = "The Ops Storage Account and Container must be decoded from CONFIG."
   }
 
   assert {
@@ -65,6 +66,16 @@ run "azure_8x_contract" {
     error_message = "The Console stack must create the canonical Azure Ops Bucket from CONFIG."
   }
 
+}
+
+run "config_region_must_match_location" {
+  command = plan
+
+  variables {
+    location = "westus2"
+  }
+
+  expect_failures = [azurerm_resource_group.rg]
 }
 
 run "invalid_legacy_ops_bucket_is_rejected" {

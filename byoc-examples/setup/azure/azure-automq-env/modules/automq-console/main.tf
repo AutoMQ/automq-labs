@@ -5,17 +5,29 @@ variable "location" {
 
 variable "resource_group_name" {
   type        = string
-  description = "Resource Group where Console resources are created"
+  description = "Resource group where resources are created"
 }
 
 variable "vnet_id" {
   type        = string
-  description = "Existing VNet full ARM ID"
+  description = "ID of the virtual network"
 }
 
 variable "subnet_id" {
   type        = string
-  description = "Existing Console subnet full ARM ID"
+  description = "Subnet ID for the console VM (private)"
+}
+
+
+
+variable "ops_container_name" {
+  type        = string
+  description = "Existing container name for ops bucket"
+}
+
+variable "data_container_name" {
+  type        = string
+  description = "Existing container name for data bucket"
 }
 
 variable "automq_config" {
@@ -31,39 +43,28 @@ variable "console_image" {
 
 variable "vm_size" {
   type        = string
-  description = "Azure VM size for the Console"
+  description = "VM size for the CMP console"
+}
+
+variable "cluster_identity_id" {
+  type        = string
+  description = "User-assigned identity ID used by the cluster and console"
 }
 
 variable "subscription_id" {
   type        = string
-  description = "Azure subscription ID"
+  description = "Subscription ID for role assignments"
 }
 
-variable "ops_bucket_id" {
+variable "storage_account_name" {
   type        = string
-  description = "Canonical Azure logical Ops Bucket ID in storageAccount:container form"
-}
-
-variable "kubernetes_cluster_id" {
-  type        = string
-  description = "AKS cluster full ARM ID"
-}
-
-variable "console_allowed_cidr_blocks" {
-  type        = list(string)
-  description = "IPv4 CIDRs allowed to access the Console and SSH"
+  description = "The name of the storage account."
 }
 
 variable "private_access_only" {
-  description = "Disable the Console public IP"
+  description = "If true, the console will not have a public IP."
   type        = bool
   default     = false
-}
-
-resource "random_string" "suffix" {
-  length  = 6
-  upper   = false
-  special = false
 }
 
 resource "random_password" "initial_password" {
@@ -82,25 +83,23 @@ resource "random_password" "initial_secret_key" {
 }
 
 locals {
-  automq_config             = jsondecode(base64decode(var.automq_config))
-  environment_slug          = substr(replace(lower(nonsensitive(local.automq_config.environmentId)), "/[^a-z0-9]/", ""), 0, 12)
-  name_suffix               = "${local.environment_slug}${random_string.suffix.result}"
-  vm_admin_username         = "automq"
-  ops_bucket_parts          = split(":", var.ops_bucket_id)
-  ops_storage_account_name  = local.ops_bucket_parts[0]
-  ops_container_name        = local.ops_bucket_parts[1]
-  data_storage_account_name = substr("amqdata${local.name_suffix}", 0, 24)
-  data_container_name       = "data"
-  data_bucket_id            = "${local.data_storage_account_name}:${local.data_container_name}"
-  dns_zone_name             = "${local.name_suffix}.automq.private"
-  ssh_private_key_path      = pathexpand("~/.ssh/automq-console-${local.name_suffix}.pem")
-  subscription_scope        = "/subscriptions/${var.subscription_id}"
-  allowed_cidrs             = { for index, cidr in var.console_allowed_cidr_blocks : tostring(index) => cidr }
+  env_name                  = "automq-console"
+  vm_admin_username         = "azureuser"
+  ssh_algorithm             = "RSA"
+  ssh_bits                  = 4096
+  dns_zone_name             = "automq-console.automq.private"
+  dns_link_name             = "automq-console-vnet-link"
+  storage_account_scope     = "/subscriptions/${split("/", var.vnet_id)[2]}/resourceGroups/${split("/", var.vnet_id)[4]}"
+  ssh_private_key_path      = pathexpand("~/.ssh/${local.env_name}-ssh-key.pem")
+  data_disk_name            = "${local.env_name}-datadisk"
+  disk_size_gb              = 20
+  disk_storage_account_type = "Premium_LRS"
 }
 
+# SSH key for console access
 resource "tls_private_key" "ssh" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
+  algorithm = local.ssh_algorithm
+  rsa_bits  = local.ssh_bits
 }
 
 resource "local_file" "ssh_private_key" {
@@ -109,48 +108,66 @@ resource "local_file" "ssh_private_key" {
   content         = tls_private_key.ssh.private_key_pem
 }
 
+# Identities
 resource "azurerm_user_assigned_identity" "console" {
-  name                = "uai-automq-console-${local.name_suffix}"
+  name                = "uai-${local.env_name}"
   location            = var.location
   resource_group_name = var.resource_group_name
 }
 
-resource "azurerm_user_assigned_identity" "workload" {
-  name                = "uai-automq-workload-${local.name_suffix}"
-  location            = var.location
-  resource_group_name = var.resource_group_name
-}
-
-# Evaluation-friendly permissions. Review and narrow these grants before using
-# the example as a production baseline.
-resource "azurerm_role_assignment" "console_contributor" {
-  role_definition_name = "Contributor"
-  scope                = local.subscription_scope
+resource "azurerm_role_assignment" "console_storage_blob_data_contributor" {
+  role_definition_name = "Storage Blob Data Contributor"
+  scope                = "/subscriptions/${var.subscription_id}"
   principal_id         = azurerm_user_assigned_identity.console.principal_id
 }
 
-resource "azurerm_role_assignment" "console_rbac_admin" {
-  role_definition_name = "Role Based Access Control Administrator"
-  scope                = local.subscription_scope
+resource "azurerm_role_assignment" "console_reader" {
+  role_definition_name = "Contributor"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.console.principal_id
+}
+
+resource "azurerm_role_assignment" "console_private_dns_contributor" {
+  role_definition_name = "Private DNS Zone Contributor"
+  scope                = "/subscriptions/${var.subscription_id}"
+  principal_id         = azurerm_user_assigned_identity.console.principal_id
+}
+
+resource "azurerm_role_assignment" "console_aks_admin" {
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  scope                = "/subscriptions/${var.subscription_id}"
   principal_id         = azurerm_user_assigned_identity.console.principal_id
 }
 
 resource "azurerm_role_assignment" "console_aks_user" {
   role_definition_name = "Azure Kubernetes Service Cluster User Role"
-  scope                = var.kubernetes_cluster_id
+  scope                = "/subscriptions/${var.subscription_id}"
   principal_id         = azurerm_user_assigned_identity.console.principal_id
 }
 
-resource "azurerm_role_assignment" "console_aks_rbac_admin" {
-  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
-  scope                = var.kubernetes_cluster_id
+resource "azurerm_role_assignment" "console_rbac_admin" {
+  role_definition_name = "Role Based Access Control Administrator"
+  scope                = "/subscriptions/${var.subscription_id}"
   principal_id         = azurerm_user_assigned_identity.console.principal_id
 }
 
+# DNS zone for internal records
+resource "azurerm_private_dns_zone" "zone" {
+  name                = local.dns_zone_name
+  resource_group_name = var.resource_group_name
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "zone_link" {
+  name                 = local.dns_link_name
+  private_dns_zone_id  = azurerm_private_dns_zone.zone.id
+  virtual_network_id   = var.vnet_id
+  registration_enabled = false
+}
+
+# Public IP and NIC for console
 resource "azurerm_public_ip" "console" {
-  count = var.private_access_only ? 0 : 1
-
-  name                = "pip-automq-console-${local.name_suffix}"
+  count               = var.private_access_only ? 0 : 1
+  name                = "pip-${local.env_name}"
   resource_group_name = var.resource_group_name
   location            = var.location
   allocation_method   = "Static"
@@ -158,50 +175,42 @@ resource "azurerm_public_ip" "console" {
 }
 
 resource "azurerm_network_security_group" "console" {
-  name                = "nsg-automq-console-${local.name_suffix}"
+  name                = "nsg-${local.env_name}"
   resource_group_name = var.resource_group_name
   location            = var.location
-}
 
-resource "azurerm_network_security_rule" "console" {
-  for_each = local.allowed_cidrs
+  security_rule {
+    name                       = "SSH"
+    priority                   = 1001
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "22"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 
-  name                        = "Console-${each.key}"
-  priority                    = 1000 + tonumber(each.key)
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Tcp"
-  source_port_range           = "*"
-  destination_port_range      = "8080"
-  source_address_prefix       = each.value
-  destination_address_prefix  = "*"
-  resource_group_name         = var.resource_group_name
-  network_security_group_name = azurerm_network_security_group.console.name
-}
-
-resource "azurerm_network_security_rule" "ssh" {
-  for_each = local.allowed_cidrs
-
-  name                        = "SSH-${each.key}"
-  priority                    = 2000 + tonumber(each.key)
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "Tcp"
-  source_port_range           = "*"
-  destination_port_range      = "22"
-  source_address_prefix       = each.value
-  destination_address_prefix  = "*"
-  resource_group_name         = var.resource_group_name
-  network_security_group_name = azurerm_network_security_group.console.name
+  security_rule {
+    name                       = "HTTP-8080"
+    priority                   = 1002
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "8080"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
 }
 
 resource "azurerm_network_interface" "console" {
-  name                = "nic-automq-console-${local.name_suffix}"
+  name                = "nic-${local.env_name}"
   resource_group_name = var.resource_group_name
   location            = var.location
 
   ip_configuration {
-    name                          = "primary"
+    name                          = "internal"
     subnet_id                     = var.subnet_id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = var.private_access_only ? null : azurerm_public_ip.console[0].id
@@ -213,83 +222,28 @@ resource "azurerm_network_interface_security_group_association" "console" {
   network_security_group_id = azurerm_network_security_group.console.id
 }
 
-resource "azurerm_storage_account" "ops" {
-  name                     = local.ops_storage_account_name
+resource "azurerm_storage_account" "storage" {
+  name                     = var.storage_account_name
   resource_group_name      = var.resource_group_name
   location                 = var.location
   account_tier             = "Standard"
-  account_replication_type = "LRS"
-  min_tls_version          = "TLS1_2"
+  account_replication_type = "GRS"
 }
 
-resource "azurerm_storage_container" "ops" {
-  name                  = local.ops_container_name
-  storage_account_id    = azurerm_storage_account.ops.id
+resource "azurerm_storage_container" "automq_data" {
+  name                  = var.data_container_name
+  storage_account_id    = azurerm_storage_account.storage.id
   container_access_type = "private"
 }
 
-resource "azurerm_storage_account" "data" {
-  name                     = local.data_storage_account_name
-  resource_group_name      = var.resource_group_name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  min_tls_version          = "TLS1_2"
-}
-
-resource "azurerm_storage_container" "data" {
-  name                  = local.data_container_name
-  storage_account_id    = azurerm_storage_account.data.id
+resource "azurerm_storage_container" "automq_ops" {
+  name                  = var.ops_container_name
+  storage_account_id    = azurerm_storage_account.storage.id
   container_access_type = "private"
-}
-
-resource "azurerm_private_dns_zone" "this" {
-  name                = local.dns_zone_name
-  resource_group_name = var.resource_group_name
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "this" {
-  name                 = "automq-vnet-link"
-  private_dns_zone_id  = azurerm_private_dns_zone.this.id
-  virtual_network_id   = var.vnet_id
-  registration_enabled = false
-}
-
-resource "azurerm_role_assignment" "console_ops_blob" {
-  role_definition_name = "Storage Blob Data Contributor"
-  scope                = azurerm_storage_container.ops.id
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "workload_ops_blob" {
-  role_definition_name = "Storage Blob Data Contributor"
-  scope                = azurerm_storage_container.ops.id
-  principal_id         = azurerm_user_assigned_identity.workload.principal_id
-}
-
-resource "azurerm_role_assignment" "workload_data_blob" {
-  role_definition_name = "Storage Blob Data Contributor"
-  scope                = azurerm_storage_container.data.id
-  principal_id         = azurerm_user_assigned_identity.workload.principal_id
-}
-
-resource "azurerm_role_assignment" "workload_dns" {
-  role_definition_name = "Private DNS Zone Contributor"
-  scope                = azurerm_private_dns_zone.this.id
-  principal_id         = azurerm_user_assigned_identity.workload.principal_id
-}
-
-resource "azurerm_managed_disk" "console_data" {
-  name                 = "disk-automq-console-${local.name_suffix}"
-  location             = var.location
-  resource_group_name  = var.resource_group_name
-  storage_account_type = "Premium_LRS"
-  create_option        = "Empty"
-  disk_size_gb         = 20
 }
 
 resource "azurerm_linux_virtual_machine" "console" {
-  name                  = "vm-automq-console-${local.name_suffix}"
+  name                  = "vm-${local.env_name}"
   resource_group_name   = var.resource_group_name
   location              = var.location
   size                  = var.vm_size
@@ -327,23 +281,38 @@ resource "azurerm_linux_virtual_machine" "console" {
   }))
 
   depends_on = [
-    azurerm_role_assignment.console_aks_rbac_admin,
+    azurerm_role_assignment.console_aks_admin,
     azurerm_role_assignment.console_aks_user,
-    azurerm_role_assignment.console_contributor,
-    azurerm_role_assignment.console_ops_blob,
     azurerm_role_assignment.console_rbac_admin,
+    azurerm_role_assignment.console_reader,
+    azurerm_role_assignment.console_storage_blob_data_contributor,
   ]
 }
 
-resource "azurerm_virtual_machine_data_disk_attachment" "console_data" {
-  managed_disk_id    = azurerm_managed_disk.console_data.id
+
+resource "azurerm_managed_disk" "data_disk" {
+  name                 = local.data_disk_name
+  location             = var.location
+  resource_group_name  = var.resource_group_name
+  storage_account_type = local.disk_storage_account_type
+  create_option        = "Empty"
+  disk_size_gb         = local.disk_size_gb
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "data_disk_attachment" {
+  managed_disk_id    = azurerm_managed_disk.data_disk.id
   virtual_machine_id = azurerm_linux_virtual_machine.console.id
   lun                = 10
   caching            = "ReadWrite"
 }
 
+
 output "console_endpoint" {
   value = var.private_access_only ? "http://${azurerm_network_interface.console.private_ip_address}:8080" : "http://${azurerm_public_ip.console[0].ip_address}:8080"
+}
+
+output "console_initial_username" {
+  value = "admin"
 }
 
 output "console_initial_password" {
@@ -361,38 +330,27 @@ output "console_initial_secret_key" {
   sensitive = true
 }
 
-output "console_vm_id" {
-  value = azurerm_linux_virtual_machine.console.id
+output "console_role_id" {
+  value = azurerm_user_assigned_identity.console.client_id
 }
 
-output "console_identity_id" {
+output "console_role_arn" {
   value = azurerm_user_assigned_identity.console.id
 }
 
-output "workload_identity_id" {
-  value = azurerm_user_assigned_identity.workload.id
-}
-
-output "workload_identity_client_id" {
-  value = azurerm_user_assigned_identity.workload.client_id
+output "dns_zone_name" {
+  value = azurerm_private_dns_zone.zone.name
 }
 
 output "dns_zone_id" {
-  value = azurerm_private_dns_zone.this.id
+  value = azurerm_private_dns_zone.zone.id
 }
 
-output "dns_zone_name" {
-  value = azurerm_private_dns_zone.this.name
-}
-
-output "data_bucket_id" {
-  value = local.data_bucket_id
+output "data_bucket_name" {
+  # Blob container name supplied by user
+  value = var.data_container_name
 }
 
 output "data_bucket_endpoint" {
-  value = azurerm_storage_account.data.primary_blob_endpoint
-}
-
-output "ops_bucket_endpoint" {
-  value = azurerm_storage_account.ops.primary_blob_endpoint
+  value = azurerm_storage_account.storage.primary_blob_endpoint
 }

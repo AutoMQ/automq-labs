@@ -4,7 +4,9 @@ automq_config = "REPLACE_WITH_AUTOMQ_CONFIG"
 console_image = "automq.azurecr.io/automq/automq-byoc-console:REPLACE_WITH_8_X_AZURE_TAG"
 
 subscription_id     = "00000000-0000-0000-0000-000000000000"
+location            = "eastus"
 resource_group_name = "automq-quickstart"
+env_prefix          = "automq"
 
 vnet_id           = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq-vnet"
 public_subnet_id  = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/network-rg/providers/Microsoft.Network/virtualNetworks/automq-vnet/subnets/console"
@@ -13,14 +15,11 @@ private_subnet_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourc
 service_cidr   = "172.2.0.0/16"
 dns_service_ip = "172.2.0.10"
 
-# Restrict Console and SSH access to trusted public IPv4 ranges.
-console_allowed_cidr_blocks = ["203.0.113.10/32"]
-
 # Optional overrides:
-# name_prefix             = "automq"
 # kubernetes_version      = "1.34.7"
 # kubernetes_pricing_tier = "Free"
-# console_vm_size         = "Standard_D2s_v5"
+# kubeconfig_path         = "~/.kube/automq-aks-config"
+# automq_console_vm_size  = "Standard_D2s_v3"
 # private_access_only     = false
 # nodepool = {
 #   name       = "automq"
