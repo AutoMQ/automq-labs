@@ -72,16 +72,6 @@ resource "random_password" "initial_password" {
   special = false
 }
 
-resource "random_password" "initial_access_key" {
-  length  = 16
-  special = false
-}
-
-resource "random_password" "initial_secret_key" {
-  length  = 32
-  special = false
-}
-
 locals {
   env_name                  = "automq-console"
   vm_admin_username         = "azureuser"
@@ -239,11 +229,9 @@ resource "azurerm_linux_virtual_machine" "console" {
   }
 
   custom_data = base64encode(templatefile("${path.module}/userdata.tftpl", {
-    automq_config_b64      = base64encode(var.automq_config)
-    console_image_b64      = base64encode(var.console_image)
-    initial_password_b64   = base64encode(random_password.initial_password.result)
-    initial_access_key_b64 = base64encode(random_password.initial_access_key.result)
-    initial_secret_key_b64 = base64encode(random_password.initial_secret_key.result)
+    automq_config_b64    = base64encode(var.automq_config)
+    console_image_b64    = base64encode(var.console_image)
+    initial_password_b64 = base64encode(random_password.initial_password.result)
   }))
 
   depends_on = [
@@ -288,16 +276,6 @@ output "console_initial_username" {
 
 output "console_initial_password" {
   value     = random_password.initial_password.result
-  sensitive = true
-}
-
-output "console_initial_access_key" {
-  value     = random_password.initial_access_key.result
-  sensitive = true
-}
-
-output "console_initial_secret_key" {
-  value     = random_password.initial_secret_key.result
   sensitive = true
 }
 

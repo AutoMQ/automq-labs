@@ -143,16 +143,6 @@ output "automq_console_password" {
   value     = module.automq_console.console_initial_password
 }
 
-output "console_initial_access_key" {
-  sensitive = true
-  value     = module.automq_console.console_initial_access_key
-}
-
-output "console_initial_secret_key" {
-  sensitive = true
-  value     = module.automq_console.console_initial_secret_key
-}
-
 output "kubernetes_cluster_id" {
   value = module.aks.kubernetes_cluster_id
 }

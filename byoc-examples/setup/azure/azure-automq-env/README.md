@@ -120,7 +120,6 @@ subject.
 | --- | --- |
 | `automq_console_endpoint` | AutoMQ Console URL |
 | `automq_console_password` | One-time initial admin password |
-| `console_initial_access_key` / `console_initial_secret_key` | Initial local Console API credentials |
 | `kubernetes_cluster_id` | AKS full ARM ID |
 | `automq_nodepool_name` | Dedicated AutoMQ node pool |
 | `ops_bucket_id` | Azure logical Ops Bucket ID in `account:container` form |
@@ -152,9 +151,8 @@ sudo docker logs --tail 200 automq-console
   Network Security Group before using it outside a disposable environment.
 - The Console endpoint is plain HTTP on port 8080. Add HTTPS and a controlled
   ingress layer for durable use.
-- Terraform state contains `CONFIG`, the initial password, API credentials,
-  and the generated SSH private key. Use an encrypted remote backend with
-  restricted access.
+- Terraform state contains `CONFIG`, the initial password, and the generated
+  SSH private key. Use an encrypted remote backend with restricted access.
 - Custom role definitions are registered at subscription scope, while runtime
   role assignments use the narrower scopes described above. Review the
   actions and ABAC conditions against your production policy before use.

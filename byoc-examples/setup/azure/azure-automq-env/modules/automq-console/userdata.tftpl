@@ -23,8 +23,6 @@ retry() {
 AUTOMQ_CONFIG="$(decode '${automq_config_b64}')"
 CONSOLE_IMAGE="$(decode '${console_image_b64}')"
 INITIAL_PASSWORD="$(decode '${initial_password_b64}')"
-INITIAL_ACCESS_KEY="$(decode '${initial_access_key_b64}')"
-INITIAL_SECRET_KEY="$(decode '${initial_secret_key_b64}')"
 
 retry 5 apt-get update
 retry 5 apt-get install -y ca-certificates docker.io
@@ -59,8 +57,6 @@ install -m 0600 /dev/null /etc/automq-console.env
   printf 'CLOUD_PROVIDER=azure\n'
   printf 'CONSOLE_INITIAL_USER=admin\n'
   printf 'CONSOLE_INITIAL_PASSWORD=%s\n' "$INITIAL_PASSWORD"
-  printf 'CONSOLE_INITIAL_ACCESS_KEY=%s\n' "$INITIAL_ACCESS_KEY"
-  printf 'CONSOLE_INITIAL_SECRET_KEY=%s\n' "$INITIAL_SECRET_KEY"
   printf 'CONSOLE_PORT=8080\n'
 } > /etc/automq-console.env
 
