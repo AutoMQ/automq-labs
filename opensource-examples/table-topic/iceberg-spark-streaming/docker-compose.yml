@@ -46,7 +46,7 @@ services:
       - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
       - CATALOG_S3_ENDPOINT=http://minio:9000
   minio:
-    image: minio/minio
+    image: pgsty/silo:RELEASE.2026-09-03T13-18-01Z
     container_name: minio
     environment:
       - MINIO_ROOT_USER=admin
@@ -63,7 +63,7 @@ services:
   mc:
     depends_on:
       - minio
-    image: minio/mc
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     container_name: mc
     networks:
       iceberg_net:
