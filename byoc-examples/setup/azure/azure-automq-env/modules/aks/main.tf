@@ -5,7 +5,7 @@ variable "location" {
 
 variable "resource_group_name" {
   type        = string
-  description = "Resource group name"
+  description = "Resource Group name"
 }
 
 variable "aks_name" {
@@ -16,95 +16,50 @@ variable "aks_name" {
 variable "kubernetes_version" {
   type        = string
   description = "AKS version"
-  default     = null
+}
+
+variable "subnet_id" {
+  type        = string
+  description = "AKS subnet full ARM ID"
+}
+
+variable "dns_prefix" {
+  type        = string
+  description = "AKS DNS prefix"
+}
+
+variable "service_cidr" {
+  type        = string
+  description = "Kubernetes service CIDR"
+}
+
+variable "dns_service_ip" {
+  type        = string
+  description = "Kubernetes DNS service IP"
+}
+
+variable "subscription_id" {
+  type        = string
+  description = "Azure subscription ID"
 }
 
 variable "kubernetes_pricing_tier" {
   type        = string
   description = "AKS pricing tier"
-  default     = "Free"
-}
-
-variable "subnet_id" {
-  type        = string
-  description = "Subnet ID for the default node pool"
-}
-
-variable "dns_prefix" {
-  type        = string
-  description = "DNS prefix for the cluster"
-}
-
-variable "kubeconfig_path" {
-  type        = string
-  description = "Local path to write kubeconfig file"
-  default     = "~/.kube/automq-aks-config"
-}
-
-variable "subscription_id" {
-  type        = string
-  description = "Subscription ID for role assignments"
-}
-
-variable "service_cidr" {
-  type        = string
-  description = "AKS service CIDR (must not overlap VNet/subnets)"
-  default     = "10.2.0.0/16"
-}
-
-variable "dns_service_ip" {
-  type        = string
-  description = "IP for kube-dns within service CIDR"
-  default     = "10.2.0.10"
 }
 
 variable "private_access_only" {
-  description = "If true, the AKS API server will not have a public IP."
   type        = bool
-  default     = false
+  description = "Enable a private AKS API server"
 }
 
-resource "azurerm_kubernetes_cluster" "aks" {
-  name                    = var.aks_name
-  location                = var.location
-  resource_group_name     = var.resource_group_name
-  dns_prefix              = var.dns_prefix
-  kubernetes_version      = var.kubernetes_version
-  sku_tier                = var.kubernetes_pricing_tier
-  private_cluster_enabled = var.private_access_only
-
-
-  identity {
-    type         = "UserAssigned"
-    identity_ids = [azurerm_user_assigned_identity.aks.id]
-  }
-
-  default_node_pool {
-    name                         = "system"
-    vm_size                      = "Standard_D4s_v3"
-    node_count                   = 1
-    vnet_subnet_id               = var.subnet_id
-    only_critical_addons_enabled = true
-    orchestrator_version         = var.kubernetes_version
-    temporary_name_for_rotation  = "systmp"
-    zones                        = [1, 2, 3]
-  }
-
-  network_profile {
-    network_plugin    = "azure"
-    network_policy    = "azure"
-    load_balancer_sku = "standard"
-    outbound_type     = "loadBalancer"
-    service_cidr      = var.service_cidr
-    dns_service_ip    = var.dns_service_ip
-  }
-
-  role_based_access_control_enabled = true
-  oidc_issuer_enabled               = true
-  workload_identity_enabled         = true
+variable "availability_zones" {
+  type        = list(string)
+  description = "Azure availability zones used by the system node pool"
 }
 
-# Dedicated AKS control-plane identity
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_user_assigned_identity" "aks" {
   name                = "uai-aks-${var.aks_name}"
   location            = var.location
@@ -123,38 +78,63 @@ resource "azurerm_role_assignment" "aks_contributor" {
   principal_id         = azurerm_user_assigned_identity.aks.principal_id
 }
 
+resource "azurerm_kubernetes_cluster" "this" {
+  name                = var.aks_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  dns_prefix          = var.dns_prefix
+  kubernetes_version  = var.kubernetes_version
+  sku_tier            = var.kubernetes_pricing_tier
 
-# Ensure kubeconfig directory exists and write kubeconfig locally
-resource "null_resource" "kubeconfig_dir" {
-  provisioner "local-exec" {
-    command = "mkdir -p $(dirname \"${var.kubeconfig_path}\")"
+  private_cluster_enabled           = var.private_access_only
+  role_based_access_control_enabled = true
+  oidc_issuer_enabled               = true
+  workload_identity_enabled         = true
+
+  azure_active_directory_role_based_access_control {
+    azure_rbac_enabled = true
+    tenant_id          = data.azurerm_client_config.current.tenant_id
   }
-}
 
-resource "local_sensitive_file" "kubeconfig" {
-  content  = azurerm_kubernetes_cluster.aks.kube_config_raw
-  filename = pathexpand(var.kubeconfig_path)
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.aks.id]
+  }
 
-  depends_on = [null_resource.kubeconfig_dir]
+  default_node_pool {
+    name                         = "system"
+    vm_size                      = "Standard_D4s_v3"
+    node_count                   = 1
+    vnet_subnet_id               = var.subnet_id
+    only_critical_addons_enabled = true
+    orchestrator_version         = var.kubernetes_version
+    temporary_name_for_rotation  = "systmp"
+    zones                        = var.availability_zones
+  }
+
+  network_profile {
+    network_plugin    = "azure"
+    network_policy    = "azure"
+    load_balancer_sku = "standard"
+    outbound_type     = "loadBalancer"
+    service_cidr      = var.service_cidr
+    dns_service_ip    = var.dns_service_ip
+  }
+
+  depends_on = [
+    azurerm_role_assignment.aks_contributor,
+    azurerm_role_assignment.aks_network_contributor,
+  ]
 }
 
 output "kubernetes_cluster_id" {
-  value = azurerm_kubernetes_cluster.aks.id
+  value = azurerm_kubernetes_cluster.this.id
 }
 
 output "aks_name" {
-  value = azurerm_kubernetes_cluster.aks.name
-}
-
-output "kube_config" {
-  sensitive = true
-  value     = azurerm_kubernetes_cluster.aks.kube_config_raw
+  value = azurerm_kubernetes_cluster.this.name
 }
 
 output "kubernetes_version" {
-  value = azurerm_kubernetes_cluster.aks.kubernetes_version
-}
-
-output "kubeconfig_path" {
-  value = var.kubeconfig_path
+  value = azurerm_kubernetes_cluster.this.kubernetes_version
 }

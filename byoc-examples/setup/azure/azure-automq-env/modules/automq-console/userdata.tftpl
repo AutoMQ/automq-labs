@@ -1,0 +1,84 @@
+#!/bin/bash
+set -euo pipefail
+
+decode() {
+  printf '%s' "$1" | base64 -d
+}
+
+retry() {
+  local max_attempts="$1"
+  shift
+  local attempt=1
+
+  until "$@"; do
+    if [ "$attempt" -ge "$max_attempts" ]; then
+      echo "Command failed after $${max_attempts} attempts: $*" >&2
+      return 1
+    fi
+    sleep "$((attempt * 5))"
+    attempt="$((attempt + 1))"
+  done
+}
+
+AUTOMQ_CONFIG="$(decode '${automq_config_b64}')"
+CONSOLE_IMAGE="$(decode '${console_image_b64}')"
+INITIAL_PASSWORD="$(decode '${initial_password_b64}')"
+INITIAL_ACCESS_KEY="$(decode '${initial_access_key_b64}')"
+INITIAL_SECRET_KEY="$(decode '${initial_secret_key_b64}')"
+
+retry 5 apt-get update
+retry 5 apt-get install -y ca-certificates docker.io
+systemctl enable --now docker
+
+DATA_DEVICE="/dev/disk/azure/scsi1/lun10"
+for attempt in $(seq 1 120); do
+  if [ -b "$DATA_DEVICE" ]; then
+    break
+  fi
+  sleep 2
+done
+
+if [ ! -b "$DATA_DEVICE" ]; then
+  echo "AutoMQ Console data disk did not appear" >&2
+  exit 1
+fi
+
+if ! blkid "$DATA_DEVICE" >/dev/null 2>&1; then
+  mkfs.ext4 -F "$DATA_DEVICE"
+fi
+
+mkdir -p /data
+mountpoint -q /data || mount "$DATA_DEVICE" /data
+DATA_UUID="$(blkid -s UUID -o value "$DATA_DEVICE")"
+grep -q "UUID=$${DATA_UUID} /data " /etc/fstab || \
+  echo "UUID=$${DATA_UUID} /data ext4 defaults,nofail 0 2" >> /etc/fstab
+
+install -m 0600 /dev/null /etc/automq-console.env
+{
+  printf 'CONFIG=%s\n' "$AUTOMQ_CONFIG"
+  printf 'CLOUD_PROVIDER=azure\n'
+  printf 'CONSOLE_INITIAL_USER=admin\n'
+  printf 'CONSOLE_INITIAL_PASSWORD=%s\n' "$INITIAL_PASSWORD"
+  printf 'CONSOLE_INITIAL_ACCESS_KEY=%s\n' "$INITIAL_ACCESS_KEY"
+  printf 'CONSOLE_INITIAL_SECRET_KEY=%s\n' "$INITIAL_SECRET_KEY"
+  printf 'CONSOLE_PORT=8080\n'
+} > /etc/automq-console.env
+
+retry 5 docker pull "$CONSOLE_IMAGE"
+docker rm -f automq-console >/dev/null 2>&1 || true
+docker run -d \
+  --name automq-console \
+  --restart unless-stopped \
+  --net=host \
+  --log-driver json-file \
+  --log-opt max-size=100m \
+  --log-opt max-file=3 \
+  -v /data:/root \
+  --env-file /etc/automq-console.env \
+  "$CONSOLE_IMAGE"
+
+sleep 5
+if [ "$(docker inspect --format '{{.State.Running}}' automq-console)" != "true" ]; then
+  docker logs automq-console >&2 || true
+  exit 1
+fi
