@@ -130,3 +130,15 @@ variable "private_access_only" {
   type        = bool
   default     = false
 }
+
+variable "kubernetes_namespace" {
+  description = "Optional Kubernetes namespace for the AutoMQ workload identity federation subject"
+  type        = string
+  default     = ""
+}
+
+variable "kubernetes_service_account" {
+  description = "Optional Kubernetes ServiceAccount for the AutoMQ workload identity federation subject"
+  type        = string
+  default     = ""
+}

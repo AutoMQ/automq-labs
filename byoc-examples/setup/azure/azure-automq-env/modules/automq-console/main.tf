@@ -46,9 +46,9 @@ variable "vm_size" {
   description = "VM size for the CMP console"
 }
 
-variable "cluster_identity_id" {
+variable "kubernetes_cluster_id" {
   type        = string
-  description = "User-assigned identity ID used by the cluster and console"
+  description = "AKS cluster full ARM ID"
 }
 
 variable "subscription_id" {
@@ -113,42 +113,6 @@ resource "azurerm_user_assigned_identity" "console" {
   name                = "uai-${local.env_name}"
   location            = var.location
   resource_group_name = var.resource_group_name
-}
-
-resource "azurerm_role_assignment" "console_storage_blob_data_contributor" {
-  role_definition_name = "Storage Blob Data Contributor"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_reader" {
-  role_definition_name = "Contributor"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_private_dns_contributor" {
-  role_definition_name = "Private DNS Zone Contributor"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_aks_admin" {
-  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_aks_user" {
-  role_definition_name = "Azure Kubernetes Service Cluster User Role"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_rbac_admin" {
-  role_definition_name = "Role Based Access Control Administrator"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
 }
 
 # DNS zone for internal records
@@ -234,12 +198,14 @@ resource "azurerm_storage_container" "automq_data" {
   name                  = var.data_container_name
   storage_account_id    = azurerm_storage_account.storage.id
   container_access_type = "private"
+  metadata              = { automqvendor = "automq" }
 }
 
 resource "azurerm_storage_container" "automq_ops" {
   name                  = var.ops_container_name
   storage_account_id    = azurerm_storage_account.storage.id
   container_access_type = "private"
+  metadata              = { automqvendor = "automq" }
 }
 
 resource "azurerm_linux_virtual_machine" "console" {
@@ -281,11 +247,16 @@ resource "azurerm_linux_virtual_machine" "console" {
   }))
 
   depends_on = [
-    azurerm_role_assignment.console_aks_admin,
-    azurerm_role_assignment.console_aks_user,
-    azurerm_role_assignment.console_rbac_admin,
-    azurerm_role_assignment.console_reader,
-    azurerm_role_assignment.console_storage_blob_data_contributor,
+    azurerm_role_assignment.console_aks_rbac_cluster_admin,
+    azurerm_role_assignment.console_managed_dns,
+    azurerm_role_assignment.console_managed_rbac_delegation,
+    azurerm_role_assignment.console_managed_storage,
+    azurerm_role_assignment.console_managed_target_blob_data,
+    azurerm_role_assignment.console_managed_uami,
+    azurerm_role_assignment.console_required_aks_access,
+    azurerm_role_assignment.console_required_blob_data,
+    azurerm_role_assignment.console_required_dns_records,
+    azurerm_role_assignment.console_required_read,
   ]
 }
 
@@ -353,4 +324,12 @@ output "data_bucket_name" {
 
 output "data_bucket_endpoint" {
   value = azurerm_storage_account.storage.primary_blob_endpoint
+}
+
+output "ops_storage_container_id" {
+  value = azurerm_storage_container.automq_ops.id
+}
+
+output "data_storage_container_id" {
+  value = azurerm_storage_container.automq_data.id
 }

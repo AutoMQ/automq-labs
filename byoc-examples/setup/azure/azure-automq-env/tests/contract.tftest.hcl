@@ -68,6 +68,15 @@ run "azure_8x_contract" {
 
 }
 
+run "workload_identity_federation_contract" {
+  command = plan
+
+  variables {
+    kubernetes_namespace       = "automq"
+    kubernetes_service_account = "automq"
+  }
+}
+
 run "config_region_must_match_location" {
   command = plan
 

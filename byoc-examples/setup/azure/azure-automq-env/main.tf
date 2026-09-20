@@ -74,10 +74,16 @@ module "aks" {
 module "iam" {
   source = "./modules/iam"
 
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  subscription_id     = var.subscription_id
-  name_suffix         = local.name_suffix
+  location                   = var.location
+  resource_group_name        = azurerm_resource_group.rg.name
+  subscription_id            = var.subscription_id
+  name_suffix                = local.name_suffix
+  ops_storage_container_id   = module.automq_console.ops_storage_container_id
+  data_storage_container_id  = module.automq_console.data_storage_container_id
+  dns_zone_id                = module.automq_console.dns_zone_id
+  kubernetes_cluster_id      = module.aks.kubernetes_cluster_id
+  kubernetes_namespace       = var.kubernetes_namespace
+  kubernetes_service_account = var.kubernetes_service_account
 }
 
 module "nodepool_automq" {
@@ -97,19 +103,19 @@ module "nodepool_automq" {
 module "automq_console" {
   source = "./modules/automq-console"
 
-  location             = var.location
-  resource_group_name  = azurerm_resource_group.rg.name
-  vnet_id              = var.vnet_id
-  subnet_id            = var.public_subnet_id
-  storage_account_name = local.storage_account_name
-  ops_container_name   = local.ops_container_name
-  data_container_name  = local.data_container_name
-  automq_config        = var.automq_config
-  console_image        = var.console_image
-  vm_size              = var.automq_console_vm_size
-  cluster_identity_id  = module.iam.workload_identity_id
-  subscription_id      = var.subscription_id
-  private_access_only  = var.private_access_only
+  location              = var.location
+  resource_group_name   = azurerm_resource_group.rg.name
+  vnet_id               = var.vnet_id
+  subnet_id             = var.public_subnet_id
+  storage_account_name  = local.storage_account_name
+  ops_container_name    = local.ops_container_name
+  data_container_name   = local.data_container_name
+  automq_config         = var.automq_config
+  console_image         = var.console_image
+  vm_size               = var.automq_console_vm_size
+  subscription_id       = var.subscription_id
+  kubernetes_cluster_id = module.aks.kubernetes_cluster_id
+  private_access_only   = var.private_access_only
 }
 
 output "resource_group_name" {

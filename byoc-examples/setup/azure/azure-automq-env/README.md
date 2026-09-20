@@ -22,9 +22,10 @@ VM image.
 - A Terraform-provided data container and Private DNS Zone that can be used as
   customer-provided Instance resources.
 
-This example grants broad subscription-level Console permissions so the 8.x
-System Initialization flow can exercise managed resources. It is intended for
-evaluation, not as a production IAM baseline.
+This example follows the Azure playground V1 permission contract: Console and
+workload identities use explicit custom roles, with runtime assignments scoped
+to the selected containers, Private DNS Zone, AKS cluster, Resource Group, and
+AKS node Resource Group.
 
 ## Prerequisites
 
@@ -56,6 +57,9 @@ must not overlap the VNet or either subnet.
      command.
    - The Azure subscription, matching region, Resource Group, VNet, subnet,
      service CIDR, and existing `env_prefix` inputs.
+   - Optionally set `kubernetes_namespace` and
+     `kubernetes_service_account` together to create the AKS OIDC Federated
+     Identity Credential for the workload UAMI.
 
 3. Deploy:
 
@@ -88,8 +92,27 @@ In the Console, create a K8S Instance using:
 - Scheduling label: `automq-node-group=<automq_nodepool_name>`
 
 The `data_bucket_id`, `dns_zone_id`, and `workload_identity_id` outputs are
-customer-provided Instance resources. Using the UAMI also requires the
-matching Kubernetes ServiceAccount and Federated Identity Credential.
+customer-provided Instance resources. When the Kubernetes namespace and
+ServiceAccount inputs are omitted, create the matching Federated Identity
+Credential before using the workload UAMI.
+
+## Identity Permissions
+
+The Console UAMI receives the customer-provided and managed-resource custom
+roles from the Azure playground contract:
+
+- exact-container Blob data access;
+- exact-zone DNS record access;
+- exact-cluster AKS user and Azure RBAC cluster-admin access;
+- Resource Group-scoped managed Storage, Private DNS, and UAMI lifecycle
+  access;
+- subscription-scoped discovery reads and conditional RBAC delegation.
+
+The workload UAMI receives only Blob runtime access on the Ops/Data
+containers, DNS record access on the selected zone, and disk failover actions
+on the AKS node Resource Group. When configured, its Federated Identity
+Credential uses the AKS OIDC issuer and the supplied Kubernetes ServiceAccount
+subject.
 
 ## Important Outputs
 
@@ -132,10 +155,9 @@ sudo docker logs --tail 200 automq-console
 - Terraform state contains `CONFIG`, the initial password, API credentials,
   and the generated SSH private key. Use an encrypted remote backend with
   restricted access.
-- The included subscription-level `Contributor` and
-  `Role Based Access Control Administrator` assignments are deliberately
-  broad. Replace them with the reviewed 8.x System Initialization permission
-  contract before production use.
+- Custom role definitions are registered at subscription scope, while runtime
+  role assignments use the narrower scopes described above. Review the
+  actions and ABAC conditions against your production policy before use.
 
 ## Cleanup
 
