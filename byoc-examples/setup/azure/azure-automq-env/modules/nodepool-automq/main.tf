@@ -72,7 +72,6 @@ resource "azurerm_kubernetes_cluster_node_pool" "automq" {
   zones = [1, 2, 3]
 
   node_taints = ["dedicated=automq:NoSchedule"]
-  node_labels = { automq-node-group = var.nodepool_name }
 
   upgrade_settings {
     max_surge = "33%"

@@ -57,7 +57,6 @@ install -m 0600 /dev/null /etc/automq-console.env
   printf 'CLOUD_PROVIDER=azure\n'
   printf 'CONSOLE_INITIAL_USER=admin\n'
   printf 'CONSOLE_INITIAL_PASSWORD=%s\n' "$INITIAL_PASSWORD"
-  printf 'CONSOLE_PORT=8080\n'
 } > /etc/automq-console.env
 
 retry 5 docker pull "$CONSOLE_IMAGE"

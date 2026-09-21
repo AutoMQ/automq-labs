@@ -65,8 +65,6 @@ module "aks" {
   dns_prefix              = "${var.env_prefix}-dns"
   service_cidr            = var.service_cidr
   dns_service_ip          = var.dns_service_ip
-  kubeconfig_path         = var.kubeconfig_path
-  subscription_id         = var.subscription_id
   kubernetes_pricing_tier = var.kubernetes_pricing_tier
   private_access_only     = var.private_access_only
 }
@@ -149,6 +147,10 @@ output "kubernetes_cluster_id" {
 
 output "private_subnet_id" {
   value = var.private_subnet_id
+}
+
+output "vnet_id" {
+  value = var.vnet_id
 }
 
 output "dns_zone_name" {

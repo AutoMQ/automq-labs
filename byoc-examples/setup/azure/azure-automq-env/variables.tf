@@ -88,12 +88,6 @@ variable "dns_service_ip" {
 
 }
 
-variable "kubeconfig_path" {
-  description = "Local path to write kubeconfig file"
-  type        = string
-  default     = "~/.kube/automq-aks-config"
-}
-
 variable "env_prefix" {
   description = "Short prefix used for naming resources"
   type        = string

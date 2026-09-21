@@ -235,7 +235,6 @@ resource "azurerm_linux_virtual_machine" "console" {
   }))
 
   depends_on = [
-    azurerm_role_assignment.console_aks_rbac_cluster_admin,
     azurerm_role_assignment.console_managed_dns,
     azurerm_role_assignment.console_managed_rbac_delegation,
     azurerm_role_assignment.console_managed_storage,

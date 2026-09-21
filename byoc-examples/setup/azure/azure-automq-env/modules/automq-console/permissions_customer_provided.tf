@@ -133,9 +133,3 @@ resource "azurerm_role_assignment" "console_required_aks_access" {
   role_definition_id = azurerm_role_definition.console_required_aks_access.role_definition_resource_id
   principal_id       = azurerm_user_assigned_identity.console.principal_id
 }
-
-resource "azurerm_role_assignment" "console_aks_rbac_cluster_admin" {
-  scope                = var.kubernetes_cluster_id
-  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}

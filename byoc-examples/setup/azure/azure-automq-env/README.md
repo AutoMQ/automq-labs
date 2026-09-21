@@ -12,7 +12,7 @@ VM image.
 - An AKS cluster with Microsoft Entra integration, Azure RBAC, OIDC issuer, and
   Azure Workload Identity enabled.
 - A dedicated three-zone AutoMQ node pool with the
-  `dedicated=automq:NoSchedule` taint and `automq-node-group=automq` label.
+  `dedicated=automq:NoSchedule` taint.
 - An Ubuntu Console VM with a separate persistent data disk.
 - The AutoMQ 8.x Console container, initialized from the complete Base64
   `CONFIG` value supplied by AutoMQ Cloud.
@@ -86,10 +86,9 @@ password when prompted, then finish **System Initialization**.
 In the Console, create a K8S Instance using:
 
 - Cluster: `kubernetes_cluster_id`
+- VNet: `vnet_id`
 - Node pool: `automq_nodepool_name`
-- Load balancer subnet: `private_subnet_id`
 - Scheduling taint: `dedicated=automq:NoSchedule`
-- Scheduling label: `automq-node-group=<automq_nodepool_name>`
 
 The `data_bucket_id`, `dns_zone_id`, and `workload_identity_id` outputs are
 customer-provided Instance resources. When the Kubernetes namespace and
@@ -101,12 +100,19 @@ Credential before using the workload UAMI.
 The Console UAMI receives the customer-provided and managed-resource custom
 roles from the Azure playground contract:
 
-- exact-container Blob data access;
-- exact-zone DNS record access;
-- exact-cluster AKS user and Azure RBAC cluster-admin access;
+- container-scoped Blob data access;
+- zone-scoped DNS record access;
+- cluster-scoped AKS read and `clusterUser` credential access;
 - Resource Group-scoped managed Storage, Private DNS, and UAMI lifecycle
   access;
 - subscription-scoped discovery reads and conditional RBAC delegation.
+
+This example enables Microsoft Entra integration and Azure RBAC for Kubernetes
+Authorization on the AKS cluster. Grant the Console UAMI
+`Azure Kubernetes Service RBAC Cluster Admin` at the target cluster scope as
+part of System Initialization. The AKS access role used to obtain the
+`clusterUser` kubeconfig does not grant Kubernetes management permissions by
+itself.
 
 The workload UAMI receives only Blob runtime access on the Ops/Data
 containers, DNS record access on the selected zone, and disk failover actions

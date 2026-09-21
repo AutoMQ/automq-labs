@@ -18,7 +18,6 @@ dns_service_ip = "172.2.0.10"
 # Optional overrides:
 # kubernetes_version      = "1.34.7"
 # kubernetes_pricing_tier = "Free"
-# kubeconfig_path         = "~/.kube/automq-aks-config"
 # automq_console_vm_size  = "Standard_D2s_v3"
 # private_access_only     = false
 # kubernetes_namespace       = "automq"
