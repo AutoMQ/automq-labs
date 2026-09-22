@@ -49,26 +49,69 @@ out of version control.
 
 ## Create a Kafka Instance
 
-Edit the `locals` block in [instance/main.tf](instance/main.tf):
+For this example, we want a Kafka cluster on the AKS infrastructure created
+during environment setup. The cluster should have three AutoMQ nodes across
+three availability zones, use object storage for WAL, and use pay-as-you-go
+pricing. Clients will connect over the private network using SASL_PLAINTEXT.
+AutoMQ will create and manage the cluster's data storage, identity, and DNS zone.
 
-- Set the environment ID and a supported Data Plane version.
-- Set the AKS cluster and load balancer subnet full ARM resource IDs.
-- Set the instance type, node pool name, and three zone IDs from your environment.
+### Choose the Instance Configuration
 
-The configuration selects `K8S` deployment, `UsageBased` pricing, and three
-AutoMQ nodes. `S3WAL` uses Azure Blob for object-storage WAL.
-`SASL_PLAINTEXT` provides authentication over an unencrypted private connection.
+These deployment choices determine the fields in
+[`automq_kafka_instance.demo`](instance/main.tf):
 
-The Control Plane creates and manages the Data Bucket, Data Plane identity
-(UAMI), and Private DNS Zone because `data_buckets`, `instance_role`, and
-`dns_zone` are omitted. AKS, networking, and the environment Ops Bucket are
-reused from the environment setup.
+| Deployment choice | Terraform configuration |
+| --- | --- |
+| Run on the existing AKS cluster | Set `compute_specs.deploy_type = "K8S"` and select the cluster with `kubernetes_cluster_id`. |
+| Use pay-as-you-go pricing with three AutoMQ nodes | Set `pricing_mode = "UsageBased"` and `reserved_node_count = 3`. |
+| Place workloads across three AZs | Populate `networks` with three zone IDs supported by the selected node pool. |
+| Use object-storage WAL | Set `features.wal_mode = "S3WAL"`; in Azure, this uses Azure Blob. |
+| Authenticate clients using SASL_PLAINTEXT | Set `authentication_methods = ["sasl"]` and `transit_encryption_modes = ["plaintext"]` under `features.security`. |
+| Let AutoMQ manage storage, identity, and DNS | Omit `data_buckets`, `instance_role`, and `dns_zone` from `compute_specs`. |
 
-Scheduling uses the existing AutoMQ node pool and its
-`dedicated=automq:NoSchedule` taint. Workload zones come from the node pool;
-the load balancer subnet is configured separately.
+Omitting those managed-resource fields lets the Control Plane create the Data
+Bucket, Data Plane UAMI, and Private DNS Zone when it creates the Instance.
+The existing AKS cluster, networking, and environment Ops Bucket remain the
+foundation for the deployment.
 
-From this directory, run:
+The Instance also needs a node size and a scheduling target. `instance_types`
+selects a supported compute specification, while `schedule_spec` selects the
+AutoMQ node pool and tolerates its `dedicated=automq:NoSchedule` taint. The node
+pool must have capacity in all three selected zones. Three AutoMQ nodes refer
+to the Instance size, not the total number of AKS VMs.
+
+SASL_PLAINTEXT provides authentication without transport encryption. This
+example assumes private network access; choose a TLS configuration if your
+deployment requires encrypted client connections.
+
+### Supply the Environment Details
+
+The deployment choices above are already written into the resource. To apply
+them to your environment, fill in the `locals` block at the top of
+[instance/main.tf](instance/main.tf):
+
+| Local value | Information to provide |
+| --- | --- |
+| `environment_id` | The Azure BYOC Environment ID from the Console's System Settings. |
+| `automq_version` | A Data Plane version offered by the Console for this environment, rather than the Console's own version. |
+| `kubernetes_cluster_id` | The existing AKS cluster's full ARM resource ID; the environment setup exposes it as `kubernetes_cluster_id`. |
+| `instance_type` | A supported Instance type compatible with the selected node pool. |
+| `node_pool_name` | The dedicated AKS node pool name; the environment setup exposes it as `automq_nodepool_name`. |
+| `zones` | Three AZ identifiers returned for the selected node pool in the Console. |
+| `load_balancer_subnet_id` | The full ARM resource ID of the subnet used for the Instance's private load balancer. |
+
+Azure subnets are regional. This K8S example leaves `networks[].subnets` empty
+and takes workload placement from the node pool's zones. The load balancer
+subnet is supplied separately through `kubernetes_load_balancer_subnets`.
+
+The resource references these local values so each environment detail is
+entered once. The Service Account credentials configured earlier authorize
+Terraform to submit the resulting Instance configuration to AutoMQ.
+
+### Create and Check the Instance
+
+From this directory, initialize Terraform and review the plan. Check that it
+creates the intended Instance in your environment, then apply it:
 
 ```bash
 cd instance
@@ -78,6 +121,11 @@ terraform apply
 terraform output -raw instance_id
 terraform output endpoints
 ```
+
+Check the Instance status and node placement in the Console. Save the
+`instance_id` output for the Connector example below. For additional options
+and update behavior, see the
+[Kafka Instance resource documentation](https://registry.terraform.io/providers/automq/automq/0.4.8/docs/resources/kafka_instance).
 
 ## Create a Debezium JDBC Sink
 
