@@ -20,8 +20,8 @@ locals {
   connector_name          = "demo-orders-postgres"
   connect_namespace       = "connect-demo"
   connect_service_account = "connect-demo"
-  plugin_version          = "<jdbc-plugin-version>"
-  plugin_storage_url      = "https://<plugin-host>/kafka-connect-jdbc.zip"
+  plugin_version          = "<debezium-jdbc-plugin-version>"
+  plugin_storage_url      = "https://<plugin-host>/debezium-connector-jdbc.zip"
   kafka_password          = sensitive("<kafka-user-password>")
   jdbc_url                = "jdbc:postgresql://<database-host>:5432/<database-name>?sslmode=require"
   database_username       = "<database-username>"
@@ -69,11 +69,11 @@ resource "automq_kafka_acl" "connect_group" {
 # This resource does not build or upload the archive.
 resource "automq_connector_plugin" "jdbc" {
   environment_id  = local.environment_id
-  name            = "demo-jdbc"
+  name            = "demo-debezium-jdbc"
   version         = local.plugin_version
   storage_url     = local.plugin_storage_url
   types           = ["SINK"]
-  connector_class = "io.confluent.connect.jdbc.JdbcSinkConnector"
+  connector_class = "io.debezium.connector.jdbc.JdbcSinkConnector"
 }
 
 resource "automq_connect_cluster" "demo" {
@@ -134,15 +134,14 @@ resource "automq_connector" "orders" {
     }
   }
   connector_config = {
-    "topics"            = automq_kafka_topic.orders.name
-    "connection.url"    = local.jdbc_url
-    "connection.user"   = local.database_username
-    "table.name.format" = "orders"
-    "insert.mode"       = "upsert"
-    "pk.mode"           = "record_value"
-    "pk.fields"         = "order_id"
-    "auto.create"       = "false"
-    "auto.evolve"       = "false"
+    "topics"                 = automq_kafka_topic.orders.name
+    "connection.url"         = local.jdbc_url
+    "connection.user"        = local.database_username
+    "collection.name.format" = "orders"
+    "insert.mode"            = "upsert"
+    "primary.key.mode"       = "record_value"
+    "primary.key.fields"     = "order_id"
+    "schema.evolution"       = "none"
   }
   connector_config_sensitive = {
     "connection.password" = local.database_password
