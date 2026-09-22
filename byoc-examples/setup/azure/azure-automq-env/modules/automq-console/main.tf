@@ -30,9 +30,15 @@ variable "data_container_name" {
   description = "Existing container name for data bucket"
 }
 
-variable "image_id" {
+variable "automq_config" {
   type        = string
-  description = "Custom image ID for the CMP console VM"
+  description = "Complete Base64-encoded AutoMQ BYOC CONFIG value"
+  sensitive   = true
+}
+
+variable "console_image" {
+  type        = string
+  description = "AutoMQ Azure Console 8.x container image"
 }
 
 variable "vm_size" {
@@ -40,9 +46,9 @@ variable "vm_size" {
   description = "VM size for the CMP console"
 }
 
-variable "cluster_identity_id" {
+variable "kubernetes_cluster_id" {
   type        = string
-  description = "User-assigned identity ID used by the cluster and console"
+  description = "AKS cluster full ARM ID"
 }
 
 variable "subscription_id" {
@@ -59,6 +65,11 @@ variable "private_access_only" {
   description = "If true, the console will not have a public IP."
   type        = bool
   default     = false
+}
+
+resource "random_password" "initial_password" {
+  length  = 24
+  special = false
 }
 
 locals {
@@ -94,30 +105,6 @@ resource "azurerm_user_assigned_identity" "console" {
   resource_group_name = var.resource_group_name
 }
 
-resource "azurerm_role_assignment" "console_storage_blob_data_contributor" {
-  role_definition_name = "Storage Blob Data Contributor"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_reader" {
-  role_definition_name = "Reader"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_private_dns_contributor" {
-  role_definition_name = "Private DNS Zone Contributor"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
-resource "azurerm_role_assignment" "console_aks_admin" {
-  role_definition_name = "Azure Kubernetes Service Cluster Admin Role"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.console.principal_id
-}
-
 # DNS zone for internal records
 resource "azurerm_private_dns_zone" "zone" {
   name                = local.dns_zone_name
@@ -125,11 +112,10 @@ resource "azurerm_private_dns_zone" "zone" {
 }
 
 resource "azurerm_private_dns_zone_virtual_network_link" "zone_link" {
-  name                  = local.dns_link_name
-  resource_group_name   = var.resource_group_name
-  private_dns_zone_name = azurerm_private_dns_zone.zone.name
-  virtual_network_id    = var.vnet_id
-  registration_enabled  = false
+  name                 = local.dns_link_name
+  private_dns_zone_id  = azurerm_private_dns_zone.zone.id
+  virtual_network_id   = var.vnet_id
+  registration_enabled = false
 }
 
 # Public IP and NIC for console
@@ -199,13 +185,17 @@ resource "azurerm_storage_account" "storage" {
 }
 
 resource "azurerm_storage_container" "automq_data" {
-  name                 = var.data_container_name
-  storage_account_name = azurerm_storage_account.storage.name
+  name                  = var.data_container_name
+  storage_account_id    = azurerm_storage_account.storage.id
+  container_access_type = "private"
+  metadata              = { automqvendor = "automq" }
 }
 
 resource "azurerm_storage_container" "automq_ops" {
-  name                 = var.ops_container_name
-  storage_account_name = azurerm_storage_account.storage.name
+  name                  = var.ops_container_name
+  storage_account_id    = azurerm_storage_account.storage.id
+  container_access_type = "private"
+  metadata              = { automqvendor = "automq" }
 }
 
 resource "azurerm_linux_virtual_machine" "console" {
@@ -231,16 +221,30 @@ resource "azurerm_linux_virtual_machine" "console" {
     storage_account_type = "Premium_LRS"
   }
 
-  source_image_id = var.image_id
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts-gen2"
+    version   = "latest"
+  }
 
-  custom_data = base64encode(templatefile("${path.module}/init.sh", {
-    managedIdentityClientId   = azurerm_user_assigned_identity.console.client_id
-    opsContainerName          = var.ops_container_name
-    opsStorageAccountEndpoint = azurerm_storage_account.storage.primary_blob_endpoint
-    uniqueId                  = local.env_name
-    vpcName                   = split("/", var.vnet_id)[8]
-    vpcResourceGroupName      = split("/", var.vnet_id)[4]
+  custom_data = base64encode(templatefile("${path.module}/userdata.tftpl", {
+    automq_config_b64    = base64encode(var.automq_config)
+    console_image_b64    = base64encode(var.console_image)
+    initial_password_b64 = base64encode(random_password.initial_password.result)
   }))
+
+  depends_on = [
+    azurerm_role_assignment.console_managed_dns,
+    azurerm_role_assignment.console_managed_rbac_delegation,
+    azurerm_role_assignment.console_managed_storage,
+    azurerm_role_assignment.console_managed_target_blob_data,
+    azurerm_role_assignment.console_managed_uami,
+    azurerm_role_assignment.console_required_aks_access,
+    azurerm_role_assignment.console_required_blob_data,
+    azurerm_role_assignment.console_required_dns_records,
+    azurerm_role_assignment.console_required_read,
+  ]
 }
 
 
@@ -270,7 +274,8 @@ output "console_initial_username" {
 }
 
 output "console_initial_password" {
-  value = azurerm_linux_virtual_machine.console.id
+  value     = random_password.initial_password.result
+  sensitive = true
 }
 
 output "console_role_id" {
@@ -296,4 +301,12 @@ output "data_bucket_name" {
 
 output "data_bucket_endpoint" {
   value = azurerm_storage_account.storage.primary_blob_endpoint
+}
+
+output "ops_storage_container_id" {
+  value = azurerm_storage_container.automq_ops.id
+}
+
+output "data_storage_container_id" {
+  value = azurerm_storage_container.automq_data.id
 }

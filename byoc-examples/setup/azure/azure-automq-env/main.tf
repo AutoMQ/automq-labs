@@ -3,11 +3,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = ">= 4.0, < 5.0"
-    }
-    azapi = {
-      source  = "azure/azapi"
-      version = ">= 1.0"
+      version = ">= 5.0"
     }
     random = {
       source = "hashicorp/random"
@@ -37,9 +33,11 @@ resource "random_string" "suffix" {
 }
 
 locals {
+  automq_config        = jsondecode(base64decode(var.automq_config))
+  ops_bucket_parts     = split(":", nonsensitive(local.automq_config.opsBucket.bucketName))
   name_suffix          = "${var.env_prefix}-${random_string.suffix.result}"
-  storage_account_name = "sa${var.env_prefix}${random_string.suffix.result}"
-  ops_container_name   = "automq-ops-${local.name_suffix}"
+  storage_account_name = local.ops_bucket_parts[0]
+  ops_container_name   = local.ops_bucket_parts[1]
   data_container_name  = "automq-data-${local.name_suffix}"
 }
 
@@ -47,6 +45,13 @@ locals {
 resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
+
+  lifecycle {
+    precondition {
+      condition     = lower(var.location) == lower(nonsensitive(local.automq_config.region))
+      error_message = "location must match the Azure region encoded in automq_config."
+    }
+  }
 }
 
 module "aks" {
@@ -60,8 +65,6 @@ module "aks" {
   dns_prefix              = "${var.env_prefix}-dns"
   service_cidr            = var.service_cidr
   dns_service_ip          = var.dns_service_ip
-  kubeconfig_path         = var.kubeconfig_path
-  subscription_id         = var.subscription_id
   kubernetes_pricing_tier = var.kubernetes_pricing_tier
   private_access_only     = var.private_access_only
 }
@@ -69,10 +72,16 @@ module "aks" {
 module "iam" {
   source = "./modules/iam"
 
-  location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
-  subscription_id     = var.subscription_id
-  name_suffix         = local.name_suffix
+  location                   = var.location
+  resource_group_name        = azurerm_resource_group.rg.name
+  subscription_id            = var.subscription_id
+  name_suffix                = local.name_suffix
+  ops_storage_container_id   = module.automq_console.ops_storage_container_id
+  data_storage_container_id  = module.automq_console.data_storage_container_id
+  dns_zone_id                = module.automq_console.dns_zone_id
+  kubernetes_cluster_id      = module.aks.kubernetes_cluster_id
+  kubernetes_namespace       = var.kubernetes_namespace
+  kubernetes_service_account = var.kubernetes_service_account
 }
 
 module "nodepool_automq" {
@@ -87,24 +96,24 @@ module "nodepool_automq" {
   node_count            = var.nodepool.node_count
   spot                  = var.nodepool.spot
   orchestrator_version  = module.aks.kubernetes_version
-  cluster_identity_id   = module.iam.workload_identity_id
 }
 
 module "automq_console" {
   source = "./modules/automq-console"
 
-  location             = var.location
-  resource_group_name  = azurerm_resource_group.rg.name
-  vnet_id              = var.vnet_id
-  subnet_id            = var.public_subnet_id
-  storage_account_name = local.storage_account_name
-  ops_container_name   = local.ops_container_name
-  data_container_name  = local.data_container_name
-  image_id             = var.automq_console_id
-  vm_size              = var.automq_console_vm_size
-  cluster_identity_id  = module.iam.workload_identity_id
-  subscription_id      = var.subscription_id
-  private_access_only  = var.private_access_only
+  location              = var.location
+  resource_group_name   = azurerm_resource_group.rg.name
+  vnet_id               = var.vnet_id
+  subnet_id             = var.public_subnet_id
+  storage_account_name  = local.storage_account_name
+  ops_container_name    = local.ops_container_name
+  data_container_name   = local.data_container_name
+  automq_config         = var.automq_config
+  console_image         = var.console_image
+  vm_size               = var.automq_console_vm_size
+  subscription_id       = var.subscription_id
+  kubernetes_cluster_id = module.aks.kubernetes_cluster_id
+  private_access_only   = var.private_access_only
 }
 
 output "resource_group_name" {
@@ -132,13 +141,25 @@ output "automq_console_password" {
   value     = module.automq_console.console_initial_password
 }
 
+output "kubernetes_cluster_id" {
+  value = module.aks.kubernetes_cluster_id
+}
+
+output "private_subnet_id" {
+  value = var.private_subnet_id
+}
+
+output "vnet_id" {
+  value = var.vnet_id
+}
+
 output "dns_zone_name" {
   value = module.automq_console.dns_zone_name
 }
 
-# output "dns_zone_id" {
-#   value = module.automq_console.dns_zone_id
-# }
+output "dns_zone_id" {
+  value = module.automq_console.dns_zone_id
+}
 
 
 output "data_bucket_endpoint" {
@@ -165,3 +186,14 @@ output "automq_ops_bucket" {
   value       = local.ops_container_name
 }
 
+output "ops_bucket_id" {
+  value = "${local.storage_account_name}:${local.ops_container_name}"
+}
+
+output "data_bucket_id" {
+  value = "${local.storage_account_name}:${local.data_container_name}"
+}
+
+output "workload_identity_id" {
+  value = module.iam.workload_identity_id
+}

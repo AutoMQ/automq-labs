@@ -35,17 +35,6 @@ variable "dns_prefix" {
   description = "DNS prefix for the cluster"
 }
 
-variable "kubeconfig_path" {
-  type        = string
-  description = "Local path to write kubeconfig file"
-  default     = "~/.kube/automq-aks-config"
-}
-
-variable "subscription_id" {
-  type        = string
-  description = "Subscription ID for role assignments"
-}
-
 variable "service_cidr" {
   type        = string
   description = "AKS service CIDR (must not overlap VNet/subnets)"
@@ -64,6 +53,8 @@ variable "private_access_only" {
   default     = false
 }
 
+data "azurerm_client_config" "current" {}
+
 resource "azurerm_kubernetes_cluster" "aks" {
   name                    = var.aks_name
   location                = var.location
@@ -73,6 +64,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
   sku_tier                = var.kubernetes_pricing_tier
   private_cluster_enabled = var.private_access_only
 
+  node_provisioning_profile {
+    mode = "Manual"
+  }
+
+  azure_active_directory_role_based_access_control {
+    azure_rbac_enabled = true
+    tenant_id          = data.azurerm_client_config.current.tenant_id
+  }
 
   identity {
     type         = "UserAssigned"
@@ -102,6 +101,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
   role_based_access_control_enabled = true
   oidc_issuer_enabled               = true
   workload_identity_enabled         = true
+
+  depends_on = [
+    azurerm_role_assignment.aks_network_contributor,
+  ]
 }
 
 # Dedicated AKS control-plane identity
@@ -113,29 +116,8 @@ resource "azurerm_user_assigned_identity" "aks" {
 
 resource "azurerm_role_assignment" "aks_network_contributor" {
   role_definition_name = "Network Contributor"
-  scope                = "/subscriptions/${var.subscription_id}"
+  scope                = var.subnet_id
   principal_id         = azurerm_user_assigned_identity.aks.principal_id
-}
-
-resource "azurerm_role_assignment" "aks_contributor" {
-  role_definition_name = "Contributor"
-  scope                = "/subscriptions/${var.subscription_id}"
-  principal_id         = azurerm_user_assigned_identity.aks.principal_id
-}
-
-
-# Ensure kubeconfig directory exists and write kubeconfig locally
-resource "null_resource" "kubeconfig_dir" {
-  provisioner "local-exec" {
-    command = "mkdir -p $(dirname \"${var.kubeconfig_path}\")"
-  }
-}
-
-resource "local_sensitive_file" "kubeconfig" {
-  content  = azurerm_kubernetes_cluster.aks.kube_config_raw
-  filename = pathexpand(var.kubeconfig_path)
-
-  depends_on = [null_resource.kubeconfig_dir]
 }
 
 output "kubernetes_cluster_id" {
@@ -146,15 +128,6 @@ output "aks_name" {
   value = azurerm_kubernetes_cluster.aks.name
 }
 
-output "kube_config" {
-  sensitive = true
-  value     = azurerm_kubernetes_cluster.aks.kube_config_raw
-}
-
 output "kubernetes_version" {
   value = azurerm_kubernetes_cluster.aks.kubernetes_version
-}
-
-output "kubeconfig_path" {
-  value = var.kubeconfig_path
 }

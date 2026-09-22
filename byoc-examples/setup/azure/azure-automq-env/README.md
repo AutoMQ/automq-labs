@@ -1,93 +1,175 @@
-# AutoMQ on Azure with Terraform (AKS + Console)
+# AutoMQ 8.x on Azure with Terraform
 
-This configuration creates the Azure stack for AutoMQ on AKS:
-- Creates a resource group for all resources.
-- Uses an existing VNet and public/private subnets provided by the user.
-- Creates an AKS cluster (system node pool only).
-- Creates an AutoMQ user node pool with a dedicated taint.
-- Creates a new storage account and containers for ops/data buckets.
-- Deploys an AutoMQ console VM.
-- Creates user-assigned identities and role assignments.
+This evaluation quick-start deploys an AutoMQ BYOC 8.x Console and an AKS
+foundation into an existing Azure VNet. The Console runs as a Docker container
+on a standard Ubuntu VM; it no longer uses the legacy AutoMQ Community Gallery
+VM image.
+
+## What This Creates
+
+- A Resource Group in `location`, which must match the Azure region encoded in
+  AutoMQ `CONFIG`.
+- An AKS cluster with Microsoft Entra integration, Azure RBAC, OIDC issuer, and
+  Azure Workload Identity enabled.
+- A dedicated three-zone AutoMQ node pool with the
+  `dedicated=automq:NoSchedule` taint.
+- An Ubuntu Console VM with a separate persistent data disk.
+- The AutoMQ 8.x Console container, initialized from the complete Base64
+  `CONFIG` value supplied by AutoMQ Cloud.
+- Separate Console and Data Plane user-assigned managed identities.
+- The Ops Storage Account and Container named by
+  `CONFIG.opsBucket.bucketName`.
+- A Terraform-provided data container and Private DNS Zone that can be used as
+  customer-provided Instance resources.
+
+This example follows the Azure playground V1 permission contract: Console and
+workload identities use explicit custom roles, with runtime assignments scoped
+to the selected containers, Private DNS Zone, AKS cluster, Resource Group, and
+AKS node Resource Group.
 
 ## Prerequisites
-- Terraform >= 1.3
-- Azure subscription with appropriate permissions
-- Existing VNet with public and private subnets
-- Custom image ID for the AutoMQ console VM (optional, has a default)
 
-## Directory layout
-```
-azure-automq-env/
-  main.tf            # root wiring modules
-  variables.tf
-  modules/
-    aks/
-    nodepool-automq/
-    iam/
-    automq-console/
-```
+- Terraform 1.3 or later.
+- Azure credentials allowed to create the resources and role assignments in
+  this example.
+- An existing VNet with separate Console and AKS subnets.
+- An AutoMQ Cloud Azure BYOC environment.
+- The complete `CONFIG` value and exact Azure Console 8.x image from the same
+  installation command.
+- The Storage Account name in `CONFIG` must still be available in Azure.
 
-Optional network bootstrap example (standalone): `byoc-examples/setup/azure/network-example`
+The AKS subnet should have at least 512 addresses. The Kubernetes service CIDR
+must not overlap the VNet or either subnet.
 
-## AKS configuration notes
-- AKS control plane uses its own UAI created inside the AKS module; workload identity and OIDC issuer are enabled.
-- System node pool: single node, auto-scaling enabled, `only_critical_addons_enabled = true`, temporary name for rotation (default `tmp`).
-- User node pool `automq`: taint `dedicated=automq:NoSchedule`, supports spot/regular, subnet from input, UAI assigned to VMSS post-creation.
-- Nodepool VMSS identity: the module automatically uses Azure API (via `azapi` provider) to discover the VMSS corresponding to the node pool by matching the `aks-managed-poolName` tag, then assigns the provided `cluster_identity_id` to the VMSS. This is a pure Terraform implementation with no external script dependencies.
-- Network profile: Azure CNI/policy, LB Standard, outbound via load balancer; service CIDR and DNS service IP are configurable (defaults 10.2.0.0/16 and 10.2.0.10) to avoid overlap with VNet/subnets.
-- Kubeconfig: written locally to `kubeconfig_path` (default `~/.kube/automq-aks-config`), not output in plaintext.
-- Console SSH key: written to `~/.ssh/automq-console-ssh-key.pem` by Terraform.
+## Deploy
 
-## Quick start
-1. Prepare `terraform.tfvars`:
-```hcl
-subscription_id     = "<subscription-guid>"
-resource_group_name = "<existing-rg>"
-location            = "eastus"
-env_prefix          = "automq"
+1. Copy the example variables:
 
-# Existing network resources
-vnet_id           = "/subscriptions/.../virtualNetworks/<vnet>"
-public_subnet_id  = "/subscriptions/.../subnets/<public>"
-private_subnet_id = "/subscriptions/.../subnets/<private>"
+   ```bash
+   cp terraform.tfvars.example terraform.tfvars
+   ```
 
-# AKS service CIDR and DNS service IP
-service_cidr   = "10.2.0.0/16"
-dns_service_ip = "10.2.0.10"
+2. In `terraform.tfvars`, set:
 
-# Optional variables with default values
-# kubernetes_version      = "1.32.9"
-# kubernetes_pricing_tier = "Free"
-# kubeconfig_path         = "~/.kube/automq-aks-config"
-# automq_console_id       = "/communityGalleries/automqimages-7a9bb1ec-7a2b-44cd-a3ae-a797cc8dd7eb/images/automq-control-center-gen1/versions/7.8.21"
-# automq_console_vm_size  = "Standard_D2s_v3"
-# nodepool = {
-#   name       = "automq"
-#   vm_size    = "Standard_D4as_v5"
-#   min_count  = 3
-#   max_count  = 20
-#   node_count = 3
-#   spot       = false
-# }
-```
+   - `automq_config` to the entire value after `CONFIG=`. Do not decode or
+     edit it.
+   - `console_image` to the exact image shown in the same installation
+     command.
+   - The Azure subscription, matching region, Resource Group, VNet, subnet,
+     service CIDR, and existing `env_prefix` inputs.
+   - Optionally set `kubernetes_namespace` and
+     `kubernetes_service_account` together to create the AKS OIDC Federated
+     Identity Credential for the workload UAMI.
 
-2. Init/plan/apply:
+3. Deploy:
+
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+4. Get the Console login:
+
+   ```bash
+   terraform output -raw automq_console_endpoint
+   terraform output -raw automq_console_username
+   terraform output -raw automq_console_password
+   ```
+
+The VM becoming `Running` does not mean the Console is ready. Wait for the
+login page to respond. On the first login, reset the generated bootstrap
+password when prompted, then finish **System Initialization**.
+
+## Create an AutoMQ Instance
+
+In the Console, create a K8S Instance using:
+
+- Cluster: `kubernetes_cluster_id`
+- VNet: `vnet_id`
+- Node pool: `automq_nodepool_name`
+- Scheduling taint: `dedicated=automq:NoSchedule`
+
+The `data_bucket_id`, `dns_zone_id`, and `workload_identity_id` outputs are
+customer-provided Instance resources. When the Kubernetes namespace and
+ServiceAccount inputs are omitted, create the matching Federated Identity
+Credential before using the workload UAMI.
+
+## Identity Permissions
+
+The Console UAMI receives the customer-provided and managed-resource custom
+roles from the Azure playground contract:
+
+- container-scoped Blob data access;
+- zone-scoped DNS record access;
+- cluster-scoped AKS read and `clusterUser` credential access;
+- Resource Group-scoped managed Storage, Private DNS, and UAMI lifecycle
+  access;
+- subscription-scoped discovery reads and conditional RBAC delegation.
+
+This example enables Microsoft Entra integration and Azure RBAC for Kubernetes
+Authorization on the AKS cluster. Grant the Console UAMI
+`Azure Kubernetes Service RBAC Cluster Admin` at the target cluster scope as
+part of System Initialization. The AKS access role used to obtain the
+`clusterUser` kubeconfig does not grant Kubernetes management permissions by
+itself.
+
+The workload UAMI receives only Blob runtime access on the Ops/Data
+containers, DNS record access on the selected zone, and disk failover actions
+on the AKS node Resource Group. When configured, its Federated Identity
+Credential uses the AKS OIDC issuer and the supplied Kubernetes ServiceAccount
+subject.
+
+## Important Outputs
+
+| Output | Meaning |
+| --- | --- |
+| `automq_console_endpoint` | AutoMQ Console URL |
+| `automq_console_password` | One-time initial admin password |
+| `kubernetes_cluster_id` | AKS full ARM ID |
+| `automq_nodepool_name` | Dedicated AutoMQ node pool |
+| `ops_bucket_id` | Azure logical Ops Bucket ID in `account:container` form |
+| `data_bucket_id` | Terraform-provided logical Data Bucket ID |
+| `dns_zone_id` | Terraform-provided Private DNS Zone full ARM ID |
+| `workload_identity_id` | Terraform-provided Data Plane UAMI full ARM ID |
+
+## Console Runtime
+
+The bootstrap script:
+
+- installs Docker on Ubuntu 22.04;
+- formats and mounts the separate disk at `/data`;
+- stores the Console environment in `/etc/automq-console.env` with mode
+  `0600`;
+- runs the container with `/data:/root`, host networking, restart policy, and
+  bounded Docker logs.
+
+For diagnostics, SSH to the VM and inspect:
+
 ```bash
-terraform init
-terraform plan
-terraform apply
+sudo tail -n 200 /var/log/cloud-init-output.log
+sudo docker logs --tail 200 automq-console
 ```
 
-## Outputs
-- `resource_group_name`: Name of the resource group containing all resources.
-- `aks_name`: Name of the created AKS cluster.
-- `automq_nodepool_name`: Name of the AutoMQ user node pool.
-- `automq_console_endpoint`: Public endpoint for the AutoMQ console.
-- `automq_console_username`: Initial username for the AutoMQ console.
-- `automq_console_password`: Initial password for the AutoMQ console (sensitive value).
-- `dns_zone_name`: Name of the private DNS zone created for the console.
-- `data_bucket_endpoint`: Endpoint for the data bucket.
-- `nodepool_identity_client_id`: Client ID of the managed identity for the AutoMQ node pool.
-- `storage_account_name`: Name of the storage account for AutoMQ buckets.
-- `automq_data_bucket`: Name of the container for data.
-- `automq_ops_bucket`: Name of the container for operations.
+## Security and State
+
+- The original example interface keeps ports 22 and 8080 open. Restrict the
+  Network Security Group before using it outside a disposable environment.
+- The Console endpoint is plain HTTP on port 8080. Add HTTPS and a controlled
+  ingress layer for durable use.
+- Terraform state contains `CONFIG`, the initial password, and the generated
+  SSH private key. Use an encrypted remote backend with restricted access.
+- Custom role definitions are registered at subscription scope, while runtime
+  role assignments use the narrower scopes described above. Review the
+  actions and ABAC conditions against your production policy before use.
+
+## Cleanup
+
+Delete AutoMQ Instances from the Console first, then run:
+
+```bash
+terraform destroy
+```
+
+Destroying this quick-start removes the Console disk and the Terraform-managed
+Ops/Data containers. Preserve any required data before cleanup.

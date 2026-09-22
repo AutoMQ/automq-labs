@@ -1,3 +1,39 @@
+variable "automq_config" {
+  description = "Complete Base64-encoded AutoMQ BYOC CONFIG value from the Azure installation command"
+  type        = string
+  sensitive   = true
+  nullable    = false
+
+  validation {
+    condition = can(alltrue([
+      for value in [
+        jsondecode(base64decode(var.automq_config)).environmentId,
+        jsondecode(base64decode(var.automq_config)).clientId,
+        jsondecode(base64decode(var.automq_config)).clientSecret,
+        jsondecode(base64decode(var.automq_config)).region,
+        jsondecode(base64decode(var.automq_config)).opsBucket.bucketName,
+      ] : trimspace(value) != ""
+    ]))
+    error_message = "automq_config must be valid Base64 JSON containing environmentId, clientId, clientSecret, region, and opsBucket.bucketName."
+  }
+
+  validation {
+    condition     = can(regex("^[a-z0-9]{3,24}:[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])?$", jsondecode(base64decode(var.automq_config)).opsBucket.bucketName))
+    error_message = "CONFIG opsBucket.bucketName must use the Azure storageAccount:container format."
+  }
+}
+
+variable "console_image" {
+  description = "Exact AutoMQ Azure Console 8.x container image from the same installation command as CONFIG"
+  type        = string
+  nullable    = false
+
+  validation {
+    condition     = trimspace(var.console_image) != "" && !can(regex("[[:space:]]", var.console_image))
+    error_message = "console_image must be a non-empty container image reference without whitespace."
+  }
+}
+
 variable "subscription_id" {
   description = "Azure subscription ID"
   type        = string
@@ -52,12 +88,6 @@ variable "dns_service_ip" {
 
 }
 
-variable "kubeconfig_path" {
-  description = "Local path to write kubeconfig file"
-  type        = string
-  default     = "~/.kube/automq-aks-config"
-}
-
 variable "env_prefix" {
   description = "Short prefix used for naming resources"
   type        = string
@@ -83,12 +113,6 @@ variable "nodepool" {
   }
 }
 
-variable "automq_console_id" {
-  description = "Image ID for AutoMQ console VM"
-  type        = string
-  default     = "/communityGalleries/automqimages-7a9bb1ec-7a2b-44cd-a3ae-a797cc8dd7eb/images/automq-control-center-gen1/versions/7.8.21"
-}
-
 variable "automq_console_vm_size" {
   description = "VM size for AutoMQ console"
   type        = string
@@ -99,4 +123,16 @@ variable "private_access_only" {
   description = "If true, the AKS API server and AutoMQ console will not have public IPs. Access will be restricted to the VNet."
   type        = bool
   default     = false
+}
+
+variable "kubernetes_namespace" {
+  description = "Optional Kubernetes namespace for the AutoMQ workload identity federation subject"
+  type        = string
+  default     = ""
+}
+
+variable "kubernetes_service_account" {
+  description = "Optional Kubernetes ServiceAccount for the AutoMQ workload identity federation subject"
+  type        = string
+  default     = ""
 }
