@@ -1,0 +1,11 @@
+environment_id        = "env-REPLACE_ME"
+kafka_instance_id     = "kf-REPLACE_WITH_INSTANCE_OUTPUT"
+kubernetes_cluster_id = "/subscriptions/SUBSCRIPTION_ID/resourceGroups/RESOURCE_GROUP/providers/Microsoft.ContainerService/managedClusters/AKS_NAME"
+node_pool_name        = "automq"
+connect_namespace       = "connect-demo"
+connect_service_account = "connect-demo"
+
+# Supply a complete Datagen plugin ZIP and its matching version.
+plugin_storage_url = "https://REPLACE_WITH_PLUGIN_HOST/kafka-connect-datagen.zip"
+plugin_version     = "REPLACE_WITH_PLUGIN_VERSION"
+# Supply the password through TF_VAR_kafka_password, not this file.
