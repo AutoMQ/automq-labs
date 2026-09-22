@@ -129,14 +129,62 @@ and update behavior, see the
 
 ## Create a Debezium JDBC Sink
 
-The Connector uses `io.debezium.connector.jdbc.JdbcSinkConnector` to consume the
-three-partition `orders` topic and upsert rows into PostgreSQL by `order_id`.
-It runs one task on a Connect Cluster with one `TIER1` worker.
+Next, we want to send order events from the Kafka Instance to PostgreSQL.
+Each event contains an `order_id`, `customer_id`, and `amount`. PostgreSQL should
+keep one row per order, updating that row when another event arrives with the
+same `order_id`. The database table will be prepared in advance.
 
-### Prepare PostgreSQL and the Plugin
+For this small example, we will use a three-partition `orders` topic and run
+one Sink task on a Connect Cluster with one `TIER1` worker. The data flow is
+`orders` topic → Debezium JDBC Sink → PostgreSQL `public.orders` table.
 
-Prepare a PostgreSQL database accessible from Connect workers and create the
-target table:
+### Choose the Resources and Configuration
+
+This data flow needs a plugin that understands JDBC, workers to run it, and a
+Connector configuration describing what to read and where to write. These map
+to three resources in [connector/main.tf](connector/main.tf):
+
+| Resource | Role in the example |
+| --- | --- |
+| `automq_connector_plugin.jdbc` | Registers the Debezium JDBC archive and its `io.debezium.connector.jdbc.JdbcSinkConnector` class as a `SINK` plugin. |
+| `automq_connect_cluster.demo` | Runs the workers on AKS, installs the registered plugin, and uses the Kafka Instance for worker coordination. |
+| `automq_connector.orders` | Runs the Sink task with the topic, database connection, and write settings. |
+
+The example also creates the `orders` topic and a `jdbc-reader` Kafka user.
+Because the Instance uses SASL authentication, the Connector needs that user's
+credentials and permission to consume the topic. A topic CONSUME ACL and a
+GROUP ACL for `connect-${local.connector_name}` provide the required access.
+Worker-level Kafka authentication is managed by AutoMQ.
+
+The desired write behavior determines the Connector settings:
+
+| Data flow choice | Terraform configuration |
+| --- | --- |
+| Read order events | Set `connector_config.topics` to the created `orders` topic. |
+| Write to the prepared PostgreSQL table | Set `connection.url`, `connection.user`, and `collection.name.format = "orders"`. Supply the password through `connector_config_sensitive`. |
+| Update the row when an order is replayed | Set `insert.mode = "upsert"`, `primary.key.mode = "record_value"`, and `primary.key.fields = "order_id"`. |
+| Keep table changes under database administration | Set `schema.evolution = "none"`. |
+| Decode structured JSON records | Use `JsonConverter` with `value.converter.schemas.enable = "true"` in the Connect Cluster's `worker_config`. |
+| Start with a small worker deployment | Set provisioned capacity to one `TIER1` worker and the Connector's `task_count` to `1`. |
+| Authenticate against the Kafka Instance | Set the Connector's security protocol to `SASL_PLAINTEXT` with `SCRAM-SHA-512` and the `jdbc-reader` credentials. |
+
+The Connect Cluster references the plugin's name and version, and the Connector
+references the Connect Cluster ID. These references establish the creation
+order. The Connector also depends on both Kafka ACLs so that access is granted
+before the task starts.
+
+### Supply the Environment Details
+
+The Kafka Instance and AKS infrastructure already exist. Two additional
+dependencies are needed: the JDBC plugin archive and a PostgreSQL database
+reachable from the Connect workers.
+
+Host a compatible Debezium JDBC plugin ZIP, including the PostgreSQL JDBC
+driver, at an HTTPS URL accessible to the Console and Connect runtime. See the
+[Debezium JDBC documentation](https://debezium.io/documentation/reference/3.2/connectors/jdbc.html)
+for packaging and configuration requirements.
+
+In PostgreSQL, create the table that matches the order record:
 
 ```sql
 CREATE TABLE public.orders (
@@ -150,28 +198,33 @@ Grant the database user CONNECT, schema USAGE, and SELECT/INSERT/UPDATE
 permissions. Its search path must resolve `orders` to this table. The example
 uses the existing table with automatic creation and schema evolution disabled.
 
-Host a compatible Debezium JDBC plugin ZIP, including the PostgreSQL JDBC
-driver, at an HTTPS URL accessible to the Console and Connect runtime. See the
-[Debezium JDBC documentation](https://debezium.io/documentation/reference/3.2/connectors/jdbc.html)
-for packaging and configuration requirements.
+Then fill in the `locals` block in [connector/main.tf](connector/main.tf):
 
-### Configure and Create
-
-Edit the `locals` block in [connector/main.tf](connector/main.tf). Set the
-environment and Instance IDs, AKS settings, plugin URL and version, Kafka
-password, and PostgreSQL connection details.
+| Local value | Information to provide |
+| --- | --- |
+| `environment_id`, `kafka_instance_id` | The same BYOC Environment ID and the `instance_id` output from the previous example. |
+| `kubernetes_cluster_id`, `node_pool_name` | The AKS cluster full ARM ID and node pool with capacity for the Connect worker. |
+| `connect_namespace`, `connect_service_account` | The namespace and Kubernetes ServiceAccount for the worker deployment. |
+| `plugin_storage_url`, `plugin_version` | The reachable Debezium JDBC archive URL and its matching version. |
+| `connector_name` | The name of this data flow; the group ACL derives its default consumer group from this value. |
+| `kafka_password` | A password for the Kafka user created by this example. Both the user and Connector reference this value. |
+| `jdbc_url`, `database_username`, `database_password` | Connection details for the prepared PostgreSQL database and authorized user. |
 
 Use a namespace and ServiceAccount supported by your Connect configuration.
 If the runtime requires Azure Workload Identity, prepare the worker identity,
 federation, and grants according to the target version's documentation, including
 `compute.iam_role` where required.
 
-The configuration creates a `jdbc-reader` Kafka user with topic CONSUME
-permission and access to the Connector's consumer group. The user and Connector
-share `local.kafka_password`. The PostgreSQL password is supplied through
-`connector_config_sensitive` and are retained in Terraform state.
+The AutoMQ Service Account authorizes Terraform API calls, the Kafka user
+authorizes topic consumption, and the PostgreSQL user authorizes database
+writes. Keep these credentials separate. Sensitive Terraform fields hide
+passwords from normal output, but the values remain in state.
 
-From `instance/`, run:
+### Create and Verify the Data Flow
+
+From `instance/`, initialize the Connector configuration and review the plan.
+It should create the topic, user, two ACLs, plugin registration, Connect Cluster,
+and Connector. Apply the plan after checking the target environment and inputs:
 
 ```bash
 cd ../connector
@@ -180,8 +233,6 @@ terraform plan
 terraform apply
 terraform output connector_state
 ```
-
-### Verify
 
 Use a Kafka producer with PRODUCE permission on `orders`. The configured
 JsonConverter expects a schema/payload envelope. Send the following JSON as a
@@ -213,10 +264,12 @@ Check Connector task health in the Console and verify the row in PostgreSQL:
 SELECT * FROM public.orders WHERE order_id = 1001;
 ```
 
-The Connector uses `primary.key.mode = record_value`,
-`primary.key.fields = order_id`, and `schema.evolution = none`.
-Replaying the same `order_id` updates the existing row. The group ACL follows
-`local.connector_name`; update the ACL if you configure a custom consumer group.
+Send another record with the same `order_id` and a different `amount`, then
+query the table again. The existing row should contain the new amount. This
+checks the upsert behavior chosen at the start of the example.
+
+For other task, authentication, and lifecycle options, see the
+[Connector resource documentation](https://registry.terraform.io/providers/automq/automq/0.4.8/docs/resources/connector).
 
 ## Cleanup
 
