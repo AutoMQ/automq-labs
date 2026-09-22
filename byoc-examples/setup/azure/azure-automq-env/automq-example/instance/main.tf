@@ -12,28 +12,39 @@ terraform {
 # Read the endpoint and Service Account credentials from AUTOMQ_BYOC_* variables.
 provider "automq" {}
 
+# Edit environment-specific values here before running this example.
+locals {
+  environment_id          = "<environment-id>"
+  kubernetes_cluster_id   = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name>"
+  node_pool_name          = "automq"
+  automq_version          = "<supported-data-plane-version>"
+  instance_type           = "<supported-instance-type>"
+  load_balancer_subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<network-resource-group>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<private-subnet-name>"
+  zones                   = ["<zone-1>", "<zone-2>", "<zone-3>"]
+}
+
 resource "automq_kafka_instance" "demo" {
-  environment_id = "<environment-id>"
+  environment_id = local.environment_id
   name           = "azure-managed-demo"
   description    = "Azure managed three zone demo"
-  version        = "<supported-data-plane-version>"
+  version        = local.automq_version
 
   compute_specs = {
     deploy_type         = "K8S"
     pricing_mode        = "UsageBased"
     reserved_node_count = 3
-    instance_types      = ["<supported-instance-type>"]
+    instance_types      = [local.instance_type]
 
-    kubernetes_cluster_id            = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name>"
-    kubernetes_load_balancer_subnets = ["/subscriptions/<subscription-id>/resourceGroups/<network-resource-group>/providers/Microsoft.Network/virtualNetworks/<vnet-name>/subnets/<private-subnet-name>"]
-    networks = [for zone in ["<zone-1>", "<zone-2>", "<zone-3>"] : {
+    kubernetes_cluster_id            = local.kubernetes_cluster_id
+    kubernetes_load_balancer_subnets = [local.load_balancer_subnet_id]
+    networks = [for zone in local.zones : {
       zone    = zone
       subnets = [] # AKS workload zones come from the node pool.
     }]
 
     schedule_spec = yamlencode({
       nodeSelector = {
-        "kubernetes.azure.com/agentpool" = "<automq-node-pool-name>"
+        "kubernetes.azure.com/agentpool" = local.node_pool_name
       }
       tolerations = [{
         key      = "dedicated"

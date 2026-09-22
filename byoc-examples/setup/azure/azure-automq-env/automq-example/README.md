@@ -2,8 +2,9 @@
 
 These examples show how to use the `automq/automq` provider after completing
 the [Azure BYOC environment setup](../README.md) and Console System Initialization.
-Edit the placeholders directly in each `main.tf`; these are standalone examples,
-not reusable modules.
+Edit the `locals` block at the top of each `main.tf`. Environment-specific
+values are defined once and reused by the resources; fixed example settings
+stay inline. These are standalone examples without input variables or modules.
 
 - [instance/main.tf](instance/main.tf): create a three-zone, three-node Kafka
   Instance with S3WAL, SASL_PLAINTEXT, and usage-based pricing.
@@ -36,7 +37,7 @@ Do not commit real credentials, Terraform state, or saved plans.
 
 ## Create a Kafka Instance
 
-In `instance/main.tf`, replace the environment ID, supported **Data Plane**
+In the `locals` block of `instance/main.tf`, replace the environment ID, supported **Data Plane**
 version, AKS cluster and load balancer subnet full ARM IDs, instance type,
 node pool name, and three AZ identifiers with values from your environment.
 
@@ -100,10 +101,10 @@ Give the database user CONNECT, schema USAGE, and SELECT/INSERT/UPDATE permissio
 Ensure its search path resolves `orders` to this table. The example disables
 automatic table creation and schema evolution.
 
-Replace the placeholders in `connector/main.tf`, including the Instance ID
+Update the `locals` block in `connector/main.tf`, including the Instance ID
 from the previous step, AKS settings, plugin URL/version, Kafka password, and
-database connection details. Use the same Kafka password in the user and
-Connector resources. The database password is shown in
+database connection details. The Kafka user and Connector reuse
+`local.kafka_password`. The database password is passed to
 `connector_config_sensitive` to demonstrate that API field; sensitive values
 still appear in Terraform state.
 
@@ -137,8 +138,8 @@ SELECT * FROM public.orders WHERE order_id = 1001;
 ```
 
 The record key is ignored; replaying the same `order_id` updates the existing row.
-If you change the Connector name or override its consumer group, also update
-the group ACL.
+The group ACL derives its name from `local.connector_name`. If you override
+the default consumer group, also update the group ACL.
 
 ## Cleanup
 
