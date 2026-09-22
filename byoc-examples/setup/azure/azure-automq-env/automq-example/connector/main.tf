@@ -13,8 +13,11 @@ provider "automq" {}
 
 # Edit environment-specific values here before running this example.
 locals {
-  environment_id          = "<environment-id>"
-  kubernetes_cluster_id   = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name>"
+  environment_id        = "<environment-id>"
+  kubernetes_cluster_id = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name>"
+  # Create an AKS node pool for Connect, or select an existing pool with enough
+  # available CPU and memory for the configured workers, in addition to Kafka workloads.
+  # Match the pool's labels and taints in scheduling_spec below.
   node_pool_name          = "automq"
   kafka_instance_id       = "<kafka-instance-id>"
   connector_name          = "demo-orders-postgres"
@@ -76,6 +79,8 @@ resource "automq_connector_plugin" "jdbc" {
   connector_class = "io.debezium.connector.jdbc.JdbcSinkConnector"
 }
 
+# This resource deploys Connect workers; it does not create or resize AKS node pools.
+# Provision node capacity before applying this configuration.
 resource "automq_connect_cluster" "demo" {
   environment_id = local.environment_id
   name           = "azure-connect-demo"
