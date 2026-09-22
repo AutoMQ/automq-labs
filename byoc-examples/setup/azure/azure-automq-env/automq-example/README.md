@@ -67,7 +67,7 @@ These deployment choices determine the fields in
 | Place workloads across three AZs | Populate `networks` with three zone IDs supported by the selected node pool. |
 | Use object-storage WAL | Set `features.wal_mode = "S3WAL"`; in Azure, this uses Azure Blob. |
 | Authenticate clients using SASL_PLAINTEXT | Set `authentication_methods = ["sasl"]` and `transit_encryption_modes = ["plaintext"]` under `features.security`. |
-| Let AutoMQ manage storage, identity, and DNS | Omit `data_buckets`, `instance_role`, and `dns_zone` from `compute_specs`. |
+| Let AutoMQ manage storage, identity, and DNS | Omit `data_buckets`, `instance_role`, and `dns_zone` from `compute_specs`. (If you do not want CMP to have permission to create these resources, prepare customer-provided resources that meet the documented requirements and explicitly supply these fields; CMP still needs the permissions required to use them.) |
 
 Omitting those managed-resource fields lets the Control Plane create the Data
 Bucket, Data Plane UAMI, and Private DNS Zone when it creates the Instance.
