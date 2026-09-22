@@ -11,98 +11,63 @@ terraform {
 
 provider "automq" {}
 
-variable "environment_id" {
-  type        = string
-  description = "ID of the existing Azure BYOC environment."
-}
-
-variable "kafka_instance_id" {
-  type        = string
-  description = "Kafka Instance ID from the Instance example."
-}
-
-variable "kubernetes_cluster_id" {
-  type        = string
-  description = "Full ARM resource ID of the existing AKS cluster."
-}
-
-variable "node_pool_name" {
-  type        = string
-  description = "Name of the existing AutoMQ AKS node pool."
-}
-
-variable "plugin_storage_url" {
-  type        = string
-  description = "Accessible HTTPS URL of the complete Datagen plugin ZIP."
-}
-
-variable "plugin_version" {
-  type        = string
-  description = "Datagen plugin version matching the archive."
-}
-
-variable "connect_namespace" {
-  type        = string
-  description = "Kubernetes namespace for Connect workers."
-}
-
-variable "connect_service_account" {
-  type        = string
-  description = "Kubernetes ServiceAccount for Connect workers."
-}
-
-variable "kafka_password" {
-  type        = string
-  description = "SASL password for the datagen-writer Kafka user."
-  sensitive   = true
-}
-
 resource "automq_kafka_topic" "orders" {
-  environment_id    = var.environment_id
-  kafka_instance_id = var.kafka_instance_id
+  environment_id    = "<environment-id>"
+  kafka_instance_id = "<kafka-instance-id>"
   name              = "orders"
   partition         = 3
 }
 
 # Kafka SASL credentials are separate from the AutoMQ API Service Account.
-resource "automq_kafka_user" "datagen" {
-  environment_id    = var.environment_id
-  kafka_instance_id = var.kafka_instance_id
-  username          = "datagen-writer"
-  password          = var.kafka_password
+resource "automq_kafka_user" "jdbc" {
+  environment_id    = "<environment-id>"
+  kafka_instance_id = "<kafka-instance-id>"
+  username          = "jdbc-reader"
+  password          = "<kafka-user-password>"
 }
 
-resource "automq_kafka_acl" "produce_orders" {
-  environment_id    = var.environment_id
-  kafka_instance_id = var.kafka_instance_id
+resource "automq_kafka_acl" "consume_orders" {
+  environment_id    = "<environment-id>"
+  kafka_instance_id = "<kafka-instance-id>"
   resource_type     = "TOPIC"
   resource_name     = automq_kafka_topic.orders.name
   pattern_type      = "LITERAL"
-  principal         = "User:${automq_kafka_user.datagen.username}"
-  operation_group   = "PRODUCE"
+  principal         = "User:${automq_kafka_user.jdbc.username}"
+  operation_group   = "CONSUME"
+  permission        = "ALLOW"
+}
+
+resource "automq_kafka_acl" "connect_group" {
+  environment_id    = "<environment-id>"
+  kafka_instance_id = "<kafka-instance-id>"
+  resource_type     = "GROUP"
+  resource_name     = "connect-demo-orders-postgres"
+  pattern_type      = "LITERAL"
+  principal         = "User:${automq_kafka_user.jdbc.username}"
+  operation_group   = "ALL"
   permission        = "ALLOW"
 }
 
 # Register an existing plugin archive compatible with the Connect runtime.
 # This resource does not build or upload the archive.
-resource "automq_connector_plugin" "datagen" {
-  environment_id  = var.environment_id
-  name            = "demo-datagen"
-  version         = var.plugin_version
-  storage_url     = var.plugin_storage_url
-  types           = ["SOURCE"]
-  connector_class = "io.confluent.kafka.connect.datagen.DatagenConnector"
+resource "automq_connector_plugin" "jdbc" {
+  environment_id  = "<environment-id>"
+  name            = "demo-jdbc"
+  version         = "<jdbc-plugin-version>"
+  storage_url     = "https://<plugin-host>/kafka-connect-jdbc.zip"
+  types           = ["SINK"]
+  connector_class = "io.confluent.connect.jdbc.JdbcSinkConnector"
 }
 
 resource "automq_connect_cluster" "demo" {
-  environment_id = var.environment_id
+  environment_id = "<environment-id>"
   name           = "azure-connect-demo"
   kafka_cluster = {
-    kafka_instance_id = var.kafka_instance_id
+    kafka_instance_id = "<kafka-instance-id>"
   }
   plugins = [{
-    name    = automq_connector_plugin.datagen.name
-    version = automq_connector_plugin.datagen.version
+    name    = automq_connector_plugin.jdbc.name
+    version = automq_connector_plugin.jdbc.version
   }]
   capacity = {
     type = "provisioned"
@@ -114,12 +79,12 @@ resource "automq_connect_cluster" "demo" {
   compute = {
     type = "k8s"
     kubernetes = {
-      cluster_id      = var.kubernetes_cluster_id
-      namespace       = var.connect_namespace
-      service_account = var.connect_service_account
+      cluster_id      = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<aks-name>"
+      namespace       = "<connect-namespace>"
+      service_account = "<connect-service-account>"
       scheduling_spec = yamlencode({
         nodeSelector = {
-          "kubernetes.azure.com/agentpool" = var.node_pool_name
+          "kubernetes.azure.com/agentpool" = "<automq-node-pool-name>"
         }
         tolerations = [{
           key      = "dedicated"
@@ -133,32 +98,42 @@ resource "automq_connect_cluster" "demo" {
   worker_config = {
     "key.converter"                  = "org.apache.kafka.connect.storage.StringConverter"
     "value.converter"                = "org.apache.kafka.connect.json.JsonConverter"
-    "value.converter.schemas.enable" = "false"
+    "value.converter.schemas.enable" = "true"
   }
 }
 
 resource "automq_connector" "orders" {
-  environment_id     = var.environment_id
+  environment_id     = "<environment-id>"
   connect_cluster_id = automq_connect_cluster.demo.id
-  name               = "demo-orders-datagen"
-  connector_class    = automq_connector_plugin.datagen.connector_class
+  name               = "demo-orders-postgres"
+  connector_class    = automq_connector_plugin.jdbc.connector_class
   task_count         = 1
   kafka_cluster = {
     security_protocol = {
       protocol       = "SASL_PLAINTEXT"
-      username       = automq_kafka_user.datagen.username
-      password       = var.kafka_password
+      username       = automq_kafka_user.jdbc.username
+      password       = "<kafka-user-password>"
       sasl_mechanism = "SCRAM-SHA-512"
     }
   }
   connector_config = {
-    "kafka.topic"  = automq_kafka_topic.orders.name
-    "quickstart"   = "orders"
-    "max.interval" = "1000"
-    # Use a non-idempotent producer for this basic topic-level ACL example.
-    "producer.override.enable.idempotence" = "false"
+    "topics"            = automq_kafka_topic.orders.name
+    "connection.url"    = "jdbc:postgresql://<database-host>:5432/<database-name>?sslmode=require"
+    "connection.user"   = "<database-username>"
+    "table.name.format" = "orders"
+    "insert.mode"       = "upsert"
+    "pk.mode"           = "record_value"
+    "pk.fields"         = "order_id"
+    "auto.create"       = "false"
+    "auto.evolve"       = "false"
   }
-  depends_on = [automq_kafka_acl.produce_orders]
+  connector_config_sensitive = {
+    "connection.password" = "<database-password>"
+  }
+  depends_on = [
+    automq_kafka_acl.consume_orders,
+    automq_kafka_acl.connect_group,
+  ]
 }
 
 output "connect_cluster_id" {

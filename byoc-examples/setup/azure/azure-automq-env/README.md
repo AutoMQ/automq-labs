@@ -85,7 +85,7 @@ password when prompted, then finish **System Initialization**.
 
 For a step-by-step Terraform walkthrough after System Initialization, see
 [automq-example](automq-example/README.md): create Service Account credentials,
-provision a managed Azure Kafka Instance, and add a Datagen Connector.
+provision a managed Azure Kafka Instance, and add a PostgreSQL JDBC Sink Connector.
 
 In the Console, create a K8S Instance using:
 

@@ -1,178 +1,149 @@
 # Manage AutoMQ Resources on Azure with Terraform
 
-This optional example uses the `automq/automq` provider after the
-[Azure BYOC environment setup](../README.md) and Console System Initialization
-are complete. It contains two standalone Terraform roots with separate state:
+These examples show how to use the `automq/automq` provider after completing
+the [Azure BYOC environment setup](../README.md) and Console System Initialization.
+Edit the placeholders directly in each `main.tf`; these are standalone examples,
+not reusable modules.
 
-- `instance/`: a three-zone, three-node Kafka Instance using S3WAL,
-  usage-based pricing, and SASL_PLAINTEXT.
-- `connector/`: a Datagen Source Connector that writes sample orders, including
-  its plugin, Connect worker cluster, Kafka topic, user, and ACL.
+- [instance/main.tf](instance/main.tf): create a three-zone, three-node Kafka
+  Instance with S3WAL, SASL_PLAINTEXT, and usage-based pricing.
+- [connector/main.tf](connector/main.tf): consume the `orders` topic into
+  PostgreSQL using a JDBC Sink Connector.
 
-These are evaluation examples. Adapt the configuration using the
-[provider documentation](https://registry.terraform.io/providers/automq/automq/latest/docs).
-
-## Prerequisites
-
-- Terraform 1.3 or later. The examples pin AutoMQ provider 0.4.8.
-- An initialized Azure BYOC environment with permission to create managed
-  storage, identities, DNS resources, and Kubernetes workloads.
-- An existing AKS cluster and AutoMQ node pool spanning three availability
-  zones, with sufficient capacity and connectivity to the Console.
-- A target Console/Data Plane version supporting Azure AKS, S3WAL, usage-based
-  pricing, and, for the second example, Managed Connect.
-
-The provider's published cloud support table does not yet specify an Azure
-minimum Control Plane version. Confirm compatibility with your target
-environment before applying. These examples have not been verified with a
-live Azure deployment.
+The examples use provider 0.4.8. Confirm that your Console/Data Plane versions
+support these Azure capabilities, including Managed Connect. The provider
+documentation does not yet specify an Azure minimum Control Plane version.
+These examples have not been tested against a live Azure environment.
 
 ## Configure
 
-### Create Service Account Credentials
-
-Sign in to the AutoMQ Console, open **Service Accounts**, and create a Service
-Account with permissions for the example resources. Create/download its Access
+Sign in to the AutoMQ Console and open **Service Accounts**. Create a Service
+Account with the required resource permissions, then create/download its Access
 Key ID (AK) and Secret Access Key (SK). See
 [Service Accounts](https://docs.automq.com/automq-cloud/manage-identities-and-access/service-accounts).
 
-Get the environment's Control Plane endpoint and its `environment_id` from
-**System Settings**. Export the endpoint and enter the credentials:
+Export the environment's Control Plane endpoint and Service Account credentials:
 
 ```bash
 export AUTOMQ_BYOC_ENDPOINT="<console-endpoint>"
-read -r -p 'AutoMQ Access Key ID: ' AUTOMQ_BYOC_ACCESS_KEY
-read -r -s -p 'AutoMQ Secret Access Key: ' AUTOMQ_BYOC_SECRET_KEY
-export AUTOMQ_BYOC_ACCESS_KEY AUTOMQ_BYOC_SECRET_KEY
+export AUTOMQ_BYOC_ACCESS_KEY="<service-account-access-key>"
+export AUTOMQ_BYOC_SECRET_KEY="<service-account-secret-key>"
 ```
 
-Provider 0.4.8 reads `AUTOMQ_BYOC_ACCESS_KEY`, not
-`AUTOMQ_BYOC_ACCESS_KEY_ID`. These credentials authenticate AutoMQ API calls;
-they are separate from Azure credentials, installation `CONFIG`, and Kafka
-SASL credentials. Keep credentials, Terraform state, and saved plans private.
+Provider 0.4.8 reads `AUTOMQ_BYOC_ACCESS_KEY`, not `AUTOMQ_BYOC_ACCESS_KEY_ID`.
+These API credentials are separate from Kafka SASL and PostgreSQL credentials.
+Do not commit real credentials, Terraform state, or saved plans.
 
-### Configure the Kafka Instance
+## Create a Kafka Instance
 
-From this directory:
+In `instance/main.tf`, replace the environment ID, supported **Data Plane**
+version, AKS cluster and load balancer subnet full ARM IDs, instance type,
+node pool name, and three AZ identifiers with values from your environment.
+
+| Setting | Example |
+| --- | --- |
+| Deployment | Existing AKS cluster, `K8S` |
+| Pricing | `UsageBased` |
+| AutoMQ nodes | `reserved_node_count = 3` |
+| Placement | Three zones supported by the AKS node pool |
+| WAL | `S3WAL`, backed by Azure Blob |
+| Authentication / transport | `sasl` / `plaintext` |
+
+The example deliberately omits `data_buckets`, `instance_role`, and `dns_zone`.
+The Control Plane creates and manages the Data Bucket, Data Plane UAMI, and
+Private DNS Zone. Do not fill in the environment setup's customer-provided
+bucket, identity, or DNS outputs.
+
+AKS, its node pool, networking, and the environment Ops Bucket are existing
+dependencies. The scheduling settings use the node pool label and
+`dedicated=automq:NoSchedule` taint from the environment example. Azure subnets
+are regional; workload placement uses node pool zones, not per-zone subnets.
+SASL_PLAINTEXT assumes private network access and does not encrypt traffic.
 
 ```bash
 cd instance
-cp terraform.tfvars.example terraform.tfvars
-```
-
-Replace the placeholders with values from the existing environment:
-
-- Environment ID and a supported **Data Plane** version, not the Console version.
-- AKS cluster and private load balancer subnet full ARM resource IDs.
-- A supported instance type, node pool name, and three zone IDs returned by
-  the Console for that node pool.
-
-The scheduling settings match the environment example's `automq` node pool and
-`dedicated=automq:NoSchedule` taint. Update them if your node pool differs.
-Azure subnets are regional; workload zones come from the AKS node pool, so
-`networks[].subnets` is empty and the load balancer subnet is configured separately.
-
-| Setting | Value |
-| --- | --- |
-| Deployment | `K8S` on the existing AKS cluster |
-| Pricing | `UsageBased` |
-| AutoMQ nodes | `reserved_node_count = 3` |
-| Placement | Three availability zones |
-| WAL | `S3WAL`, backed by Azure Blob |
-| Kafka security | `sasl` authentication with `plaintext` transport |
-
-`data_buckets`, `instance_role`, and `dns_zone` are intentionally omitted.
-The Control Plane creates and manages the Data Bucket, Data Plane UAMI, and
-Private DNS Zone. Do not pass the environment setup's customer-provided bucket,
-identity, or DNS outputs. AKS, networking, and the environment Ops Bucket remain
-existing dependencies.
-
-Three AutoMQ nodes are not the total AKS VM count. Allow capacity for system
-pods and Connect workers. SASL_PLAINTEXT authenticates clients without transport
-encryption; this example assumes private network access.
-
-## Create
-
-### Kafka Instance
-
-Run in `instance/`:
-
-```bash
 terraform init
-terraform validate
-terraform plan -out=instance.tfplan
-terraform apply instance.tfplan
+terraform plan
+terraform apply
 terraform output -raw instance_id
 terraform output endpoints
 ```
 
-Confirm the Instance is ready in the Console and check its placement across
-the selected availability zones.
+## Create a PostgreSQL JDBC Sink
 
-### Datagen Connector
+The Connector example creates:
 
-The second example registers a Datagen plugin, installs it into a one-worker
-`TIER1` Connect Cluster, and creates a one-task Source Connector. It also creates
-the three-partition `orders` topic and a `datagen-writer` Kafka user with PRODUCE
-permission on that topic.
+- An `orders` topic with three partitions.
+- A `jdbc-reader` Kafka user, topic CONSUME permission, and access to consumer
+  group `connect-demo-orders-postgres`.
+- A JDBC plugin registration and a one-worker `TIER1` Connect Cluster.
+- A one-task `io.confluent.connect.jdbc.JdbcSinkConnector` that upserts orders
+  into PostgreSQL using `order_id` as the primary key.
 
-Before running it:
+Prepare a complete JDBC plugin ZIP, including the PostgreSQL JDBC driver,
+compatible with your Connect runtime. Supply an HTTPS download URL reachable
+by the Console/runtime. The example registers the archive; it does not build
+or upload it. See the
+[JDBC Sink documentation](https://docs.confluent.io/kafka-connectors/jdbc/current/sink-connector/overview.html).
 
-- Prepare a complete Datagen plugin ZIP compatible with the Connect runtime,
-  with an HTTPS URL accessible to the Console/runtime. The plugin resource
-  registers an archive; it does not build or upload it. See the
-  [Datagen documentation](https://github.com/confluentinc/kafka-connect-datagen).
-- Confirm the namespace, ServiceAccount, scheduling capacity, and networking
-  required by your Console's Connect implementation. If runtime access requires
-  Azure Workload Identity, configure the worker UAMI, federation, and grants
-  according to that version's documentation, including `compute.iam_role` when
-  required. The Kafka Instance identity is not automatically the worker identity.
+Prepare a PostgreSQL database reachable from Connect workers and create:
 
-From `instance/`:
-
-```bash
-cd ../connector
-cp terraform.tfvars.example terraform.tfvars
-# Fill in the Instance ID from the previous step and all other placeholders.
-read -r -s -p 'Kafka datagen-writer password: ' TF_VAR_kafka_password
-export TF_VAR_kafka_password
-terraform init
-terraform validate
-terraform plan -out=connector.tfplan
-terraform apply connector.tfplan
+```sql
+CREATE TABLE public.orders (
+    order_id BIGINT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    amount DOUBLE PRECISION NOT NULL
+);
 ```
 
-The Connector uses `SASL_PLAINTEXT` with `SCRAM-SHA-512` for its producer.
-AutoMQ manages worker-level Kafka authentication. Plugin settings belong in
-`connector_config`; `connector.class` and `tasks.max` are injected from
-`connector_class` and `task_count`.
+Give the database user CONNECT, schema USAGE, and SELECT/INSERT/UPDATE permissions.
+Ensure its search path resolves `orders` to this table. The example disables
+automatic table creation and schema evolution.
 
-The example disables producer idempotence to demonstrate topic-level write
-permissions. Adjust reliability settings and ACLs for your use case. For a
-database Source or Blob Sink, replace the plugin and its configuration and
-provide the external system's permissions and credentials. Use
-`connector_config_sensitive` for sensitive plugin settings.
+Replace the placeholders in `connector/main.tf`, including the Instance ID
+from the previous step, AKS settings, plugin URL/version, Kafka password, and
+database connection details. Use the same Kafka password in the user and
+Connector resources. The database password is shown in
+`connector_config_sensitive` to demonstrate that API field; sensitive values
+still appear in Terraform state.
 
-## Outputs
-
-Run in `connector/`:
+Confirm the Connect namespace, ServiceAccount, capacity, and network requirements
+for your target environment. If the worker runtime needs Azure Workload Identity,
+configure its identity, federation, and grants according to the target version's
+documentation, including `compute.iam_role` when required. The Instance identity
+is not automatically the Connect worker identity.
 
 ```bash
-terraform output connect_cluster_id
-terraform output connector_id
+# From instance/
+cd ../connector
+terraform init
+terraform plan
+terraform apply
 terraform output connector_state
 ```
 
-Check Connect Cluster/task health and incoming `orders` records or write metrics
-in the Console. Client-side consumption requires a separate user with topic
-CONSUME and consumer group permissions; the example writer has write access only.
+Produce records to `orders` using a separate Kafka user with PRODUCE permission.
+The JsonConverter in this example requires a schema/payload envelope, not plain
+JSON. Send the following as one Kafka record value:
 
-For later changes, review `terraform plan` before applying, particularly resource
-replacements. Follow each resource's import documentation to adopt existing resources.
+```json
+{"schema":{"type":"struct","name":"Order","optional":false,"fields":[{"field":"order_id","type":"int64","optional":false},{"field":"customer_id","type":"string","optional":false},{"field":"amount","type":"float64","optional":false}]},"payload":{"order_id":1001,"customer_id":"customer-1","amount":42.5}}
+```
+
+Check Connector/task health in the Console, then query PostgreSQL:
+
+```sql
+SELECT * FROM public.orders WHERE order_id = 1001;
+```
+
+The record key is ignored; replaying the same `order_id` updates the existing row.
+If you change the Connector name or override its consumer group, also update
+the group ACL.
 
 ## Cleanup
 
-Destroy Connector resources before the Kafka Instance:
+The examples have separate Terraform state. Destroy Connector resources first,
+then the Kafka Instance:
 
 ```bash
 # From connector/
@@ -181,11 +152,13 @@ cd ../instance
 terraform destroy
 ```
 
-The roots have separate state and pass the Instance ID manually; Terraform does
-not enforce this cross-state cleanup order. Clean up environment infrastructure
-last, and check the target version's data retention behavior before deleting it.
+The external PostgreSQL database and rows are not managed by these examples.
+Clean up environment infrastructure last, after checking data retention needs.
 
 ## Reference
+
+Use the provider documentation for complete schemas, version compatibility,
+permissions, and update/import behavior:
 
 - [Provider](https://registry.terraform.io/providers/automq/automq/0.4.8/docs)
 - [Kafka Instance](https://registry.terraform.io/providers/automq/automq/0.4.8/docs/resources/kafka_instance)
