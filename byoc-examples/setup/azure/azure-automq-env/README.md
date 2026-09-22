@@ -83,6 +83,10 @@ password when prompted, then finish **System Initialization**.
 
 ## Create an AutoMQ Instance
 
+For a step-by-step Terraform walkthrough after System Initialization, see
+[automq-example](automq-example/README.md): create Service Account credentials,
+provision a managed Azure Kafka Instance, and add a Debezium JDBC Sink for PostgreSQL.
+
 In the Console, create a K8S Instance using:
 
 - Cluster: `kubernetes_cluster_id`
