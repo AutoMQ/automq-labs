@@ -1,3 +1,6 @@
+# Console permissions for Managed resources. Resource-group assignments bound
+# lifecycle actions to the managed root; the selected VNet assignment is kept
+# exact because Azure validates linked-scope join/action separately.
 locals {
   managed_blob_metadata_key   = "automqvendor"
   managed_blob_metadata_value = "automq"
@@ -58,7 +61,15 @@ resource "azurerm_role_definition" "console_managed_dns" {
 }
 
 resource "azurerm_role_assignment" "console_managed_dns" {
+  # Zone and VNet-link write actions apply to the Console-managed Resource Group.
   scope              = local.console_resource_group_scope
+  role_definition_id = azurerm_role_definition.console_managed_dns.role_definition_resource_id
+  principal_id       = azurerm_user_assigned_identity.console.principal_id
+}
+
+resource "azurerm_role_assignment" "console_managed_dns_vnet" {
+  # Azure LinkedAuthorization requires join/action on the linked VNet itself.
+  scope              = var.vnet_id
   role_definition_id = azurerm_role_definition.console_managed_dns.role_definition_resource_id
   principal_id       = azurerm_user_assigned_identity.console.principal_id
 }
