@@ -1,3 +1,7 @@
+# Console permissions for customer-provided resources. Keep ARM management
+# actions separate from Kubernetes API authorization: the AKS management role
+# only obtains clusterUser credentials, while the Azure RBAC Cluster Admin
+# assignment grants the Kubernetes verbs used by Helm.
 locals {
   console_subscription_scope = "/subscriptions/${var.subscription_id}"
   console_resource_group_scope = join("/", [
@@ -10,6 +14,7 @@ locals {
     ops  = azurerm_storage_container.automq_ops.id
     data = azurerm_storage_container.automq_data.id
   }
+  console_required_aks_cluster_admin_scopes = [var.kubernetes_cluster_id]
 }
 
 resource "azurerm_role_definition" "console_required_read" {
@@ -129,7 +134,17 @@ resource "azurerm_role_definition" "console_required_aks_access" {
 }
 
 resource "azurerm_role_assignment" "console_required_aks_access" {
+  # Exact AKS scope: this grants ARM read and clusterUser credential access.
   scope              = var.kubernetes_cluster_id
   role_definition_id = azurerm_role_definition.console_required_aks_access.role_definition_resource_id
   principal_id       = azurerm_user_assigned_identity.console.principal_id
+}
+
+resource "azurerm_role_assignment" "console_required_aks_cluster_admin" {
+  # The list currently contains one selected AKS; keep it list-shaped for the
+  # same late-bound scope model used by the playground permissions module.
+  for_each             = { for index, scope in local.console_required_aks_cluster_admin_scopes : index => scope }
+  scope                = each.value
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  principal_id         = azurerm_user_assigned_identity.console.principal_id
 }

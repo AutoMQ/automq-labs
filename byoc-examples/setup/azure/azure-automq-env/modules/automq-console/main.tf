@@ -236,11 +236,13 @@ resource "azurerm_linux_virtual_machine" "console" {
 
   depends_on = [
     azurerm_role_assignment.console_managed_dns,
+    azurerm_role_assignment.console_managed_dns_vnet,
     azurerm_role_assignment.console_managed_rbac_delegation,
     azurerm_role_assignment.console_managed_storage,
     azurerm_role_assignment.console_managed_target_blob_data,
     azurerm_role_assignment.console_managed_uami,
     azurerm_role_assignment.console_required_aks_access,
+    azurerm_role_assignment.console_required_aks_cluster_admin,
     azurerm_role_assignment.console_required_blob_data,
     azurerm_role_assignment.console_required_dns_records,
     azurerm_role_assignment.console_required_read,
