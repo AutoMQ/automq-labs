@@ -138,8 +138,6 @@ resource "azurerm_role_definition" "workload_node_disk_runtime" {
     actions = [
       "Microsoft.Compute/disks/read",
       "Microsoft.Compute/virtualMachines/read",
-      "Microsoft.Compute/virtualMachines/attachDisk/action",
-      "Microsoft.Compute/virtualMachines/detachDisk/action",
       "Microsoft.Compute/virtualMachines/write",
       "Microsoft.Compute/virtualMachineScaleSets/virtualMachines/read",
       "Microsoft.Compute/virtualMachineScaleSets/virtualMachines/write",
