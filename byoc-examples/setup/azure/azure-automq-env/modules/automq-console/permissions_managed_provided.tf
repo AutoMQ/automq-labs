@@ -4,6 +4,7 @@
 locals {
   managed_blob_metadata_key   = "automqvendor"
   managed_blob_metadata_value = "automq"
+  vnet_ids                    = [var.vnet_id]
 }
 
 resource "azurerm_role_definition" "console_managed_storage" {
@@ -68,8 +69,10 @@ resource "azurerm_role_assignment" "console_managed_dns" {
 }
 
 resource "azurerm_role_assignment" "console_managed_dns_vnet" {
+  for_each = { for index, vnet_id in local.vnet_ids : index => vnet_id }
+
   # Azure LinkedAuthorization requires join/action on the linked VNet itself.
-  scope              = var.vnet_id
+  scope              = each.value
   role_definition_id = azurerm_role_definition.console_managed_dns.role_definition_resource_id
   principal_id       = azurerm_user_assigned_identity.console.principal_id
 }
