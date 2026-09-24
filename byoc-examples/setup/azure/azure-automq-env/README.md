@@ -1,4 +1,4 @@
-# Deploy AutoMQ BYOC Console on Azure with Terraform
+# Deploy AutoMQ BYOC Environment on Azure with Terraform
 
 This evaluation quick-start deploys an AutoMQ BYOC 8.x Console and an AKS
 foundation into an existing Azure VNet. The Console runs as a Docker container
