@@ -41,7 +41,7 @@ param publicIPName string = ''
 param publicIPResourceGroup string = resourceGroup().name
 
 @description('Virtual machine size for the AutoMQ BYOC Console')
-param vmSize string = 'Standard_D2s_v3'
+param vmSize string = 'Standard_D2s_v5'
 
 @description('Administrator username for the virtual machine')
 param adminUsername string = 'azureuser'

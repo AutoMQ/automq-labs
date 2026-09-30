@@ -116,7 +116,7 @@ variable "nodepool" {
 variable "automq_console_vm_size" {
   description = "VM size for AutoMQ console"
   type        = string
-  default     = "Standard_D2s_v3"
+  default     = "Standard_D2s_v5"
 }
 
 variable "private_access_only" {

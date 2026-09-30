@@ -80,7 +80,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   default_node_pool {
     name                         = "system"
-    vm_size                      = "Standard_D4s_v3"
+    vm_size                      = "Standard_D4s_v5"
     node_count                   = 1
     vnet_subnet_id               = var.subnet_id
     only_critical_addons_enabled = true
