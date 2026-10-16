@@ -1,0 +1,29 @@
+# Pure private deployment: all Console and broker subnets use VPC endpoints.
+# Ensure the private subnet has access to the Console image and bootstrap
+# packages through an approved private path before applying this template.
+# Register the AWS environment and copy the complete Base64 CONFIG value from
+# the AutoMQ Cloud installation wizard:
+# https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#register-your-automq-environment
+automq_config = "REPLACE_WITH_AUTOMQ_CONFIG"
+
+# All other inputs have evaluation-ready defaults. Override only when needed.
+# name_prefix          = "automq-ec2-quickstart"
+# vpc_cidr             = "10.42.0.0/16"
+# cluster_mode         = "ec2" # Use "eks" for EKS cluster API endpoints.
+# enable_fsx           = false
+# enable_efs           = false
+# enable_s3table       = false
+# enable_public_dns    = false # Adds the STS endpoint.
+# Use the Console image shown by the same installation wizard when it differs,
+# then review the image-specific EC2 Mode Minimal Permissions contract.
+# console_image         = "automq.azurecr.io/automq/automq-byoc-console:8.3.16-aws"
+# console_instance_type = "t3.large"
+
+# Console port 8080 is restricted to the VPC CIDR; reach it through VPN,
+# Direct Connect, a bastion, or another connected private network.
+
+# Leave empty to create a module-managed encrypted data bucket. An override
+# must already exist in the CONFIG Region and is not managed by this root.
+# data_bucket_name          = ""
+# force_destroy_data_bucket = true
+# force_destroy_ops_bucket  = true
