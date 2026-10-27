@@ -11,10 +11,6 @@
 3. AutoMQ 运维人员通过其受控身份获取临时凭据，调用 `sts:AssumeRole` 进入您创建的 Role，再对您授权的 EC2 发起 `ssm:StartSession`。
 4. 您可随时修改目标实例范围或撤销 Role，并在客户账号中查看访问记录。
 
-External ID 是跨账号 AssumeRole 请求中的客户专属标识，用来防止服务方在操作不同客户环境时使用错 Role。它不是密码，也不能代替对 AutoMQ IAM Role 和目标 EC2 的权限限制。请向 AutoMQ 获取**具体的 IAM Role ARN**和为您分配的 External ID。[AWS：第三方跨账号访问](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html)
-
-[AutoMQ 的 AWS 运维授权文档](https://docs.automq.com/zh/automq-cloud/manage-environments/manage-environment-ops-authing/set-ops-authing-from-aws)介绍的是 **S3 Ops Bucket 授权**。其中的 AutoMQ AWS 账号 ID 不是本运维通道的 External ID，也没有指定用于 AssumeRole 的 IAM Role ARN。
-
 ## 准备控制台和数据面 EC2
 
 ### 1. 安装并启动 SSM Agent
