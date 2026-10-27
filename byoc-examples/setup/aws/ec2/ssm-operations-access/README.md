@@ -1,77 +1,62 @@
-# SSM Operations Access for AWS EC2 BYOC
+# 在 AWS EC2 BYOC 环境中配置 SSM 运维通道
 
-Use this procedure when you want authorized AutoMQ operators to open a
-Session Manager shell on the Console EC2 host. The native Session Manager shell
-does not require an SSH key, `sshd`, or inbound TCP 22. SSH tunneled through
-Session Manager is a different mode: it still requires `sshd` and SSH
-credentials, and Session Manager cannot log the commands inside that tunnel.
-[AWS explains the distinction](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html).
+您可以通过 AWS Systems Manager（SSM）Session Manager，为 AutoMQ BYOC 环境建立受控的运维通道。发生需要主机排查的问题时，获您授权的 AutoMQ 运维人员可进入指定的控制台或数据面 EC2 主机。您在自己的 AWS 账号中管理授权范围、访问记录和撤销操作。
 
-The Console instance role lets the **agent on the host** connect to AWS.
-The separate operator role below lets an **AutoMQ person** start a session.
-Neither role grants the other role's permissions.
+本文使用 **Session Manager 原生 Shell**：由 EC2 上的 SSM Agent 主动连接 AWS 服务，运维人员无需 SSH 私钥，也无需为主机开放入站 TCP 22。它与通过 SSM 隧道运行 SSH 不同；后者仍需要 `sshd` 和 SSH 凭据，且无法记录隧道内的命令内容。[AWS：Session Manager](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager.html) · [AWS：SSH over SSM](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html)
 
-## 1. Verify that the Console host is managed by SSM
+## 了解访问流程
 
-The Console root already attaches
-[`AmazonSSMManagedInstanceCore`](../automq-console/iam.tf) to its existing Console
-EC2 role and assigns that role through an instance profile. Keep this
-attachment if you customize the root; an EC2 instance cannot use a second
-instance profile alongside the Console profile. The example selects the
-standard Amazon Linux 2023 AMI through the public SSM parameter. Verify that
-SSM Agent is installed and running on the actual instance. It uses the instance
-role to register with Systems Manager and establish its message channels.
-[AWS documents the instance permissions](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-instance-profile.html).
+1. 您让目标 EC2 的 SSM Agent 注册到 AWS Systems Manager，并允许主机通过出站 HTTPS 443 连接本 Region 的 SSM 服务。
+2. 您在客户账号中创建 **SSM 运维 Role**。该 Role 只信任 AutoMQ 提供的指定 IAM Role，并要求双方约定的客户专属 External ID。
+3. AutoMQ 运维人员通过其受控身份获取临时凭据，调用 `sts:AssumeRole` 进入您创建的 Role，再对您授权的 EC2 发起 `ssm:StartSession`。
+4. 您可随时修改目标实例范围或撤销 Role，并在客户账号中查看访问记录。
 
-From `automq-console`, get the target instance ID:
+External ID 是跨账号 AssumeRole 请求中的客户专属标识，用来防止服务方在操作不同客户环境时使用错 Role。它不是密码，也不能代替对 AutoMQ IAM Role 和目标 EC2 的权限限制。请向 AutoMQ 获取**具体的 IAM Role ARN**和为您分配的 External ID。[AWS：第三方跨账号访问](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html)
 
-```bash
-terraform output -raw console_instance_id
-```
+[AutoMQ 的 AWS 运维授权文档](https://docs.automq.com/zh/automq-cloud/manage-environments/manage-environment-ops-authing/set-ops-authing-from-aws)介绍的是 **S3 Ops Bucket 授权**。其中的 AutoMQ AWS 账号 ID 不是本运维通道的 External ID，也没有指定用于 AssumeRole 的 IAM Role ARN。
 
-Check the instance in **AWS Systems Manager > Fleet Manager > Managed nodes**.
-Its ping status must be `Online`. You can also query it with the AWS CLI:
+## 准备控制台和数据面 EC2
 
-```bash
-aws ssm describe-instance-information --region <REGION> \
-  --filters Key=InstanceIds,Values=<CONSOLE_INSTANCE_ID>
-```
+### 1. 安装并启动 SSM Agent
 
-The Console security group has no SSH ingress. The host must reach regional
-`ssm` and `ssmmessages` endpoints over outbound HTTPS 443. This example's
-public Console subnet and outbound security group rule provide an internet
-path; a private deployment needs NAT or suitable interface VPC endpoints,
-private DNS, and endpoint security group access. Older agent/Region
-combinations can also need `ec2messages`.
-[AWS lists the network requirements](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-create-vpc.html).
-
-If you replace the AMI with one that lacks SSM Agent, install and start it in
-the AMI or instance user data before closing other management access:
+控制台和每台需要接受 SSM 连接的数据面 EC2 都必须运行 SSM Agent。此 EC2 示例使用标准 Amazon Linux 2023 AMI；部署后仍应检查实际实例的 Agent 状态。若您更换 AMI，请在镜像或启动脚本中安装 Agent，再启动服务：[AWS：预装 Agent 的 AMI](https://docs.aws.amazon.com/systems-manager/latest/userguide/ami-preinstalled-agent.html) · [AWS：在 Amazon Linux 安装 Agent](https://docs.aws.amazon.com/systems-manager/latest/userguide/agent-install-al2.html)。
 
 ```bash
 sudo dnf install -y amazon-ssm-agent
+```
+
+```bash
 sudo systemctl enable --now amazon-ssm-agent
 ```
 
-If the host is not `Online`, check the instance profile, Agent service and
-logs, Region, DNS, and outbound 443 before granting operator access. On the
-host, check `systemctl status amazon-ssm-agent` and
-`/var/log/amazon/ssm/amazon-ssm-agent.log`.
+```bash
+sudo systemctl status amazon-ssm-agent
+```
 
-## 2. Deploy the customer-owned operator role
+### 2. 给目标主机的 instance profile 授权
 
-Keep this Terraform root separate from `automq-console` and `automq-cluster`.
-It takes the existing AWS account, Region, instance IDs, and IAM role names as
-inputs. It does not read either root's Terraform state or modify their source.
+SSM Agent 需要通过主机现有 instance profile 的 IAM Role 向 Systems Manager 注册并建立消息通道。请在该 Role 上附加 AWS 托管策略 `AmazonSSMManagedInstanceCore`；保留主机原有的应用权限。[AWS：实例侧权限](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-instance-profile.html)
 
-Ask AutoMQ for the specific IAM Role ARN used by its operators and a unique
-External ID for your customer account. From `automq-console`, obtain the
-Console instance and data-plane role names after applying that root:
+此示例的 [Console Terraform](../automq-console/iam.tf) **已经**把该策略附加到控制台 EC2 的 Role。数据面节点使用另一个 Role。若要让数据面主机也接受 SSM 连接，请将 `automq-console` 输出的 `cluster_role_name` 传给下文的 `additional_instance_role_names`；本目录的 [Terraform](ssm-operator.tf)会为该 Role 附加策略。不要把控制台 Role 再传入该参数，以免两个 Terraform state 同时管理同一个附件。
 
-The [AWS Ops authorization guide](https://docs.automq.com/zh/automq-cloud/manage-environments/manage-environment-ops-authing/set-ops-authing-from-aws)
-lists an AutoMQ AWS account ID for **S3 Ops Bucket access**. It does not
-provide an External ID or identify the IAM Role for this SSM connection. Do
-not substitute that account ID for either value.
+### 3. 确认网络与注册状态
+
+目标 EC2 需要通过出站 HTTPS 443 访问同一 Region 的 `ssm` 和 `ssmmessages` 服务。您可以使用现有互联网/NAT 路径，或配置 Interface VPC Endpoint；后者需要 Private DNS 和允许实例访问的 Endpoint 安全组规则。旧 Region 或旧版 Agent 可能还需 `ec2messages`。[AWS：Systems Manager VPC Endpoint](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-create-vpc.html)
+
+在 **AWS Systems Manager > Fleet Manager > Managed nodes** 中确认每台目标主机为 `Online`。也可查询指定实例：
+
+```bash
+aws ssm describe-instance-information --region <REGION> \
+  --filters Key=InstanceIds,Values=<INSTANCE_ID>
+```
+
+若主机未显示 `Online`，先检查 Agent 服务、instance profile、出站网络、DNS 与 `/var/log/amazon/ssm/amazon-ssm-agent.log`。[AWS：排查 SSM Agent](https://docs.aws.amazon.com/systems-manager/latest/userguide/troubleshooting-ssm-agent.html)
+
+## 创建客户侧 SSM 运维 Role
+
+在此 `ssm-operations-access` 目录中部署独立的 Terraform 配置。它通过参数接收您的 Region、目标 EC2 instance ID、AutoMQ IAM Role ARN、External ID，以及需要补充 SSM 权限的数据面 Role 名称；不会读取或修改控制台和集群的 Terraform state。
+
+部署控制台后，在 `automq-console` 目录获取以下输出：
 
 ```bash
 terraform output -raw console_instance_id
@@ -81,30 +66,18 @@ terraform output -raw console_instance_id
 terraform output -raw cluster_role_name
 ```
 
-The Console root already attaches `AmazonSSMManagedInstanceCore` to its own
-instance role. To let broker EC2 hosts register with SSM, put the
-`cluster_role_name` value in `additional_instance_role_names`. This root will
-attach the same AWS managed policy to that existing node role. Leave the list
-empty if you only need Console access. Do not add the Console role to this
-list, because its attachment is already managed by the Console Terraform root.
-
-In this `ssm-operations-access` directory, create a local `terraform.tfvars`:
+在本目录创建本地 `terraform.tfvars`，将占位符替换为实际值。首次可只授权控制台；需要访问数据面时，再把经过确认的 Broker EC2 instance ID 加入 `target_instance_ids`。该文件及 Terraform state 包含 External ID，应存放在受控位置。
 
 ```hcl
 aws_region                     = "<REGION>"
 operator_role_name             = "automq-ssm-operator-<ENVIRONMENT>"
 automq_principal_arn           = "arn:aws:iam::<AUTOMQ_ACCOUNT_ID>:role/<AUTOMQ_OPERATOR_ROLE>"
-external_id                   = "<CUSTOMER_SPECIFIC_EXTERNAL_ID>"
-target_instance_ids           = ["<CONSOLE_INSTANCE_ID>"]
+external_id                    = "<CUSTOMER_SPECIFIC_EXTERNAL_ID>"
+target_instance_ids            = ["<CONSOLE_INSTANCE_ID>"]
 additional_instance_role_names = ["<CLUSTER_ROLE_NAME>"]
 ```
 
-Set `additional_instance_role_names = []` for Console-only access. Add broker
-EC2 instance IDs to `target_instance_ids` only after you identify and approve
-them. Updating the input and applying again updates the allowed instance ARNs.
-Keep `terraform.tfvars` and Terraform state private; they contain the External
-ID and the operator Role configuration. Confirm the AWS identity points to
-your customer account, then apply this directory:
+如果只访问控制台，将 `additional_instance_role_names` 设为 `[]`。在客户账号中确认当前 AWS 身份，然后初始化、检查计划并部署：
 
 ```bash
 aws sts get-caller-identity
@@ -122,59 +95,25 @@ terraform plan
 terraform apply
 ```
 
+部署后取得客户侧运维 Role ARN，提供给 AutoMQ：
+
 ```bash
 terraform output -raw ssm_operator_role_arn
 ```
 
-[`ssm-operator.tf`](ssm-operator.tf) creates a role that trusts only the named
-AutoMQ IAM Principal with the supplied `sts:ExternalId`. AutoMQ must separately
-allow that source Principal to assume the output role ARN. Verify that a
-missing or incorrect External ID is rejected.
-[AWS describes cross-account third-party access](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html).
+请同时告知 AutoMQ 您的 AWS 账号 ID、Region 和允许访问的实例 ID。AutoMQ 需要在其自身账号中允许指定 IAM Role 调用 `sts:AssumeRole`，并在请求中传入约定的 External ID。
 
-The generated policy requires **both** an approved EC2 instance ID and the
-case-sensitive `automqVendor=automq` tag on that instance. The Console root
-sets this tag on its EC2 host. Check the actual tag on every broker EC2 host
-before adding its ID; a tag on the IAM role or AutoMQ Instance alone does not
-satisfy the SSM policy. The assumed operator role cannot create or delete the
-access tag. Protect other identities that can set the tag, create tagged EC2
-instances, or change this role's policies.
-[AWS documents tag-based Session Manager access](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html).
+## 确认权限边界与审计记录
 
-The policy grants native Session Manager shell access. It does not grant
-`ssm:SendCommand` or SSH-over-SSM access. Give AutoMQ the
-`ssm_operator_role_arn`, AWS account ID, Region, and approved instance ID.
-With short-lived assumed credentials, AWS CLI, and the
-[Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html),
-operators confirm their identity and open a shell:
+本目录创建的 Role 只信任参数指定的 AutoMQ IAM Role，并要求正确的 `sts:ExternalId`。因此，只有获得该 AutoMQ Role 使用权限的人员或流程，才能尝试 AssumeRole；AutoMQ 负责管理其内部人员权限。客户侧策略进一步要求目标 **EC2 实例 ID 在 `target_instance_ids` 中**，且该实例具有大小写完全一致的 `automqVendor=automq` Tag。只有 Role 或 AutoMQ Instance 上存在该 Tag 不够。假设后的 Role 被显式禁止给 EC2 创建或删除这个访问边界 Tag；您还应限制其他身份修改该 Tag 或运维 Role。[AWS：按 Tag 限制 Session Manager 访问](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html)
 
-```bash
-aws sts get-caller-identity --profile <ASSUMED_OPERATOR_PROFILE>
-```
+本配置授予 Session Manager 原生 Shell 权限，不授予 `ssm:SendCommand` 或 SSH over SSM。运维人员使用短期凭据和 [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)进入获授权主机；Linux 默认会话用户 `ssm-user` 通常具有 sudo 权限，请将其视为高权限主机访问。
 
-```bash
-aws ssm start-session --profile <ASSUMED_OPERATOR_PROFILE> \
-  --region <REGION> --target <CONSOLE_INSTANCE_ID>
-```
+客户可在自己的 AWS 账号中分别查看两类记录：
 
-Confirm the session opens on the expected host and that an unapproved or
-untagged instance returns `AccessDenied`. The default Linux user, `ssm-user`,
-normally has sudo privileges; treat this as privileged host access.
+| 记录 | 配置与查看位置 | 能看到什么 |
+| --- | --- | --- |
+| API 调用 | **CloudTrail > Event history**，在目标 Region 查询 `StartSession`、`TerminateSession`；需长期保留时配置 CloudTrail trail。 | AssumeRole 后的会话身份、目标及调用时间等 API 信息；**不包含 Shell 内执行的命令**。[AWS：CloudTrail 记录](https://docs.aws.amazon.com/systems-manager/latest/userguide/monitoring-cloudtrail-logs.html) |
+| 原生 Shell 内容 | 在 **Systems Manager > Session Manager > Preferences** 中，提前启用发送至客户控制的 CloudWatch Logs 或 S3，并设置保留期和访问权限；随后到对应 Log Group 或 Bucket 查看。 | 启用日志后产生的原生 Shell 会话内容。SSH over SSM 和端口转发的隧道内容无法由 Session Manager 记录。[AWS：会话日志](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-logging.html) |
 
-## 3. Review sessions and API activity
-
-In the customer AWS account, configure **Systems Manager > Session Manager >
-Preferences** to deliver native shell session content to a customer-owned
-CloudWatch Logs log group or S3 bucket. Set retention and access controls for
-that destination. Open the configured log group or bucket to review commands
-from sessions created **after** logging was enabled.
-[AWS explains session logging and its limitations](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-logging.html).
-
-Use **CloudTrail > Event history** in the same Region to find `StartSession`
-and `TerminateSession` API events and identify the assumed operator role,
-target, and time. CloudTrail records API activity, not shell command content.
-For a longer retention period or centralized audit, configure a CloudTrail
-trail. SSH-over-SSM and port-forwarding tunnel content cannot be captured by
-Session Manager session logging.
-[AWS documents the CloudTrail events](https://docs.aws.amazon.com/systems-manager/latest/userguide/monitoring-cloudtrail-logs.html).
-
+配置完成后，用客户认可的实例验收：目标主机为 `Online`；AutoMQ 运维 Role 能进入已授权实例；实例不在清单中或缺少授权 Tag 时返回 `AccessDenied`；客户能在 CloudTrail 和所选会话日志目的地找到新会话的记录。
