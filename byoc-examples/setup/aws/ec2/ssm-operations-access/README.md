@@ -43,26 +43,22 @@ sudo systemctl status amazon-ssm-agent
 
 SSM Agent 需要通过主机现有 instance profile 的 IAM Role 向 Systems Manager 注册并建立消息通道。请在该 Role 上附加 AWS 托管策略 `AmazonSSMManagedInstanceCore`；保留主机原有的应用权限。[AWS：实例侧权限](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-instance-profile.html)
 
-此示例的 [Console Terraform](../automq-console/iam.tf) **已经**把该策略附加到控制台 EC2 的 Role。数据面节点使用另一个 Role。若要让数据面主机也接受 SSM 连接，请在 `automq-console` 目录取得节点 Role 名称：
+在 **AWS EC2 控制台 > 实例** 中选择控制台 EC2，打开 **安全 > IAM Role**，查看它实际使用的 Role。此示例的 [Console Terraform](../automq-console/iam.tf) **已经**为该 Role 附加了 `AmazonSSMManagedInstanceCore`，无需重复操作。
+
+如果还要连接数据面主机，请分别在 EC2 控制台查看目标 Broker 实例的 **安全 > IAM Role**，取得该 Role 的名称，再为它附加策略：
 
 ```bash
-terraform output -raw cluster_role_name
-```
-
-然后在客户账号中附加策略：
-
-```bash
-aws iam attach-role-policy --role-name <CLUSTER_ROLE_NAME> \
+aws iam attach-role-policy --role-name <BROKER_INSTANCE_ROLE_NAME> \
   --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
 ```
 
 确认策略已附加：
 
 ```bash
-aws iam list-attached-role-policies --role-name <CLUSTER_ROLE_NAME>
+aws iam list-attached-role-policies --role-name <BROKER_INSTANCE_ROLE_NAME>
 ```
 
-若您使用其他控制台部署模板，也可对其**现有** EC2 Role 执行同一命令；本示例的控制台 Role 无需重复操作。
+若您使用其他控制台部署模板，先从目标控制台 EC2 的 **IAM Role** 查看实际 Role；仅当该策略尚未附加时，才对这个现有 Role 执行同一命令。
 
 ### 3. 确认网络与注册状态
 
