@@ -77,7 +77,7 @@ If a host is not `Online`, check the Agent service, instance profile, outbound n
 
 The [Terraform example](ssm-operator.tf) in this directory creates a customer-side operations role. It allows sessions to EC2 instances in the specified Region and customer account that have the case-sensitive tag `automqVendor=automq`. This includes any other instances with that tag. It does not read or modify the Console or Cluster Terraform state.
 
-Create a local `terraform.tfvars` in this directory and replace the placeholders with your values. Keep this file and the Terraform state in a controlled location because they contain the External ID.
+Create a local `terraform.tfvars` in this directory and replace the placeholders with your values. AWS recommends a unique External ID for each customer when a third party serves multiple customers ([AWS guidance](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html)). Keep this file and the Terraform state in a controlled location because they contain the External ID.
 
 ```hcl
 region          = "<REGION>"
@@ -123,7 +123,7 @@ Also provide AutoMQ with your AWS account ID and Region. AutoMQ must allow its d
 
 ## Review access boundaries and audit records
 
-The customer-side role trusts only the AutoMQ IAM Role specified in `automq_role_arn` and requires the correct `sts:ExternalId`. Only people or processes permitted to use that AutoMQ Role can attempt to assume the customer-side role. AutoMQ manages access for its operators. The customer-side policy allows access to **every EC2 instance in the specified Region and customer account** that has the case-sensitive tag `automqVendor=automq`. Tagging only the role or the AutoMQ Instance does not satisfy this condition. The assumed role is explicitly denied permission to add or remove this access-boundary tag on EC2 instances. You should also restrict other identities from changing the tag or the operations role. If you need a narrower scope, add a customer-controlled EC2 tag condition to the policy before applying it. [AWS: restrict Session Manager access by tag](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html)
+The customer-side role trusts only the AutoMQ IAM Role specified in `automq_role_arn` and requires the correct `sts:ExternalId`. Only people or processes permitted to use that AutoMQ Role can attempt to assume the customer-side role. AutoMQ manages access for its operators. The customer-side policy allows access to **every EC2 instance in the specified Region and customer account** that has the case-sensitive tag `automqVendor=automq`. Tagging only the role or the AutoMQ Instance does not satisfy this condition. The assumed role is explicitly denied permission to add or remove this access-boundary tag on EC2 instances. You should also restrict other identities from changing the tag or the operations role. If you need a narrower scope, add a customer-controlled EC2 tag condition to the policy before applying it. [AWS: instance, tag, Session document, and own-session policy examples](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html)
 
 If you deployed the Console from this example, get its EC2 instance ID from the `automq-console` directory before checking its tag:
 
@@ -138,7 +138,7 @@ aws ec2 describe-tags --region <REGION> \
   --filters Name=resource-id,Values=<INSTANCE_ID> Name=key,Values=automqVendor
 ```
 
-This configuration grants native Session Manager shell access, but not `ssm:SendCommand` or SSH over SSM. Operators use temporary credentials and the [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) to access authorized hosts. The default Linux session user, `ssm-user`, usually has sudo access; treat these sessions as privileged host access.
+This configuration grants native Session Manager shell access, but not `ssm:SendCommand` or SSH over SSM. [AWS's sample Session Manager policies](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-quickstart.html) show `StartSession`, Session document, and session management permissions; some also grant `SendCommand`. Operators use temporary credentials and the [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) to access authorized hosts. The default Linux session user, `ssm-user`, usually has sudo access; treat these sessions as privileged host access.
 
 AutoMQ operators can verify their temporary identity before starting a session:
 
