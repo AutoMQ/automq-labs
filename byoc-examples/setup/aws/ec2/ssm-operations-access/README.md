@@ -13,17 +13,27 @@
 
 ## 准备控制台和数据面 EC2
 
-### 1. 安装并启动 SSM Agent
+### 1. 检查并启动 SSM Agent
 
-控制台和每台需要接受 SSM 连接的数据面 EC2 都必须运行 SSM Agent。此 EC2 示例使用标准 Amazon Linux 2023 AMI；部署后仍应检查实际实例的 Agent 状态。若您更换 AMI，请在镜像或启动脚本中安装 Agent，再启动服务：[AWS：预装 Agent 的 AMI](https://docs.aws.amazon.com/systems-manager/latest/userguide/ami-preinstalled-agent.html) · [AWS：在 Amazon Linux 安装 Agent](https://docs.aws.amazon.com/systems-manager/latest/userguide/agent-install-al2.html)。
+控制台和每台需要接受 SSM 连接的数据面 EC2 都必须运行 SSM Agent。此示例使用 Amazon Linux 2023 AMI。先在目标主机检查 Agent 是否已安装：
+
+```bash
+rpm -q amazon-ssm-agent
+```
+
+如果显示未安装，再执行安装。更换其他操作系统时，请按 [AWS 安装指南](https://docs.aws.amazon.com/systems-manager/latest/userguide/manually-install-ssm-agent-linux.html)选择对应方法；标准 AMI 是否预装 Agent 可查阅 [AWS 预装列表](https://docs.aws.amazon.com/systems-manager/latest/userguide/ami-preinstalled-agent.html)。
 
 ```bash
 sudo dnf install -y amazon-ssm-agent
 ```
 
+安装检查完成后，启动 Agent 并设置开机自启：
+
 ```bash
 sudo systemctl enable --now amazon-ssm-agent
 ```
+
+确认服务正在运行：
 
 ```bash
 sudo systemctl status amazon-ssm-agent
