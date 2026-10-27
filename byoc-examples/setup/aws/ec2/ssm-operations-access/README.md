@@ -75,21 +75,14 @@ If a host is not `Online`, check the Agent service, instance profile, outbound n
 
 ## Create the customer-side SSM operations role
 
-The [Terraform example](ssm-operator.tf) in this directory creates a customer-side operations role and limits session access by target EC2 instance ID and tag. It does not read or modify the Console or Cluster Terraform state.
+The [Terraform example](ssm-operator.tf) in this directory creates a customer-side operations role. It allows sessions to EC2 instances in the specified Region and customer account that have the case-sensitive tag `automqVendor=automq`. This includes any other instances with that tag. It does not read or modify the Console or Cluster Terraform state.
 
-After deploying the Console, get its instance ID from the `automq-console` directory:
-
-```bash
-terraform output -raw console_instance_id
-```
-
-Create a local `terraform.tfvars` in this directory and replace the placeholders with your values. You can initially allow only the Console. To add data plane access later, add the verified Broker EC2 instance IDs to `instance_ids`. Keep this file and the Terraform state in a controlled location because they contain the External ID.
+Create a local `terraform.tfvars` in this directory and replace the placeholders with your values. Keep this file and the Terraform state in a controlled location because they contain the External ID.
 
 ```hcl
 region          = "<REGION>"
 automq_role_arn = "arn:aws:iam::<AUTOMQ_ACCOUNT_ID>:role/<AUTOMQ_OPERATOR_ROLE>"
 external_id     = "<CUSTOMER_SPECIFIC_EXTERNAL_ID>"
-instance_ids    = ["<CONSOLE_INSTANCE_ID>"]
 ```
 
 The default role name is `automq-ssm-operator`. Set `role_name` if you need more than one operations role in the account. Verify your AWS identity in the customer account, then initialize, review, and apply the configuration:
@@ -126,11 +119,17 @@ aws iam get-role --role-name <ROLE_NAME>
 aws iam get-role-policy --role-name <ROLE_NAME> --policy-name ssm-operator
 ```
 
-Also provide AutoMQ with your AWS account ID, Region, and allowed instance IDs. AutoMQ must allow its designated IAM Role to call `sts:AssumeRole` in its own account and pass the agreed External ID in the request.
+Also provide AutoMQ with your AWS account ID and Region. AutoMQ must allow its designated IAM Role to call `sts:AssumeRole` in its own account and pass the agreed External ID in the request.
 
 ## Review access boundaries and audit records
 
-The customer-side role trusts only the AutoMQ IAM Role specified in `automq_role_arn` and requires the correct `sts:ExternalId`. Only people or processes permitted to use that AutoMQ Role can attempt to assume the customer-side role. AutoMQ manages access for its operators. The customer-side policy also requires that the target **EC2 instance ID is in `instance_ids`** and that the instance has the case-sensitive tag `automqVendor=automq`. Tagging only the role or the AutoMQ Instance does not satisfy this condition. The assumed role is explicitly denied permission to add or remove this access-boundary tag on EC2 instances. You should also restrict other identities from changing the tag or the operations role. [AWS: restrict Session Manager access by tag](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html)
+The customer-side role trusts only the AutoMQ IAM Role specified in `automq_role_arn` and requires the correct `sts:ExternalId`. Only people or processes permitted to use that AutoMQ Role can attempt to assume the customer-side role. AutoMQ manages access for its operators. The customer-side policy allows access to **every EC2 instance in the specified Region and customer account** that has the case-sensitive tag `automqVendor=automq`. Tagging only the role or the AutoMQ Instance does not satisfy this condition. The assumed role is explicitly denied permission to add or remove this access-boundary tag on EC2 instances. You should also restrict other identities from changing the tag or the operations role. If you need a narrower scope, add a customer-controlled EC2 tag condition to the policy before applying it. [AWS: restrict Session Manager access by tag](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html)
+
+If you deployed the Console from this example, get its EC2 instance ID from the `automq-console` directory before checking its tag:
+
+```bash
+terraform output -raw console_instance_id
+```
 
 Check the tag on a target EC2 instance with the AWS CLI:
 
@@ -166,4 +165,4 @@ aws cloudtrail lookup-events --region <REGION> \
   --lookup-attributes AttributeKey=EventName,AttributeValue=StartSession
 ```
 
-To validate the setup, use instances approved by the customer: confirm that each target host is `Online`, the AutoMQ operations role can access an allowed instance, an instance absent from `instance_ids` or missing the required tag returns `AccessDenied`, and the new session appears in CloudTrail and the configured session log destination.
+To validate the setup, use instances approved by the customer: confirm that each target host is `Online`, the AutoMQ operations role can access a tagged instance, an instance missing the required tag returns `AccessDenied`, and the new session appears in CloudTrail and the configured session log destination.

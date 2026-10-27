@@ -32,16 +32,6 @@ variable "external_id" {
   }
 }
 
-variable "instance_ids" {
-  description = "EC2 instances AutoMQ may access, provided they have automqVendor=automq"
-  type        = set(string)
-
-  validation {
-    condition     = length(var.instance_ids) > 0
-    error_message = "instance_ids must contain at least one EC2 instance ID."
-  }
-}
-
 variable "role_name" {
   description = "Name of the customer SSM operator Role"
   type        = string
@@ -74,10 +64,10 @@ resource "aws_iam_role_policy" "ssm_operator" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid      = "StartSessionOnApprovedInstances"
+        Sid      = "StartSessionOnTaggedInstances"
         Effect   = "Allow"
         Action   = "ssm:StartSession"
-        Resource = [for id in var.instance_ids : "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:instance/${id}"]
+        Resource = "arn:aws:ec2:${var.region}:${data.aws_caller_identity.current.account_id}:instance/*"
         Condition = {
           StringEquals = { "ssm:resourceTag/automqVendor" = "automq" }
         }
