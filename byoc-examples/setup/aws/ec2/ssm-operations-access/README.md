@@ -18,10 +18,9 @@ The Console root already attaches
 EC2 role and assigns that role through an instance profile. Keep this
 attachment if you customize the root; an EC2 instance cannot use a second
 instance profile alongside the Console profile. The example selects the
-standard Amazon Linux 2023 AMI through the public SSM parameter. Verify the
-SSM Agent on the actual instance rather than assuming every AMI variant has
-it installed. The agent uses the instance role to register with Systems
-Manager and establish its message channels.
+standard Amazon Linux 2023 AMI through the public SSM parameter. Verify that
+SSM Agent is installed and running on the actual instance. It uses the instance
+role to register with Systems Manager and establish its message channels.
 [AWS documents the instance permissions](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-instance-profile.html).
 
 From `automq-console`, get the target instance ID:
@@ -46,114 +45,121 @@ private DNS, and endpoint security group access. Older agent/Region
 combinations can also need `ec2messages`.
 [AWS lists the network requirements](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup-create-vpc.html).
 
+If you replace the AMI with one that lacks SSM Agent, install and start it in
+the AMI or instance user data before closing other management access:
+
+```bash
+sudo dnf install -y amazon-ssm-agent
+sudo systemctl enable --now amazon-ssm-agent
+```
+
 If the host is not `Online`, check the instance profile, Agent service and
 logs, Region, DNS, and outbound 443 before granting operator access. On the
 host, check `systemctl status amazon-ssm-agent` and
 `/var/log/amazon/ssm/amazon-ssm-agent.log`.
 
-## 2. Create a customer-owned operator role
+## 2. Deploy the customer-owned operator role
 
-Ask AutoMQ for the **specific AWS Principal ARN** that its operators use and
-a customer-specific External ID. In your AWS account, create a dedicated IAM
-role that trusts only that Principal. Replace both placeholders in this trust
-policy; verify that `AssumeRole` fails when the External ID is absent or
-incorrect. AutoMQ must separately allow its Principal to call
-`sts:AssumeRole` on your role.
+Keep this Terraform root separate from `automq-console` and `automq-cluster`.
+It takes the existing AWS account, Region, instance IDs, and IAM role names as
+inputs. It does not read either root's Terraform state or modify their source.
+
+Ask AutoMQ for the specific IAM Role ARN used by its operators and a unique
+External ID for your customer account. From `automq-console`, obtain the
+Console instance and data-plane role names after applying that root:
+
+The [AWS Ops authorization guide](https://docs.automq.com/zh/automq-cloud/manage-environments/manage-environment-ops-authing/set-ops-authing-from-aws)
+lists an AutoMQ AWS account ID for **S3 Ops Bucket access**. It does not
+provide an External ID or identify the IAM Role for this SSM connection. Do
+not substitute that account ID for either value.
+
+```bash
+terraform output -raw console_instance_id
+```
+
+```bash
+terraform output -raw cluster_role_name
+```
+
+The Console root already attaches `AmazonSSMManagedInstanceCore` to its own
+instance role. To let broker EC2 hosts register with SSM, put the
+`cluster_role_name` value in `additional_instance_role_names`. This root will
+attach the same AWS managed policy to that existing node role. Leave the list
+empty if you only need Console access. Do not add the Console role to this
+list, because its attachment is already managed by the Console Terraform root.
+
+In this `ssm-operations-access` directory, create a local `terraform.tfvars`:
+
+```hcl
+aws_region                     = "<REGION>"
+operator_role_name             = "automq-ssm-operator-<ENVIRONMENT>"
+automq_principal_arn           = "arn:aws:iam::<AUTOMQ_ACCOUNT_ID>:role/<AUTOMQ_OPERATOR_ROLE>"
+external_id                   = "<CUSTOMER_SPECIFIC_EXTERNAL_ID>"
+target_instance_ids           = ["<CONSOLE_INSTANCE_ID>"]
+additional_instance_role_names = ["<CLUSTER_ROLE_NAME>"]
+```
+
+Set `additional_instance_role_names = []` for Console-only access. Add broker
+EC2 instance IDs to `target_instance_ids` only after you identify and approve
+them. Updating the input and applying again updates the allowed instance ARNs.
+Keep `terraform.tfvars` and Terraform state private; they contain the External
+ID and the operator Role configuration. Confirm the AWS identity points to
+your customer account, then apply this directory:
+
+```bash
+aws sts get-caller-identity
+```
+
+```bash
+terraform init
+```
+
+```bash
+terraform plan
+```
+
+```bash
+terraform apply
+```
+
+```bash
+terraform output -raw ssm_operator_role_arn
+```
+
+[`ssm-operator.tf`](ssm-operator.tf) creates a role that trusts only the named
+AutoMQ IAM Principal with the supplied `sts:ExternalId`. AutoMQ must separately
+allow that source Principal to assume the output role ARN. Verify that a
+missing or incorrect External ID is rejected.
 [AWS describes cross-account third-party access](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_common-scenarios_third-party.html).
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": { "AWS": "<AUTOMQ_OPERATOR_PRINCIPAL_ARN>" },
-    "Action": "sts:AssumeRole",
-    "Condition": {
-      "StringEquals": { "sts:ExternalId": "<CUSTOMER_EXTERNAL_ID>" }
-    }
-  }]
-}
+The generated policy requires **both** an approved EC2 instance ID and the
+case-sensitive `automqVendor=automq` tag on that instance. The Console root
+sets this tag on its EC2 host. Check the actual tag on every broker EC2 host
+before adding its ID; a tag on the IAM role or AutoMQ Instance alone does not
+satisfy the SSM policy. The assumed operator role cannot create or delete the
+access tag. Protect other identities that can set the tag, create tagged EC2
+instances, or change this role's policies.
+[AWS documents tag-based Session Manager access](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html).
+
+The policy grants native Session Manager shell access. It does not grant
+`ssm:SendCommand` or SSH-over-SSM access. Give AutoMQ the
+`ssm_operator_role_arn`, AWS account ID, Region, and approved instance ID.
+With short-lived assumed credentials, AWS CLI, and the
+[Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html),
+operators confirm their identity and open a shell:
+
+```bash
+aws sts get-caller-identity --profile <ASSUMED_OPERATOR_PROFILE>
 ```
-
-Attach the following permissions policy to that customer-owned role. Replace
-the Region, account ID, and Console instance ID. The example uses both the
-exact instance ARN and the case-sensitive EC2 instance tag
-`automqVendor=automq`; the tag belongs on the **EC2 instance**, not only on
-its IAM role or subnet. This Terraform example sets the tag on the Console
-instance. If the instance is replaced, update the ARN in this policy.
-[AWS shows how to restrict Session Manager by resource tag](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html).
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "StartSessionOnConsole",
-      "Effect": "Allow",
-      "Action": "ssm:StartSession",
-      "Resource": "arn:aws:ec2:<REGION>:<CUSTOMER_ACCOUNT_ID>:instance/<CONSOLE_INSTANCE_ID>",
-      "Condition": {
-        "StringEquals": { "ssm:resourceTag/automqVendor": "automq" }
-      }
-    },
-    {
-      "Sid": "UseShellDocument",
-      "Effect": "Allow",
-      "Action": "ssm:StartSession",
-      "Resource": "arn:aws:ssm:<REGION>:<CUSTOMER_ACCOUNT_ID>:document/SSM-SessionManagerRunShell"
-    },
-    {
-      "Sid": "ManageOwnSessions",
-      "Effect": "Allow",
-      "Action": [
-        "ssm:ResumeSession",
-        "ssm:TerminateSession",
-        "ssmmessages:OpenDataChannel"
-      ],
-      "Resource": "arn:aws:ssm:<REGION>:<CUSTOMER_ACCOUNT_ID>:session/${aws:userid}-*"
-    },
-    {
-      "Sid": "ProtectAccessTag",
-      "Effect": "Deny",
-      "Action": ["ec2:CreateTags", "ec2:DeleteTags"],
-      "Resource": "arn:aws:ec2:<REGION>:<CUSTOMER_ACCOUNT_ID>:instance/*",
-      "Condition": {
-        "ForAnyValue:StringEquals": { "aws:TagKeys": ["automqVendor"] }
-      }
-    }
-  ]
-}
-```
-
-Check the actual owner of `SSM-SessionManagerRunShell` in your account and
-adjust its document ARN if necessary. Keep control of who can set
-`automqVendor` or change this operator role's policies; denying the two tag
-APIs above does not constrain other identities or every resource-creation
-path. This policy grants an interactive shell only. Add instance discovery
-permissions if operators need them; grant `ssm:SendCommand` separately only
-if remote command execution is required.
-
-Give AutoMQ the operator role ARN, AWS account ID, Region, and Console
-instance ID. AutoMQ operators assume the role using short-lived credentials
-and the agreed External ID. They can then start a shell using AWS CLI and the
-[Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html):
 
 ```bash
 aws ssm start-session --profile <ASSUMED_OPERATOR_PROFILE> \
   --region <REGION> --target <CONSOLE_INSTANCE_ID>
 ```
 
-Confirm the session opens on the expected host. The default Linux session
-user, `ssm-user`, normally has sudo privileges; treat this as privileged host
-access. Also test that this role cannot start a session on an instance outside
-the policy's scope.
-
-The data-plane nodes use the separate `cluster_instance_profile_arn` output.
-This example does **not** attach `AmazonSSMManagedInstanceCore` to that role.
-If you also need SSM host access to broker EC2 instances, add the required
-SSM Agent permissions to their instance role, verify the tag on each target
-EC2 instance, and extend the operator policy only to those approved instance
-ARNs. Console instance permissions do not carry over to brokers.
+Confirm the session opens on the expected host and that an unapproved or
+untagged instance returns `AccessDenied`. The default Linux user, `ssm-user`,
+normally has sudo privileges; treat this as privileged host access.
 
 ## 3. Review sessions and API activity
 
