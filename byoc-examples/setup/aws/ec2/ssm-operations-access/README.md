@@ -45,7 +45,7 @@ SSM Agent 需要通过主机现有 instance profile 的 IAM Role 向 Systems Man
 
 在 **AWS EC2 控制台 > 实例** 中选择控制台 EC2，打开 **安全 > IAM Role**，查看它实际使用的 Role。此示例的 [Console Terraform](../automq-console/iam.tf) **已经**为该 Role 附加了 `AmazonSSMManagedInstanceCore`，无需重复操作。
 
-如果还要连接数据面主机，请分别在 EC2 控制台查看目标 Broker 实例的 **安全 > IAM Role**，取得该 Role 的名称，再为它附加策略：
+如果还要连接数据面主机，请在 **AutoMQ 控制台 > Instance** 页面查看目标 Instance 的 **IAM Role**，取得该 Role 的名称，再为它附加策略。这个 Role 供该 Instance 的 Broker EC2 使用：
 
 ```bash
 aws iam attach-role-policy --role-name <BROKER_INSTANCE_ROLE_NAME> \
