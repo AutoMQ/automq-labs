@@ -33,7 +33,26 @@ sudo systemctl status amazon-ssm-agent
 
 SSM Agent 需要通过主机现有 instance profile 的 IAM Role 向 Systems Manager 注册并建立消息通道。请在该 Role 上附加 AWS 托管策略 `AmazonSSMManagedInstanceCore`；保留主机原有的应用权限。[AWS：实例侧权限](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-instance-profile.html)
 
-此示例的 [Console Terraform](../automq-console/iam.tf) **已经**把该策略附加到控制台 EC2 的 Role。数据面节点使用另一个 Role。若要让数据面主机也接受 SSM 连接，请将 `automq-console` 输出的 `cluster_role_name` 传给下文的 `additional_instance_role_names`；本目录的 [Terraform](ssm-operator.tf)会为该 Role 附加策略。不要把控制台 Role 再传入该参数，以免两个 Terraform state 同时管理同一个附件。
+此示例的 [Console Terraform](../automq-console/iam.tf) **已经**把该策略附加到控制台 EC2 的 Role。数据面节点使用另一个 Role。若要让数据面主机也接受 SSM 连接，请在 `automq-console` 目录取得节点 Role 名称：
+
+```bash
+terraform output -raw cluster_role_name
+```
+
+然后在客户账号中附加策略：
+
+```bash
+aws iam attach-role-policy --role-name <CLUSTER_ROLE_NAME> \
+  --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+```
+
+确认策略已附加：
+
+```bash
+aws iam list-attached-role-policies --role-name <CLUSTER_ROLE_NAME>
+```
+
+若您使用其他控制台部署模板，也可对其**现有** EC2 Role 执行同一命令；本示例的控制台 Role 无需重复操作。
 
 ### 3. 确认网络与注册状态
 
@@ -50,7 +69,7 @@ aws ssm describe-instance-information --region <REGION> \
 
 ## 创建客户侧 SSM 运维 Role
 
-在此 `ssm-operations-access` 目录中部署独立的 Terraform 配置。它通过参数接收您的 Region、目标 EC2 instance ID、AutoMQ IAM Role ARN、External ID，以及需要补充 SSM 权限的数据面 Role 名称；不会读取或修改控制台和集群的 Terraform state。
+本目录的 [Terraform 示例](ssm-operator.tf)仅创建客户侧运维 Role，并按目标 EC2 instance ID 与 Tag 限制会话访问。它不会读取或修改控制台、集群的 Terraform state。
 
 部署控制台后，在 `automq-console` 目录获取以下输出：
 
@@ -58,22 +77,16 @@ aws ssm describe-instance-information --region <REGION> \
 terraform output -raw console_instance_id
 ```
 
-```bash
-terraform output -raw cluster_role_name
-```
-
-在本目录创建本地 `terraform.tfvars`，将占位符替换为实际值。首次可只授权控制台；需要访问数据面时，再把经过确认的 Broker EC2 instance ID 加入 `target_instance_ids`。该文件及 Terraform state 包含 External ID，应存放在受控位置。
+在本目录创建本地 `terraform.tfvars`，将占位符替换为实际值。首次可只授权控制台；需要访问数据面时，再把经过确认的 Broker EC2 instance ID 加入 `instance_ids`。该文件及 Terraform state 包含 External ID，应存放在受控位置。
 
 ```hcl
-aws_region                     = "<REGION>"
-operator_role_name             = "automq-ssm-operator-<ENVIRONMENT>"
-automq_principal_arn           = "arn:aws:iam::<AUTOMQ_ACCOUNT_ID>:role/<AUTOMQ_OPERATOR_ROLE>"
-external_id                    = "<CUSTOMER_SPECIFIC_EXTERNAL_ID>"
-target_instance_ids            = ["<CONSOLE_INSTANCE_ID>"]
-additional_instance_role_names = ["<CLUSTER_ROLE_NAME>"]
+region          = "<REGION>"
+automq_role_arn = "arn:aws:iam::<AUTOMQ_ACCOUNT_ID>:role/<AUTOMQ_OPERATOR_ROLE>"
+external_id     = "<CUSTOMER_SPECIFIC_EXTERNAL_ID>"
+instance_ids    = ["<CONSOLE_INSTANCE_ID>"]
 ```
 
-如果只访问控制台，将 `additional_instance_role_names` 设为 `[]`。在客户账号中确认当前 AWS 身份，然后初始化、检查计划并部署：
+默认创建的 Role 名为 `automq-ssm-operator`；如果该账号需要多个运维 Role，可以另设 `role_name`。在客户账号中确认当前 AWS 身份，然后初始化、检查计划并部署：
 
 ```bash
 aws sts get-caller-identity
@@ -97,13 +110,41 @@ terraform apply
 terraform output -raw ssm_operator_role_arn
 ```
 
+您也可以用 AWS CLI 查看该 Role 的信任策略和会话权限：
+
+```bash
+aws iam get-role --role-name <ROLE_NAME>
+```
+
+```bash
+aws iam get-role-policy --role-name <ROLE_NAME> --policy-name ssm-operator
+```
+
 请同时告知 AutoMQ 您的 AWS 账号 ID、Region 和允许访问的实例 ID。AutoMQ 需要在其自身账号中允许指定 IAM Role 调用 `sts:AssumeRole`，并在请求中传入约定的 External ID。
 
 ## 确认权限边界与审计记录
 
-本目录创建的 Role 只信任参数指定的 AutoMQ IAM Role，并要求正确的 `sts:ExternalId`。因此，只有获得该 AutoMQ Role 使用权限的人员或流程，才能尝试 AssumeRole；AutoMQ 负责管理其内部人员权限。客户侧策略进一步要求目标 **EC2 实例 ID 在 `target_instance_ids` 中**，且该实例具有大小写完全一致的 `automqVendor=automq` Tag。只有 Role 或 AutoMQ Instance 上存在该 Tag 不够。假设后的 Role 被显式禁止给 EC2 创建或删除这个访问边界 Tag；您还应限制其他身份修改该 Tag 或运维 Role。[AWS：按 Tag 限制 Session Manager 访问](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html)
+本目录创建的 Role 只信任参数指定的 AutoMQ IAM Role，并要求正确的 `sts:ExternalId`。因此，只有获得该 AutoMQ Role 使用权限的人员或流程，才能尝试 AssumeRole；AutoMQ 负责管理其内部人员权限。客户侧策略进一步要求目标 **EC2 实例 ID 在 `instance_ids` 中**，且该实例具有大小写完全一致的 `automqVendor=automq` Tag。只有 Role 或 AutoMQ Instance 上存在该 Tag 不够。假设后的 Role 被显式禁止给 EC2 创建或删除这个访问边界 Tag；您还应限制其他身份修改该 Tag 或运维 Role。[AWS：按 Tag 限制 Session Manager 访问](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-examples.html)
+
+用 AWS CLI 检查目标 EC2 上的 Tag：
+
+```bash
+aws ec2 describe-tags --region <REGION> \
+  --filters Name=resource-id,Values=<INSTANCE_ID> Name=key,Values=automqVendor
+```
 
 本配置授予 Session Manager 原生 Shell 权限，不授予 `ssm:SendCommand` 或 SSH over SSM。运维人员使用短期凭据和 [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html)进入获授权主机；Linux 默认会话用户 `ssm-user` 通常具有 sudo 权限，请将其视为高权限主机访问。
+
+AutoMQ 运维人员先核对所使用的临时身份，再发起会话：
+
+```bash
+aws sts get-caller-identity --profile <AUTOMQ_ASSUMED_ROLE_PROFILE>
+```
+
+```bash
+aws ssm start-session --profile <AUTOMQ_ASSUMED_ROLE_PROFILE> \
+  --region <REGION> --target <INSTANCE_ID>
+```
 
 客户可在自己的 AWS 账号中分别查看两类记录：
 
@@ -111,5 +152,12 @@ terraform output -raw ssm_operator_role_arn
 | --- | --- | --- |
 | API 调用 | **CloudTrail > Event history**，在目标 Region 查询 `StartSession`、`TerminateSession`；需长期保留时配置 CloudTrail trail。 | AssumeRole 后的会话身份、目标及调用时间等 API 信息；**不包含 Shell 内执行的命令**。[AWS：CloudTrail 记录](https://docs.aws.amazon.com/systems-manager/latest/userguide/monitoring-cloudtrail-logs.html) |
 | 原生 Shell 内容 | 在 **Systems Manager > Session Manager > Preferences** 中，提前启用发送至客户控制的 CloudWatch Logs 或 S3，并设置保留期和访问权限；随后到对应 Log Group 或 Bucket 查看。 | 启用日志后产生的原生 Shell 会话内容。SSH over SSM 和端口转发的隧道内容无法由 Session Manager 记录。[AWS：会话日志](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-logging.html) |
+
+也可用 AWS CLI 查询 CloudTrail 中的 `StartSession` 事件：
+
+```bash
+aws cloudtrail lookup-events --region <REGION> \
+  --lookup-attributes AttributeKey=EventName,AttributeValue=StartSession
+```
 
 配置完成后，用客户认可的实例验收：目标主机为 `Online`；AutoMQ 运维 Role 能进入已授权实例；实例不在清单中或缺少授权 Tag 时返回 `AccessDenied`；客户能在 CloudTrail 和所选会话日志目的地找到新会话的记录。
