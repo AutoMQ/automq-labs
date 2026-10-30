@@ -266,7 +266,7 @@ install_automq() {
     fi
     
     print_info "Installing AutoMQ (this may take a few minutes)..."
-    helm install automq oci://automq.azurecr.io/helm/automq-enterprise-chart \
+    helm install automq oci://automq.azurecr.io/helm/automq-software-chart \
         --version "$AUTOMQ_VERSION" \
         -f automq-values.yaml \
         --wait --timeout 10m > /dev/null
