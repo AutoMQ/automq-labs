@@ -169,9 +169,9 @@ For more details on available parameters, refer to:
 Once your `automq-values.yaml` file is configured, deploy AutoMQ using Helm. Replace `<namespace>` with your desired namespace name:
 
 ```bash
-helm install <release-name> oci://automq.azurecr.io/helm/automq-enterprise-chart \
+helm install <release-name> oci://automq.azurecr.io/helm/automq-software-chart \
   -f automq-values.yaml \
-  --version 5.3.2 \
+  --version 5.5.6 \
   --namespace <namespace> \
   --create-namespace
 ```
@@ -289,9 +289,9 @@ For production environments, consider using Managed Identity (Workload Identity)
 To apply changes after updating `automq-values.yaml` (replace `<release-name>` and `<namespace>` with your values):
 
 ```bash
-helm upgrade <release-name> oci://automq.azurecr.io/helm/automq-enterprise-chart \
+helm upgrade <release-name> oci://automq.azurecr.io/helm/automq-software-chart \
   -f automq-values.yaml \
-  --version 5.3.2 \
+  --version 5.5.6 \
   --namespace <namespace>
 ```
 
