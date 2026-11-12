@@ -35,7 +35,7 @@ jobs:
           cd "$RUNNER_TEMP"
           "$entry" --help
   python:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python: ['3.9', '3.14']
