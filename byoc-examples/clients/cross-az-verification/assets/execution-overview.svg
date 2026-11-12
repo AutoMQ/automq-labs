@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 416" role="img" aria-labelledby="execution-title execution-desc" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif">
+<title id="execution-title">Run locally, measure in the cloud</title>
+<desc id="execution-desc">The local terminal controls a real Linux client through AWS SSM. Kafka production and consumption flow between the cloud client and AutoMQ brokers, not through the local terminal.</desc>
+<defs><marker id="execution-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M0 0 L8 3 L0 6 Z" fill="#0066FF"/></marker></defs>
+<rect width="800" height="416" fill="#FFFFFF"/>
+<text id="execution-heading" x="40" y="48" font-size="24" font-weight="700" fill="#333333" text-anchor="start" dominant-baseline="central">Run locally. Measure in the cloud.</text>
+<rect id="execution-cloud" x="288" y="96" width="480" height="208" rx="12" fill="#0066FF" fill-opacity=".06"/>
+<text id="execution-cloud-label" x="312" y="108" font-size="14" font-weight="600" fill="#333333" text-anchor="start" dominant-baseline="central">Your AWS VPC</text>
+<rect id="execution-terminal" x="40" y="128" width="176" height="144" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<rect id="execution-client" x="312" y="128" width="184" height="144" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<rect id="execution-brokers" x="592" y="128" width="152" height="144" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<g transform="translate(108 156)" fill="none" stroke="#333333" stroke-width="2" stroke-linecap="round"><rect x="2" width="36" height="26" rx="3"/><path d="M20 26v10m-10 0h20"/></g>
+<g transform="translate(384 156)" fill="none" stroke="#333333" stroke-width="2"><rect width="40" height="10" rx="2"/><rect y="14" width="40" height="10" rx="2"/><rect y="28" width="40" height="10" rx="2"/><path d="M6 5h2m-2 14h2m-2 14h2" stroke-linecap="round"/></g>
+<g transform="translate(648 156)" fill="none" stroke="#333333" stroke-width="2"><rect width="40" height="10" rx="2"/><rect y="14" width="40" height="10" rx="2"/><rect y="28" width="40" height="10" rx="2"/><path d="M6 5h2m-2 14h2m-2 14h2" stroke-linecap="round"/></g>
+<text id="execution-terminal-title" x="128" y="224" font-size="24" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Terminal</text>
+<text id="execution-terminal-caption" x="128" y="248" font-size="14" font-weight="400" fill="#333333" text-anchor="middle" dominant-baseline="central">before / after</text>
+<text id="execution-client-title" x="404" y="224" font-size="24" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Client</text>
+<text id="execution-client-caption" x="404" y="248" font-size="14" font-weight="400" fill="#333333" text-anchor="middle" dominant-baseline="central">Produce + consume</text>
+<text id="execution-brokers-title" x="668" y="224" font-size="24" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">AutoMQ</text>
+<text id="execution-brokers-caption" x="668" y="248" font-size="14" font-weight="400" fill="#333333" text-anchor="middle" dominant-baseline="central">Kafka brokers</text>
+<line id="execution-ssm-arrow" x1="224" y1="200" x2="304" y2="200" stroke="#0066FF" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#execution-arrow)"/>
+<text id="execution-ssm-label" x="264" y="152" font-size="14" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">AWS SSM</text>
+<text id="execution-control-label" x="264" y="172" font-size="14" font-weight="400" fill="#333333" text-anchor="middle" dominant-baseline="central">control</text>
+<line id="execution-kafka-arrow" x1="504" y1="200" x2="584" y2="200" stroke="#0066FF" stroke-width="2.5" marker-start="url(#execution-arrow)" marker-end="url(#execution-arrow)"/>
+<text id="execution-kafka-label" x="544" y="160" font-size="14" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Kafka TCP</text>
+<text id="execution-footer" x="40" y="352" font-size="16" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Kafka traffic stays between the cloud client and brokers.</text>
+</svg>
