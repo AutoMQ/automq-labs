@@ -52,4 +52,3 @@ Keep the private `--state-dir`: it stores the task/controller identity required 
 SSM returns short snapshots, normally polled about every three seconds; API delay can increase this. Inspect task identity, actual host, frame age and application exit status. Repeated old frames do not become fresh. Ctrl+C sends a separate stop request and confirms the corresponding remote task. `Stop unconfirmed` means retain the identity and retry `status`/`stop` after connectivity returns. Closing a terminal or canceling an SSM request alone does not confirm that the remote process stopped.
 
 The lease is at most 90 seconds and the total lifetime at most 900 seconds. Expiry sends TERM, followed by KILL after a bounded grace period if needed. Each role owns its own lease; stopping one does not stop another. The runner verifies process identity rather than killing every Java process.
-
