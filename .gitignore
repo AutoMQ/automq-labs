@@ -94,3 +94,12 @@ Thumbs.db
 .vscode/
 *.swp
 *~
+
+# Kafka workload / cross-AZ local controller identities and generated topology
+/.runner-state/
+/generated/
+/tools/kafka-workload/.runner-state/
+/byoc-examples/clients/cross-az-verification/.runner-state/
+/byoc-examples/clients/cross-az-verification/generated/
+
+/byoc-examples/clients/cross-az-verification/demo-state/

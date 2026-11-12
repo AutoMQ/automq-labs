@@ -34,7 +34,7 @@ This repository provides a collection of samples to help you get started with [A
 
 ## Repository Structure
 
-This repository is organized into three main directories:
+This repository contains product examples and reusable client tools:
 
 ### 📦 [opensource-examples](opensource-examples/)
 
@@ -50,6 +50,7 @@ Examples and demos for the **AutoMQ Open Source** version. This directory contai
 Examples for deploying **AutoMQ Cloud Service (BYOC - Bring Your Own Cloud)**. This directory contains:
 
 *   **[Setup](byoc-examples/setup/)**: Deploy AutoMQ cloud service on AWS (EC2 and EKS) and Azure using Terraform.
+*   **[Cross-AZ verification](byoc-examples/clients/cross-az-verification/)**: Manually compare client network paths before and after configuring CIDR routing, using real Linux clients in the target AZs.
 *   **[Kubernetes Infrastructure](byoc-examples/setup/kubernetes/)**: Provides Terraform scripts for provisioning Kubernetes clusters on AWS, Azure, and GCP.
 
 ### 🚀 [software-examples](software-examples/)
@@ -57,6 +58,10 @@ Examples for deploying **AutoMQ Cloud Service (BYOC - Bring Your Own Cloud)**. T
 Kubernetes deployment examples for AutoMQ software with different configurations:
 
 *   **[Kubernetes](software-examples/kubernetes/)**: Deployment examples with role-based, static, and TLS configurations.
+
+### 🛠️ [Kafka workload](tools/kafka-workload/)
+
+Reusable Java 17 topic, producer and consumer commands, with an optional AWS SSM runner for existing Linux clients. [Cloud-free checks](tools/kafka-workload/#verify-without-cloud-resources) build the workload and test runner/case contracts.
 
 ## Getting Started
 
@@ -69,3 +74,4 @@ Each section contains a detailed `README.md` file with instructions on how to ru
 > For production deployments, we strongly recommend discussing your architecture and best practices with our engineering team to ensure optimal performance, reliability, and cost-efficiency.
 >
 > Please **[contact us](https://www.automq.com/contact)** to get in touch.
+The [client cross-AZ verification case](byoc-examples/clients/cross-az-verification/) supports one local `demo before` or `demo after` command per round, with live remote traffic evidence and owned task/scope cleanup. CIDR configuration between rounds remains manual.

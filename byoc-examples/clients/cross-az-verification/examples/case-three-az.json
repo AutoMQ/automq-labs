@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "run_id": "replace-with-unique-run",
+  "topic": "dedicated-locality-demo",
+  "workload": {
+    "partitions": 9,
+    "rate_mibps": 0.0095367431640625,
+    "record_bytes": 1024,
+    "compression": "none",
+    "duration_seconds": 90,
+    "max_messages": 600
+  },
+  "observation": {
+    "window_seconds": 10,
+    "warmup_seconds": 10
+  },
+  "clients": {
+    "client-a": {
+      "runner_file": "runner-a.json",
+      "remote_connection_file": "/opt/demo/client.properties",
+      "zone_id": "example-az1",
+      "source_ip": "10.40.1.10",
+      "source_cidrs": [
+        "10.40.1.0/24"
+      ],
+      "scope_cidr": "198.18.240.0/24"
+    },
+    "client-b": {
+      "runner_file": "runner-b.json",
+      "remote_connection_file": "/opt/demo/client.properties",
+      "zone_id": "example-az2",
+      "source_ip": "10.40.2.10",
+      "source_cidrs": [
+        "10.40.2.0/24"
+      ],
+      "scope_cidr": "198.18.241.0/24"
+    },
+    "client-c": {
+      "runner_file": "runner-c.json",
+      "remote_connection_file": "/opt/demo/client.properties",
+      "zone_id": "example-az3",
+      "source_ip": "10.40.3.10",
+      "source_cidrs": [
+        "10.40.3.0/24"
+      ],
+      "scope_cidr": "198.18.242.0/24"
+    }
+  },
+  "brokers": [
+    {
+      "ip": "10.40.11.10",
+      "port": 9092,
+      "zone_id": "example-az1",
+      "rack": "example-az1"
+    },
+    {
+      "ip": "10.40.12.10",
+      "port": 9092,
+      "zone_id": "example-az2",
+      "rack": "example-az2"
+    },
+    {
+      "ip": "10.40.13.10",
+      "port": 9092,
+      "zone_id": "example-az3",
+      "rack": "example-az3"
+    }
+  ]
+}

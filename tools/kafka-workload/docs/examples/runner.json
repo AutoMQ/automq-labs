@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "transport": "ssm",
+  "region": "us-east-1",
+  "profile": "demo-profile",
+  "instance_id": "i-00000000000000000",
+  "remote_root": "/opt/automq-labs/client-case",
+  "poll_seconds": 3,
+  "lease_seconds": 90,
+  "max_runtime_seconds": 900
+}

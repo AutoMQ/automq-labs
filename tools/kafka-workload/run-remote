@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+"""Use the runner next to this launcher, independent of the caller's cwd."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from runner.cli import main
+
+sys.exit(main())

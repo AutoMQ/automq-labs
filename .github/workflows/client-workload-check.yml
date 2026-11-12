@@ -1,0 +1,51 @@
+name: Client workload checks
+
+on:
+  pull_request:
+    paths:
+      - 'tools/kafka-workload/**'
+      - 'byoc-examples/clients/cross-az-verification/**'
+      - '.github/workflows/client-workload-check.yml'
+  push:
+    paths:
+      - 'tools/kafka-workload/**'
+      - 'byoc-examples/clients/cross-az-verification/**'
+      - '.github/workflows/client-workload-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: tools/kafka-workload/pom.xml
+      - name: Build and test Java workload
+        run: mvn -B -f tools/kafka-workload/pom.xml verify
+      - name: Run the packaged launcher from another directory
+        run: |
+          entry="$GITHUB_WORKSPACE/tools/kafka-workload/workload"
+          cd "$RUNNER_TEMP"
+          "$entry" --help
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.9', '3.14']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test runner, observation and local prepare contracts
+        run: |
+          entry="$GITHUB_WORKSPACE/tools/kafka-workload/check"
+          cd "$RUNNER_TEMP"
+          python "$entry" --python-only

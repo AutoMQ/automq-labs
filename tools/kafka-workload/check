@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+"""Run client checks without AWS credentials, a broker or provisioned resources."""
+import argparse
+import os
+from pathlib import Path
+import shlex
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent
+CASE = ROOT.parents[1] / 'byoc-examples/clients/cross-az-verification'
+
+
+def run(argv, cwd=None):
+    print('+ ' + shlex.join(map(str, argv)), flush=True)
+    subprocess.run(list(map(str, argv)), cwd=str(cwd or ROOT), check=True)
+
+
+def contracts():
+    sys.path.insert(0, str(CASE))
+    from cross_az.config import load
+    with tempfile.TemporaryDirectory(prefix='client-contract-') as scratch:
+        # Spaces exercise quoting; generation must not execute a remote command.
+        base = Path(scratch) / 'input with spaces'
+        base.mkdir()
+        for runner in (CASE / 'examples').glob('runner-*.json'):
+            shutil.copyfile(runner, base / runner.name)
+        for example in ('case.json', 'case-three-az.json'):
+            config = base / example
+            shutil.copyfile(CASE / 'examples' / example, config)
+            case = load(config)
+            out = base / (example + '-generated')
+            run([sys.executable, CASE / 'az-case', 'prepare', '--config', config, '--out', out])
+            assert stat.S_IMODE(out.stat().st_mode) == 0o700
+            for script in out.rglob('*.sh'):
+                assert stat.S_IMODE(script.stat().st_mode) == 0o700
+                run(['sh', '-n', script])
+                lines = script.read_text().splitlines()
+                assert lines[:2] == ['#!/bin/sh', 'set -eu']
+                argv = shlex.split(lines[2])[1:]
+                assert Path(argv[0]).is_file() and os.access(argv[0], os.X_OK)
+                if script.name != 'topic-create.sh':
+                    assert argv[1] == script.stem
+                    assert argv[argv.index('--config') + 1] == str(config.resolve())
+                    assert argv[argv.index('--state-dir') + 1] == str((out / 'state').resolve())
+                    assert argv[argv.index('--client') + 1] == script.parent.parent.name
+                    assert argv[argv.index('--phase') + 1] == script.parent.name
+                    assert argv[argv.index('--cohort') + 1] == ','.join(case['clients'])
+                else:
+                    assert argv[argv.index('--state-dir') + 1] == str((out / 'state').resolve())
+                    assert argv.index('--state-dir') < argv.index('start'), 'runner state-dir is a global option'
+                    assert argv[argv.index('--runner') + 1] == case['clients'][next(iter(case['clients']))]['runner_file']
+                    assert '--role' in argv and argv[argv.index('--role') + 1] == 'topic'
+                    assert argv[argv.index('--') + 1:][:2] == ['topic', 'create']
+            assert not (out / 'state').exists(), 'prepare must not start a runtime'
+            print('PASS local prepare argv and permissions: ' + example, flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--python-only', action='store_true', help='skip Maven/JAR checks')
+    args = parser.parse_args()
+    if not args.python_only:
+        run([os.environ.get('MVN', 'mvn'), '-B', '-f', ROOT / 'pom.xml', 'verify'])
+        run([ROOT / 'workload', '--help'], cwd=Path(tempfile.gettempdir()))
+    for tests in (ROOT / 'runner/tests', CASE / 'tests'):
+        run([sys.executable, '-m', 'unittest', 'discover', '-s', tests, '-v'],
+            cwd=CASE if tests.parent == CASE else ROOT)
+    run([sys.executable, '-m', 'compileall', '-q', ROOT / 'runner', CASE / 'cross_az'])
+    run([sys.executable, ROOT / 'run-remote', '--help'], cwd=Path(tempfile.gettempdir()))
+    run([sys.executable, CASE / 'az-case', '--help'], cwd=Path(tempfile.gettempdir()))
+    run([sys.executable, CASE / 'demo', '--help'], cwd=Path(tempfile.gettempdir()))
+    run([sys.executable, '-m', 'runner.bundle', '--help'])
+    contracts()
+    print('PASS cloud-free client checks', flush=True)
+
+
+if __name__ == '__main__':
+    main()
