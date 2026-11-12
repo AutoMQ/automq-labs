@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 416" role="img" aria-labelledby="result-title result-desc" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif">
+<title id="result-title">Read one valid client Kafka traffic window</title>
+<desc id="result-desc">Illustrative output, not a benchmark or guarantee. A before sample has nonzero cross-AZ traffic; an after sample has zero cross-AZ send and receive bytes and no unknown peers. Both include successful sends and reads with complete capture. Results apply only to the selected client and valid business window.</desc>
+<defs></defs>
+<rect width="800" height="416" fill="#FFFFFF"/>
+<text id="result-heading" x="40" y="48" font-size="24" font-weight="700" fill="#333333" text-anchor="start" dominant-baseline="central">Read the result summary</text>
+<text id="result-example-label" x="40" y="80" font-size="16" font-weight="600" fill="#333333" text-anchor="start" dominant-baseline="central">Illustrative example — not a benchmark</text>
+<rect id="result-before" x="40" y="112" width="344" height="216" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<text id="result-before-title" x="64" y="144" font-size="22" font-weight="600" fill="#333333" text-anchor="start" dominant-baseline="central">Before</text>
+<text id="result-before-business" x="64" y="176" font-size="14" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Round totals: 600 sent / 600 read</text>
+<text id="result-before-cross-label" x="64" y="208" font-size="18" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Cross-AZ send / receive</text>
+<text id="result-before-metric" x="64" y="248" font-size="30" font-weight="700" fill="#333333" text-anchor="start" dominant-baseline="central">100 KB / 100 KB</text>
+<line x1="64" y1="272" x2="160" y2="272" stroke="#0066FF" stroke-width="3"/>
+<text id="result-before-unknown" x="64" y="296" font-size="18" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Unknown peers: 0 B</text>
+<rect id="result-after" x="416" y="112" width="344" height="216" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<text id="result-after-title" x="440" y="144" font-size="22" font-weight="600" fill="#333333" text-anchor="start" dominant-baseline="central">After</text>
+<text id="result-after-business" x="440" y="176" font-size="14" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Round totals: 600 sent / 600 read</text>
+<text id="result-after-cross-label" x="440" y="208" font-size="18" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Cross-AZ send / receive</text>
+<text id="result-after-metric" x="440" y="248" font-size="30" font-weight="700" fill="#333333" text-anchor="start" dominant-baseline="central">0 B / 0 B</text>
+<line x1="440" y1="272" x2="536" y2="272" stroke="#00C853" stroke-width="3"/>
+<text id="result-after-unknown" x="440" y="296" font-size="18" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Unknown peers: 0 B</text>
+<text id="result-footer" x="40" y="368" font-size="14" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Client Kafka traffic • one valid window • successful workload + complete capture</text>
+</svg>

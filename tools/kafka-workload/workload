@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source_path="${BASH_SOURCE[0]}"
+while [[ -L "$source_path" ]]; do
+  base="$(cd -P -- "$(dirname -- "$source_path")" && pwd)"
+  source_path="$(readlink -- "$source_path")"
+  [[ "$source_path" = /* ]] || source_path="$base/$source_path"
+done
+base="$(cd -P -- "$(dirname -- "$source_path")" && pwd)"
+if [[ ${WORKLOAD_JAR+x} ]]; then
+  jar="$WORKLOAD_JAR"
+  [[ -f "$jar" && -r "$jar" ]] || { echo 'WORKLOAD_JAR must name a readable fat JAR.' >&2; exit 2; }
+elif [[ -f "$base/workload.jar" && -r "$base/workload.jar" ]]; then
+  jar="$base/workload.jar"
+else
+  jar="$base/target/workload.jar"
+  [[ -f "$jar" && -r "$jar" ]] || { echo 'Build the runtime first: mvn -f tools/kafka-workload/pom.xml package (Java 17+).' >&2; exit 2; }
+fi
+if [[ ${JAVA_HOME+x} ]]; then
+  java="$JAVA_HOME/bin/java"
+  [[ -x "$java" ]] || { echo 'JAVA_HOME must point to a Java 17+ installation.' >&2; exit 2; }
+else
+  java="$(command -v java || true)"
+  [[ -n "$java" ]] || { echo 'Install Java 17+ or set JAVA_HOME.' >&2; exit 2; }
+fi
+version="$("$java" -version 2>&1 | head -n 1)"
+if [[ "$version" =~ \"([0-9]+)(\.([0-9]+))? ]]; then
+  major="${BASH_REMATCH[1]}"
+  [[ "$major" != 1 ]] || major="${BASH_REMATCH[3]:-0}"
+  (( major >= 17 )) || { echo 'Java 17+ is required.' >&2; exit 2; }
+else
+  echo 'Cannot identify Java version; install Java 17+.' >&2; exit 2
+fi
+exec "$java" -jar "$jar" "$@"

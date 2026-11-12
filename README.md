@@ -34,7 +34,7 @@ This repository provides a collection of samples to help you get started with [A
 
 ## Repository Structure
 
-This repository is organized into three main directories:
+This repository contains product examples and reusable client tools:
 
 ### 📦 [opensource-examples](opensource-examples/)
 
@@ -50,6 +50,7 @@ Examples and demos for the **AutoMQ Open Source** version. This directory contai
 Examples for deploying **AutoMQ Cloud Service (BYOC - Bring Your Own Cloud)**. This directory contains:
 
 *   **[Setup](byoc-examples/setup/)**: Deploy AutoMQ cloud service on AWS (EC2 and EKS) and Azure using Terraform.
+*   **[Cross-AZ verification](byoc-examples/clients/cross-az-verification/)**: Follow the illustrated guide to run a workload, configure CIDR routing and compare real client traffic before and after.
 *   **[Kubernetes Infrastructure](byoc-examples/setup/kubernetes/)**: Provides Terraform scripts for provisioning Kubernetes clusters on AWS, Azure, and GCP.
 
 ### 🚀 [software-examples](software-examples/)
@@ -57,6 +58,10 @@ Examples for deploying **AutoMQ Cloud Service (BYOC - Bring Your Own Cloud)**. T
 Kubernetes deployment examples for AutoMQ software with different configurations:
 
 *   **[Kubernetes](software-examples/kubernetes/)**: Deployment examples with role-based, static, and TLS configurations.
+
+### 🛠️ [Kafka workload](tools/kafka-workload/)
+
+Create a test topic, send a small Kafka workload and consume it. Start with the [local quick start](tools/kafka-workload/); an optional SSM runner controls existing cloud clients.
 
 ## Getting Started
 

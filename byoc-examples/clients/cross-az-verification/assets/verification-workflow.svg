@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 416" role="img" aria-labelledby="workflow-title workflow-desc" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif">
+<title id="workflow-title">Before, manual configuration, then after</title>
+<desc id="workflow-desc">Run before to save a baseline. Copy the candidate CIDR value, paste only the value into New Value in the AutoMQ Console, save and verify it manually, then run after with the same config and state.</desc>
+<defs><marker id="workflow-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M0 0 L8 3 L0 6 Z" fill="#0066FF"/></marker></defs>
+<rect width="800" height="416" fill="#FFFFFF"/>
+<text id="workflow-heading" x="40" y="48" font-size="24" font-weight="700" fill="#333333" text-anchor="start" dominant-baseline="central">Before → configure → after</text>
+<text id="workflow-subtitle" x="40" y="80" font-size="16" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Prepare once. Run each round with the same config and state.</text>
+<rect id="workflow-step-1" x="40" y="112" width="144" height="192" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<circle cx="112" cy="144" r="16" fill="#0066FF"/>
+<text id="workflow-number-1" x="112" y="144" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">1</text>
+<text id="workflow-label-1" x="112" y="184" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Run</text>
+<text id="workflow-action-1" x="112" y="224" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">before</text>
+<text id="workflow-caption-1" x="112" y="256" font-size="14" font-weight="400" fill="#333333" text-anchor="middle" dominant-baseline="central">Save baseline</text>
+<rect id="workflow-step-2" x="232" y="112" width="144" height="192" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<circle cx="304" cy="144" r="16" fill="#0066FF"/>
+<text id="workflow-number-2" x="304" y="144" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">2</text>
+<text id="workflow-label-2" x="304" y="184" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Copy</text>
+<text id="workflow-action-2" x="304" y="224" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">CIDR</text>
+<text id="workflow-caption-2" x="304" y="256" font-size="14" font-weight="400" fill="#333333" text-anchor="middle" dominant-baseline="central">From before</text>
+<rect id="workflow-step-3" x="424" y="112" width="144" height="192" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<circle cx="496" cy="144" r="16" fill="#0066FF"/>
+<text id="workflow-number-3" x="496" y="144" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">3</text>
+<text id="workflow-label-3" x="496" y="184" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Save in</text>
+<text id="workflow-action-3" x="496" y="224" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Console</text>
+<text id="workflow-paste-value" x="496" y="256" font-size="16" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Value only</text>
+<rect id="workflow-step-4" x="616" y="112" width="144" height="192" rx="8" fill="#FFFFFF" stroke="#333333" stroke-opacity=".20"/>
+<circle cx="688" cy="144" r="16" fill="#0066FF"/>
+<text id="workflow-number-4" x="688" y="144" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">4</text>
+<text id="workflow-label-4" x="688" y="184" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">Run</text>
+<text id="workflow-action-4" x="688" y="224" font-size="22" font-weight="600" fill="#333333" text-anchor="middle" dominant-baseline="central">after</text>
+<text id="workflow-caption-4" x="688" y="256" font-size="14" font-weight="400" fill="#333333" text-anchor="middle" dominant-baseline="central">New connections</text>
+<line id="workflow-arrow-1" x1="190" y1="208" x2="226" y2="208" stroke="#0066FF" stroke-width="2" marker-end="url(#workflow-arrow)"/>
+<line id="workflow-arrow-2" x1="382" y1="208" x2="418" y2="208" stroke="#0066FF" stroke-width="2" marker-end="url(#workflow-arrow)"/>
+<line id="workflow-arrow-3" x1="574" y1="208" x2="610" y2="208" stroke="#0066FF" stroke-width="2" marker-end="url(#workflow-arrow)"/>
+<text id="workflow-footer" x="40" y="352" font-size="16" font-weight="400" fill="#333333" text-anchor="start" dominant-baseline="central">Paste only the CIDR value in New Value. Keep the same config and state.</text>
+</svg>

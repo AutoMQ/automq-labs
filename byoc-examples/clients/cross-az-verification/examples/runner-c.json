@@ -1,0 +1,1 @@
+{"schema_version":1,"transport":"ssm","region":"REPLACE_REGION","profile":"REPLACE_PROFILE","instance_id":"i-REPLACE_INSTANCE","remote_root":"/opt/automq-labs/client-case","poll_seconds":3,"lease_seconds":90,"max_runtime_seconds":900}
