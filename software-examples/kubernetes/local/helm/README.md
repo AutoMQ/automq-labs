@@ -98,8 +98,8 @@ This script will:
 After running `install.sh`, you can edit `automq-values.yaml` and upgrade:
 
 ```bash
-helm upgrade automq oci://automq.azurecr.io/helm/automq-enterprise-chart \
-  --version 5.3.4 \
+helm upgrade automq oci://automq.azurecr.io/helm/automq-software-chart \
+  --version 5.5.6 \
   -f automq-values.yaml
 ```
 

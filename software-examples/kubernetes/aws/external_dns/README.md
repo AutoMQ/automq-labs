@@ -103,9 +103,9 @@ kubectl create secret generic automq-tls-secret \
 ### 2.3 Install AutoMQ Software
 
 ```bash
-helm install automq-release oci://automq.azurecr.io/helm/automq-enterprise-chart \
+helm install automq-release oci://automq.azurecr.io/helm/automq-software-chart \
   -f ./demo-values.yaml \
-  --version 5.3.3 \
+  --version 5.5.6 \
   --namespace automq \
   --create-namespace
 ```
