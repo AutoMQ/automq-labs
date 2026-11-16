@@ -1,0 +1,20 @@
+# Set the full CONFIG once with TF_VAR_automq_config; do not commit credentials.
+name_prefix = "automq-eks-demo"
+vpc_id      = "vpc-0123456789abcdef0"
+private_subnet_ids_by_az = {
+  us-east-1a = "subnet-0123456789abcdef0"
+  us-east-1b = "subnet-0123456789abcdef1"
+  us-east-1c = "subnet-0123456789abcdef2"
+}
+s3_vpc_endpoint_id = "vpce-0123456789abcdef0"
+deployer_role_arn  = "arn:aws:iam::123456789012:role/eks-demo-deployer"
+kubernetes_version = "1.36"
+
+# Empty disables public API; run console Terraform from a private-network runner.
+public_api_allowed_cidrs = []
+# For a workstation with no private route, explicitly allow its trusted /32:
+# public_api_allowed_cidrs = ["203.0.113.10/32"]
+
+# Opt in only if private tables lack a default route. Existing routes are not adopted.
+# create_private_nat_egress = true
+# nat_public_subnet_id      = "subnet-0123456789abcdef3"

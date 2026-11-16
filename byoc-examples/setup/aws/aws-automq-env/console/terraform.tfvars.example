@@ -1,0 +1,3 @@
+# Supply CONFIG only through TF_VAR_automq_config.
+# Use an image whose provenance confirms SA fallback + strict trust + S3WAL fixes.
+console_image = "your-private-registry/automq-console:compatible-build"
