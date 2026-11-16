@@ -31,6 +31,8 @@ Each directory is a separate Terraform root. Put non-secret inputs in its own `t
 
 The business pools use `AL2023_ARM_64_STANDARD`; the system pool uses `AL2023_x86_64_STANDARD`. Select compatible images and Instance specifications for their respective architectures. The node-pool autoscaler supplies capacity for pending Pods within these limits; an Instance's configured node count is a separate setting.
 
+For sizing and placement requirements, review the official [EKS compute-capacity guide](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-3-prepare-eks-compute-capacity) and [SchedulingSpec reference](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/overview#schedulingspec). This example creates its pools and scheduling automatically with `automq.io/pool` labels; retain those selectors when adapting capacity rather than copying the manual guide's different labels.
+
 ### Console: `console/`
 
 | Input | Required or default | Meaning and selection |
@@ -130,6 +132,12 @@ For EKS Minimal, change the Instance inputs to supply `data_buckets`, `instance_
 | Instance deployment | Console-managed K8S Instance | EC2/ASG; this is a different Instance deployment path |
 | Console Kubernetes access | In-cluster Kubernetes ServiceAccount + ClusterRoleBinding to `cluster-admin` | IAM principal + EKS Access Entry/EKS access policy; requires a compatible Console path and separate access configuration |
 | AWS workload credentials | IRSA for Console, each Instance and infrastructure components | AWS EKS Pod Identity is a distinct mechanism requiring separate compatibility validation |
+
+### AWS and management permissions
+
+For Console's required AWS permissions, see [Complete Console initialization](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#complete-initialization), which explains the IAM policy displayed during initialization. This example's [foundation IAM configuration](../infrastructure/iam.tf) already provisions the Console role and policies. Use the official manual-grant steps to understand and review those permissions; a second manual role/policy setup is not needed for this path.
+
+For AWS role and workload-identity preparation, see the official [Console workload-identity guide](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#configure-the-workload-identity) and [Instance IAM role and ServiceAccount guide](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-5-prepare-the-automq-workload-iam-role-and-serviceaccount). Their manual provisioning and alternative identity paths explain the underlying requirements; these Terraform roots retain Console ServiceAccount/RBAC, IRSA and Console-managed Instance resources. AutoMQ [management Service Accounts](https://docs.automq.com/automq-cloud/manage-identities-and-access/service-accounts) grant management API access and are separate from AWS IAM roles.
 
 The deployer has its own EKS Access Entry, independent of Console. IRSA is a Pod-level identity mechanism; it is not the AWS EKS Pod Identity product. Default Permissions and `cluster-admin` are broad permissions for resource management. Pod identity isolation does not by itself make the permission set least-privilege: review the [foundation IAM policies](../infrastructure/iam.tf) against your security requirements. Nodes receive worker/ECR policies only, while business permissions stay on their workload roles. IMDSv2 with hop limit 1 restricts ordinary Pod access to Node credentials; hostNetwork/infrastructure Pods need separate review.
 

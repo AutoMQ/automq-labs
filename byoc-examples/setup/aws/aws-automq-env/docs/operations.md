@@ -22,7 +22,7 @@ python3 scripts/kubectl.py -n kube-system get pods
 | Console PVC stays pending | EBS CSI controller and IRSA, StorageClass, available capacity and AZ scheduling | Inspect PVC events and CSI logs before changing storage |
 | Console cannot initialize | Complete CONFIG, matching Environment/Region/Ops bucket, subscription and compatible image | Confirm the installation values with AutoMQ; do not substitute an older Console image |
 | Instance creation fails | Console events, data-plane version/specification availability, IAM errors, selected EKS cluster and three-AZ capacity | Fix the reported precondition and recover the existing operation before retrying |
-| Kafka bootstrap connects but produce/consume fails | Private DNS and routing to **all advertised broker endpoints**, SASL credentials and Topic/Consumer group ACLs | Use the exact returned endpoint/port and the dedicated Kafka password, not management keys |
+| Kafka bootstrap connects but produce/consume fails | Private DNS and routing to **all advertised broker endpoints**, SASL credentials and Topic/Consumer group ACLs | Use the exact returned endpoint/port and the dedicated Kafka password, not management keys. For clients in another VPC, review [cross-VPC access](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/prepare-vpc#configure-cross-vpc-access) |
 | Pending Pods do not trigger capacity | Autoscaler Pod/logs, node-pool maximums, business affinity/taint compatibility and AWS quota | Check the scheduling cause and available pool capacity; node scaling does not change Instance node count |
 
 Collect only the diagnostics relevant to the failed component:
@@ -40,6 +40,8 @@ If a Deployment has a different name, list the Deployments in `kube-system` firs
 Console manages Kubernetes with its Pod ServiceAccount and a binding to the existing `cluster-admin` ClusterRole. Its AWS API access uses its separate IRSA role. Each managed Instance, CNI, EBS CSI, LB Controller and Autoscaler uses its own Pod role.
 
 When an AWS request is denied, inspect the intended role's trust and permissions, the Pod ServiceAccount and the actual caller. IRSA trust must match the EKS OIDC issuer, audience `sts.amazonaws.com` and exact namespace/ServiceAccount. Inspect actual Node role attachments as well: AutoMQ S3, DNS, IAM management or WAL permissions must not be added to Nodes as a workaround. Pod annotations alone do not establish the caller used for a request.
+
+For the AWS role-to-ServiceAccount requirements, see the official [Instance IAM role and ServiceAccount guide](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-5-prepare-the-automq-workload-iam-role-and-serviceaccount). Use it to review the role-to-ServiceAccount relationship while keeping this example's IRSA configuration. The Console and infrastructure components retain their separate roles.
 
 For S3WAL, Instance permissions cover its Data and Ops S3 resources; metadata disk operations use the EBS CSI identity. Ordinary Pods are restricted from Node credentials with IMDSv2/hop limit 1. Review hostNetwork and infrastructure Pods separately.
 

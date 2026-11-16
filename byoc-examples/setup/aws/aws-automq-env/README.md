@@ -41,6 +41,21 @@ This guide selects **Default Permissions + Helm Console + managed K8S Instance +
 
 ## Before you start
 
+### Official deployment documentation
+
+Use these official guides when reviewing network requirements, node-pool sizing or permissions before applying Terraform.
+
+| Planning task | Official guide |
+| --- | --- |
+| Prepare VPC, DNS and S3 access | [Prepare an AWS VPC](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/prepare-vpc) |
+| Plan node pools and Pod placement | [Prepare EKS compute capacity](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-3-prepare-eks-compute-capacity) and [SchedulingSpec](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/overview#schedulingspec) |
+| Review Console deployment and AWS workload roles | [Deploy Console on EKS](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#deploy-automq-console-on-eks) and [Instance IAM role and ServiceAccount](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-5-prepare-the-automq-workload-iam-role-and-serviceaccount) |
+| Create AutoMQ management API credentials | [AutoMQ Service Accounts](https://docs.automq.com/automq-cloud/manage-identities-and-access/service-accounts) |
+
+The official guides cover several deployment paths. In this example, Terraform prepares the node pools and cluster components, and Console manages Instance Data buckets, roles and private DNS. Follow this guide's `automq.io/pool` labels, Console ServiceAccount/RBAC and IRSA configuration; do not repeat manual provisioning steps or replace them with the alternative Access Entry/EKS Pod Identity configurations. Keep the supplied [component versions](docs/configuration.md#component-versions) together when planning changes.
+
+### Prerequisites
+
 | Prepare | Requirement |
 | --- | --- |
 | AutoMQ environment | A new AWS BYOC Environment, its complete `CONFIG`, an active subscription and the compatible Console image |
@@ -54,7 +69,7 @@ This guide selects **Default Permissions + Helm Console + managed K8S Instance +
 
 Use a new `CONFIG` that no active Console uses. Before applying Terraform, confirm that its Ops bucket does not already exist. This example creates that bucket; using an existing bucket requires a separate ownership and migration/import plan.
 
-If you need a new network, use the [optional network example](docs/configuration.md#optional-new-network) first, then return to this guide with its outputs. If your existing private subnets lack outbound routing, review the [optional NAT configuration](docs/configuration.md#optional-nat-for-an-existing-network).
+For detailed DNS, endpoint and connected-network requirements, see the official [VPC preparation guide](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/prepare-vpc). If you need a new network, use the [optional network example](docs/configuration.md#optional-new-network) first, then return to this guide with its outputs. If your existing private subnets lack outbound routing, review the [optional NAT configuration](docs/configuration.md#optional-nat-for-an-existing-network).
 
 ## Parameters you need to set
 
@@ -156,7 +171,7 @@ python3 scripts/kubectl.py -n automq-console port-forward --address 127.0.0.1 \
 
 Sign in with `admin/admin` and change the password. Complete any initialization prompts using **Default Permissions** and confirm the new EKS cluster. This CONFIG-based deployment initializes the environment with its own Ops bucket; you do not need to supply an existing default Data bucket or Instance role.
 
-Create an AutoMQ **Service Account** with Instance and Kafka management permissions, then create its access keys. These are management API credentials; they are separate from the Kubernetes ServiceAccount, AWS IAM roles and Kafka user.
+Follow the [AutoMQ Service Account guide](https://docs.automq.com/automq-cloud/manage-identities-and-access/service-accounts) to create an AutoMQ **Service Account** with Instance and Kafka management permissions, then create its access keys. These are management API credentials; they are separate from the Kubernetes ServiceAccount, AWS IAM roles and Kafka user.
 
 ### 4. Create the Kafka Instance
 
