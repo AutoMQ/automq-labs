@@ -10,7 +10,7 @@ Each directory is a separate Terraform root. Put non-secret inputs in its own `t
 
 | Input | Required or default | Meaning and selection |
 | --- | --- | --- |
-| `automq_config` | Required; use `TF_VAR_automq_config` | Complete AWS BYOC `CONFIG` from AutoMQ. It carries the Environment, Region, client identity and Ops bucket; it is not an AWS access key |
+| `automq_config` | Required; use `TF_VAR_automq_config` | Complete value from [Get your AutoMQ environment configuration](../README.md#get-your-automq-environment-configuration). It carries the Environment, Region, client identity and Ops bucket; it is not an AWS access key |
 | `vpc_id` | Required | Existing VPC in the CONFIG Region; this root does not take ownership of it |
 | `private_subnet_ids_by_az` | Required | Exactly three distinct AZ-to-private-subnet pairs, in the selected VPC |
 | `s3_vpc_endpoint_id` | Required | S3 Gateway Endpoint associated with each selected private route table, permitting Ops and future managed Data buckets |

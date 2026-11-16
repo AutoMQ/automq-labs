@@ -134,7 +134,7 @@ Revoke the temporary AutoMQ management Service Account/access keys **now**, whil
 
 If you added a separate Console ALB Ingress, delete that Ingress first and wait for its ALB/target groups/ENIs/SGs to disappear. Keep the LB Controller until that cleanup finishes.
 
-Use the same complete CONFIG as deployment. In the terminal used for cleanup, read it again without echo if it is not already set:
+Use the same complete CONFIG as deployment, obtained from your [AutoMQ Environment installation script](../README.md#get-your-automq-environment-configuration). In the terminal used for cleanup, read it again without echo if it is not already set:
 
 ```bash
 umask 077

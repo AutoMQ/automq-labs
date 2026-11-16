@@ -71,6 +71,23 @@ Use a new `CONFIG` that no active Console uses. Before applying Terraform, confi
 
 For detailed DNS, endpoint and connected-network requirements, see the official [VPC preparation guide](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/prepare-vpc). If you need a new network, use the [optional network example](docs/configuration.md#optional-new-network) first, then return to this guide with its outputs. If your existing private subnets lack outbound routing, review the [optional NAT configuration](docs/configuration.md#optional-nat-for-an-existing-network).
 
+### Get your AutoMQ environment configuration
+
+1. Sign in to [AutoMQ Cloud](https://account.automq.cloud).
+2. Create a new Environment, select **AWS** and choose the Region where you will deploy EKS.
+3. Open that Environment's details and find **Installation Script**. The installation wizard also displays the generated installation command. See [Register your AutoMQ Environment](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#register-your-automq-environment) for the environment-creation workflow.
+4. Find the `-e CONFIG=` argument and copy only its complete Base64 value. Exclude `-e CONFIG=`, any surrounding quotes, the trailing continuation backslash and all other Docker arguments.
+
+The following fragment shows the format only:
+
+```text
+-e CONFIG=BASE64_VALUE_GENERATED_BY_AUTOMQ
+```
+
+Copy the actual full string represented by `BASE64_VALUE_GENERATED_BY_AUTOMQ` from your installation command, not the illustrative words. Paste that string at the **AutoMQ CONFIG:** prompt in step 1. The foundation and Console use the same value.
+
+Use the generated value unchanged; you do not need to assemble fields, decode it or Base64-encode it again. CONFIG contains Environment credentials, so keep it private. **Do not run the generated Docker command:** this guide installs Console with Helm.
+
 ## Parameters you need to set
 
 Only the values in this table must be supplied for the standard path. Copy the supplied `.tfvars.example` files at the relevant deployment step; replace their sample IDs and image values with your own.
@@ -78,7 +95,7 @@ Only the values in this table must be supplied for the standard path. Copy the s
 | Parameter | Where to set it | How to choose the value |
 | --- | --- | --- |
 | `AWS_PROFILE` | Deployment terminal environment | Configured AWS CLI profile for the intended account and deployer role |
-| `automq_config` | Environment variable `TF_VAR_automq_config` | Complete `CONFIG` value from your AutoMQ AWS BYOC installation command; this is not an AWS credential. Supply the same value to foundation and Console |
+| `automq_config` | Environment variable `TF_VAR_automq_config` | Complete value obtained in [Get your AutoMQ environment configuration](#get-your-automq-environment-configuration); this is not an AWS credential. Supply the same value to foundation and Console |
 | `vpc_id` | `infrastructure/terraform.tfvars` | Existing VPC ID in the Region from `CONFIG` |
 | `private_subnet_ids_by_az` | `infrastructure/terraform.tfvars` | Map exactly three AZ names to their private subnet IDs |
 | `s3_vpc_endpoint_id` | `infrastructure/terraform.tfvars` | Existing S3 Gateway Endpoint associated with those subnets' route tables |
@@ -104,7 +121,7 @@ Keep EKS at 1.36 for the supplied component configuration. The [complete paramet
 
 ### 1. Prepare your working directory and credentials
 
-Run the following commands in **Bash**. All commands in this guide start from the example directory unless a step says otherwise.
+Have your [AutoMQ environment configuration](#get-your-automq-environment-configuration) ready to paste at the prompt. Run the following commands in **Bash**. All commands in this guide start from the example directory unless a step says otherwise.
 
 ```bash
 git clone https://github.com/AutoMQ/automq-labs.git
