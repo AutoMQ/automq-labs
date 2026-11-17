@@ -37,7 +37,6 @@ data "aws_ec2_instance_type" "system" { instance_type = var.system_instance_type
 data "aws_ec2_instance_type" "automq" { instance_type = var.automq_instance_type }
 
 resource "terraform_data" "network_contract" {
-  input = { vpc_id = var.vpc_id }
   lifecycle {
     precondition {
       condition     = alltrue([for az, subnet in data.aws_subnet.private : subnet.vpc_id == var.vpc_id && subnet.availability_zone == az && startswith(az, local.region) && !subnet.map_public_ip_on_launch])
@@ -92,8 +91,6 @@ resource "aws_s3_bucket_public_access_block" "ops" {
 resource "aws_s3_bucket_server_side_encryption_configuration" "ops" {
   bucket = aws_s3_bucket.ops.id
   rule {
-    blocked_encryption_types = ["SSE-C"]
-    bucket_key_enabled       = false
     apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
   }
 }

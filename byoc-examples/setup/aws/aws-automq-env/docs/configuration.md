@@ -31,8 +31,6 @@ Each directory is a separate Terraform root. Put non-secret inputs in its own `t
 
 The business pools use `AL2023_ARM_64_STANDARD`; the system pool uses `AL2023_x86_64_STANDARD`. Select compatible images and Instance specifications for their respective architectures. The node-pool autoscaler supplies capacity for pending Pods within these limits; an Instance's configured node count is a separate setting.
 
-The example configures the shared EKS module explicitly. Its three business pools delegate desired capacity to Cluster Autoscaler. The system pool has a Terraform desired capacity of two, which a foundation apply restores if Autoscaler has changed it.
-
 For sizing and placement requirements, review the official [EKS compute-capacity guide](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-3-prepare-eks-compute-capacity) and [SchedulingSpec reference](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/overview#schedulingspec). This example creates its pools and scheduling automatically with `automq.io/pool` labels; retain those selectors when adapting capacity rather than copying the manual guide's different labels.
 
 ### Console: `console/`
@@ -155,9 +153,7 @@ Use the supplied versions as a coordinated configuration. Console Chart and imag
 | Terraform | `>= 1.9, < 2.0`; CI uses `1.11.4` |
 | EKS | `1.36` |
 | Terraform EKS module | `21.2.0` |
-| Foundation and Console AWS provider | `6.28.0` |
-| Foundation TLS provider | `4.1.0` |
-| Optional network example AWS provider | `6.13.0` |
+| AWS / TLS providers | `6.13.0` / `4.1.0` |
 | Kubernetes / Helm providers | `2.38.0` / `2.17.0` |
 | Console Chart | `oci://automq.azurecr.io/helm/automq-byoc-console-chart`, `8.3.28` |
 | Console image | `automq.azurecr.io/automq/automq-byoc-console:8.4.13-aws` |

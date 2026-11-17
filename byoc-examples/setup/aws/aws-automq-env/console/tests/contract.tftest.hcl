@@ -1,14 +1,3 @@
-mock_provider "aws" {
-  mock_data "aws_eks_cluster" {
-    defaults = {
-      name                  = "automq-test-eks"
-      endpoint              = "https://eks.example.test"
-      certificate_authority = [{ data = "dGVzdA==" }]
-      identity              = [{ oidc = [{ issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE" }] }]
-      vpc_config            = [{ cluster_security_group_id = "sg-example", subnet_ids = ["subnet-a", "subnet-b", "subnet-c"], vpc_id = "vpc-example" }]
-    }
-  }
-}
 mock_provider "kubernetes" {}
 mock_provider "helm" {}
 override_data {
@@ -18,7 +7,6 @@ override_data {
     cluster_name              = "automq-test-eks", cluster_endpoint = "https://eks.example.test", cluster_certificate_authority_data = "dGVzdA==", kubernetes_version = "1.36"
     console_kubernetes_access = { principal_arn = "arn:aws:iam::123456789012:role/console", policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy", scope_type = "cluster" }
     console_namespace         = "automq-console", console_service_account_name = "automq-console", console_role_arn = "arn:aws:iam::123456789012:role/console"
-    ebs_csi_role_arn          = "arn:aws:iam::123456789012:role/csi"
     lb_controller_role_arn    = "arn:aws:iam::123456789012:role/lb", autoscaler_role_arn = "arn:aws:iam::123456789012:role/as"
     private_subnet_ids_by_az  = { us-east-1a = "subnet-a", us-east-1b = "subnet-b", us-east-1c = "subnet-c" }
     automq_node_selector      = { "automq.io/pool" = "automq" }
@@ -44,9 +32,8 @@ run "console_identity_storage_chart_contract" {
     error_message = "Chart must reference the external CONFIG secret/KSA and keep the Console on system nodes with private access."
   }
   assert {
-    condition     = !contains(local.token_args, "--role-arn") && module.eks_addons.cluster_autoscaler_role_arn == local.infra.autoscaler_role_arn && module.eks_addons.alb_controller_role_arn == local.infra.lb_controller_role_arn
-    error_message = "Tokens must use current deployer credentials and the shared components must reuse foundation Pod roles."
-
+    condition     = !contains(local.token_args, "--role-arn") && helm_release.lb_controller.version == "1.13.4" && yamldecode(helm_release.autoscaler.values[0]).image.tag == "v1.36.0" && yamldecode(helm_release.lb_controller.values[0]).serviceAccount.name == "aws-load-balancer-controller" && yamldecode(helm_release.autoscaler.values[0]).rbac.serviceAccount.name == "cluster-autoscaler"
+    error_message = "Tokens must use current deployer credentials and component KSAs must match foundation trust."
   }
 }
 run "released_console_image_is_accepted" {
@@ -75,7 +62,6 @@ run "missing_console_access_entry_rejected" {
       region                   = "us-east-1", account_id = "123456789012", environment_id = "env-example", ops_bucket_name = "automq-test-ops", vpc_id = "vpc-example"
       cluster_name             = "automq-test-eks", cluster_endpoint = "https://eks.example.test", cluster_certificate_authority_data = "dGVzdA==", kubernetes_version = "1.36"
       console_namespace        = "automq-console", console_service_account_name = "automq-console", console_role_arn = "arn:aws:iam::123456789012:role/console"
-      ebs_csi_role_arn         = "arn:aws:iam::123456789012:role/csi"
       lb_controller_role_arn   = "arn:aws:iam::123456789012:role/lb", autoscaler_role_arn = "arn:aws:iam::123456789012:role/as"
       private_subnet_ids_by_az = { us-east-1a = "subnet-a", us-east-1b = "subnet-b", us-east-1c = "subnet-c" }
       automq_node_selector     = { "automq.io/pool" = "automq" }, automq_tolerations = []
@@ -103,7 +89,6 @@ run "wrong_console_access_principal_rejected" {
       cluster_name              = "automq-test-eks", cluster_endpoint = "https://eks.example.test", cluster_certificate_authority_data = "dGVzdA==", kubernetes_version = "1.36"
       console_kubernetes_access = { principal_arn = "arn:aws:iam::123456789012:role/node", policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy", scope_type = "cluster" }
       console_namespace         = "automq-console", console_service_account_name = "automq-console", console_role_arn = "arn:aws:iam::123456789012:role/console"
-      ebs_csi_role_arn          = "arn:aws:iam::123456789012:role/csi"
       lb_controller_role_arn    = "arn:aws:iam::123456789012:role/lb", autoscaler_role_arn = "arn:aws:iam::123456789012:role/as"
       private_subnet_ids_by_az  = { us-east-1a = "subnet-a", us-east-1b = "subnet-b", us-east-1c = "subnet-c" }
       automq_node_selector      = { "automq.io/pool" = "automq" }
@@ -122,7 +107,6 @@ run "namespace_scoped_console_access_rejected" {
       cluster_name              = "automq-test-eks", cluster_endpoint = "https://eks.example.test", cluster_certificate_authority_data = "dGVzdA==", kubernetes_version = "1.36"
       console_kubernetes_access = { principal_arn = "arn:aws:iam::123456789012:role/console", policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy", scope_type = "namespace" }
       console_namespace         = "automq-console", console_service_account_name = "automq-console", console_role_arn = "arn:aws:iam::123456789012:role/console"
-      ebs_csi_role_arn          = "arn:aws:iam::123456789012:role/csi"
       lb_controller_role_arn    = "arn:aws:iam::123456789012:role/lb", autoscaler_role_arn = "arn:aws:iam::123456789012:role/as"
       private_subnet_ids_by_az  = { us-east-1a = "subnet-a", us-east-1b = "subnet-b", us-east-1c = "subnet-c" }
       automq_node_selector      = { "automq.io/pool" = "automq" }

@@ -5,19 +5,19 @@ output "ops_bucket_name" { value = aws_s3_bucket.ops.id }
 output "vpc_id" { value = var.vpc_id }
 output "private_subnet_ids_by_az" { value = var.private_subnet_ids_by_az }
 output "s3_vpc_endpoint_id" { value = var.s3_vpc_endpoint_id }
-output "cluster_name" { value = module.eks_cluster.eks_cluster_name }
-output "cluster_endpoint" { value = module.eks_cluster.eks_cluster_endpoint }
-output "cluster_certificate_authority_data" { value = module.eks_cluster.eks_cluster_ca_certificate }
-output "oidc_provider_arn" { value = module.eks_cluster.oidc_provider_arn }
+output "cluster_name" { value = module.eks.cluster_name }
+output "cluster_endpoint" { value = module.eks.cluster_endpoint }
+output "cluster_certificate_authority_data" { value = module.eks.cluster_certificate_authority_data }
+output "oidc_provider_arn" { value = module.eks.oidc_provider_arn }
 output "console_namespace" { value = var.console_namespace }
 output "console_service_account_name" { value = var.console_service_account_name }
 output "console_role_arn" { value = aws_iam_role.pod["console"].arn }
-output "ebs_csi_role_arn" { value = module.eks_cluster.component_role_arns["ebs-csi"] }
-output "lb_controller_role_arn" { value = module.eks_cluster.component_role_arns["lb-controller"] }
-output "autoscaler_role_arn" { value = module.eks_cluster.component_role_arns["autoscaler"] }
+output "ebs_csi_role_arn" { value = aws_iam_role.pod["ebs-csi"].arn }
+output "lb_controller_role_arn" { value = aws_iam_role.pod["lb-controller"].arn }
+output "autoscaler_role_arn" { value = aws_iam_role.pod["autoscaler"].arn }
 output "automq_node_selector" { value = local.automq_selector }
 output "automq_tolerations" { value = local.automq_tolerations }
-output "node_role_arn" { value = module.eks_cluster.node_role_arn }
+output "node_role_arn" { value = aws_iam_role.node.arn }
 output "kubernetes_version" { value = var.kubernetes_version }
 output "deployer_role_arn" { value = var.deployer_role_arn }
 output "private_nat_gateway_id" {
@@ -26,7 +26,7 @@ output "private_nat_gateway_id" {
 }
 output "addon_versions" {
   description = "Resolved versions; supply these as addon_versions when reproducing the verified matrix."
-  value       = module.eks_cluster.addon_versions
+  value       = merge({ "vpc-cni" = aws_eks_addon.vpc_cni.addon_version }, { for name, addon in aws_eks_addon.after_nodes : name => addon.addon_version })
 }
 
 output "console_kubernetes_access" {
