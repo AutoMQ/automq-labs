@@ -8,12 +8,14 @@ on:
       - '**/*.tf'
       - '**/*.tfvars'
       - '**/*.tftest.hcl'
+      - 'byoc-examples/setup/aws/aws-automq-env/**'
       - '.github/workflows/terraform-validate.yml'
   pull_request:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
       - '**/*.tftest.hcl'
+      - 'byoc-examples/setup/aws/aws-automq-env/**'
       - '.github/workflows/terraform-validate.yml'
 
 jobs:
@@ -67,3 +69,43 @@ jobs:
         done
 
         exit "$test_failed"
+
+  eks-8x-contract:
+    name: 'New EKS: ${{ matrix.root }}'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        root: [network-example, infrastructure, console, automq-example/instance, automq-example/smoke]
+    defaults:
+      run:
+        working-directory: byoc-examples/setup/aws/aws-automq-env/${{ matrix.root }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+      - name: Initialize
+        run: terraform init -backend=false -input=false
+      - name: Validate
+        run: terraform validate -no-color
+      - name: Mock and negative contract tests
+        run: terraform test -no-color
+
+  eks-8x-chart-scripts:
+    name: 'New EKS: Chart, scripts and docs'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: azure/setup-helm@v4.3.1
+        with:
+          version: 'v3.19.0'
+      - name: Install parser
+        run: python -m pip install PyYAML==6.0.3
+      - name: Render official pinned OCI Chart
+        run: python byoc-examples/setup/aws/aws-automq-env/scripts/check-chart.py
+      - name: Check script syntax and documentation
+        run: python byoc-examples/setup/aws/aws-automq-env/scripts/check-static.py

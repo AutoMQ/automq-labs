@@ -1,0 +1,14 @@
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/terraform.tfvars
+**/*.auto.tfvars
+**/*.auto.tfvars.json
+**/crash.log
+**/override.tf
+**/*_override.tf
+**/kubeconfig
+**/values.local.yaml
+**/*.secret.yaml
+!**/.terraform.lock.hcl

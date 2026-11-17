@@ -1,0 +1,3 @@
+# Supply CONFIG only through TF_VAR_automq_config.
+# Use the exact released AWS Console image from your AutoMQ installation command.
+console_image = "automq.azurecr.io/automq/automq-byoc-console:8.4.13-aws"
