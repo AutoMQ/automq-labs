@@ -28,8 +28,8 @@ variable "name_prefix" {
   type        = string
   default     = "automq-eks-demo"
   validation {
-    condition     = can(regex("^[a-z][a-z0-9-]{2,29}$", var.name_prefix))
-    error_message = "name_prefix must be 3-30 lowercase letters, digits, or hyphens and start with a letter."
+    condition     = can(regex("^[a-z][a-z0-9-]{2,24}$", var.name_prefix))
+    error_message = "name_prefix must be 3-25 lowercase letters, digits, or hyphens and start with a letter."
   }
 }
 

@@ -15,7 +15,7 @@ Each directory is a separate Terraform root. Put non-secret inputs in its own `t
 | `private_subnet_ids_by_az` | Required | Exactly three distinct AZ-to-private-subnet pairs, in the selected VPC |
 | `s3_vpc_endpoint_id` | Required | S3 Gateway Endpoint associated with each selected private route table, permitting Ops and future managed Data buckets |
 | `deployer_role_arn` | Required | IAM role ARN used to administer this EKS cluster; must match the role used by your deployment session. Do not use an STS assumed-role session ARN or the Console role |
-| `name_prefix` | `automq-eks-demo` | Unique lowercase resource prefix, 3–30 characters, starting with a letter |
+| `name_prefix` | `automq-eks-demo` | Unique lowercase resource prefix, 3–25 characters, starting with a letter |
 | `kubernetes_version` | `1.36` | Keep `1.36` for this example. Console checks this exact version; changing it requires updating and verifying the component configuration together |
 | `public_api_allowed_cidrs` | `[]` | Empty disables the public API. Set only trusted IPv4 CIDRs when the deployment host cannot reach the private API; `0.0.0.0/0` is rejected |
 | `service_ipv4_cidr` | `172.20.0.0/16` | Kubernetes Service address space; use a canonical private `/12`–`/24` range that does not overlap any VPC CIDR |

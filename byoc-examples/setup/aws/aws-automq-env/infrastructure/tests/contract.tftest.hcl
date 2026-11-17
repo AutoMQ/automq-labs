@@ -82,6 +82,21 @@ variables {
   deployer_role_arn        = "arn:aws:iam::123456789012:role/deployer"
 }
 
+run "name_prefix_25_characters_is_accepted" {
+  command = plan
+  variables { name_prefix = "abcdefghijklmnopqrstuvwxy" }
+  assert {
+    condition     = local.cluster_name == "abcdefghijklmnopqrstuvwxy-eks"
+    error_message = "A 25-character prefix must be accepted without changing the cluster naming convention."
+  }
+}
+
+run "name_prefix_26_characters_is_rejected" {
+  command = plan
+  variables { name_prefix = "abcdefghijklmnopqrstuvwxyz" }
+  expect_failures = [var.name_prefix]
+}
+
 run "pod_identity_and_capacity_contract" {
   command = apply
   assert {
