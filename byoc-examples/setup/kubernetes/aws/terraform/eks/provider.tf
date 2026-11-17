@@ -12,17 +12,17 @@ terraform {
 
     tls = {
       source  = "hashicorp/tls"
-      version = ">= 4.0.5, < 5.0.0"
+      version = "~> 4.0.5"
     }
 
     cloudinit = {
       source  = "hashicorp/cloudinit"
-      version = ">= 2.3.4, < 3.0.0"
+      version = "~> 2.3.4"
     }
 
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = ">= 2.36.0, < 3.0.0"
+      version = "2.36.0"
     }
 
     helm = {
@@ -38,27 +38,23 @@ provider "aws" {
   region = var.region
 }
 
-# Use the caller's existing AWS CLI credential chain. Exec refreshes tokens for
-# long installs and never stores a Kubernetes bearer token in Terraform state.
+# Data sources for cluster authentication
+ephemeral "aws_eks_cluster_auth" "cluster" {
+  name       = module.eks.cluster_name
+  depends_on = [module.eks]
+}
+
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args        = ["eks", "get-token", "--region", var.region, "--cluster-name", module.eks.cluster_name]
-  }
+  token                  = ephemeral.aws_eks_cluster_auth.cluster.token
 }
 
 provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
     cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--region", var.region, "--cluster-name", module.eks.cluster_name]
-    }
+    token                  = ephemeral.aws_eks_cluster_auth.cluster.token
   }
 }
 

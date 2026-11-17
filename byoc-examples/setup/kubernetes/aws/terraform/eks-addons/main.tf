@@ -25,16 +25,11 @@ locals {
   external_dns_role_name       = "external-dns-role-${var.resource_suffix}"
 
   # Helm release names
-  cluster_autoscaler_role_arn = try(var.role_arns["autoscaler"], module.cluster_autoscaler_irsa_role[0].arn)
-  alb_controller_role_arn     = try(var.role_arns["lb-controller"], module.lb_irsa_role[0].arn)
-  ebs_csi_role_arn            = try(var.role_arns["ebs-csi"], module.ebs-csi-irsa-role[0].arn)
-
   cluster_autoscaler_release_name = "cluster-autoscaler"
   alb_controller_release_name     = "aws-load-balancer-controller"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "automq_ingress_rule" {
-  count             = var.enable_automq_ingress_rule ? 1 : 0
   description       = "Allow traffic from EKS cluster to Automq service"
   from_port         = 9092
   to_port           = 9103
