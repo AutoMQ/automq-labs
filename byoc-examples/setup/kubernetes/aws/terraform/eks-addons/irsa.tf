@@ -2,9 +2,10 @@
 # Load Balancer Controller Role
 ##############################################################################
 module "lb_irsa_role" {
-  count = var.enable_alb_ingress_controller ? 1 : 0
+  count = var.enable_alb_ingress_controller && !contains(keys(var.role_arns), "lb-controller") ? 1 : 0
 
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "6.11.0"
 
   name                                   = local.alb_controller_role_name
   attach_load_balancer_controller_policy = true
@@ -21,9 +22,10 @@ module "lb_irsa_role" {
 # EBS Storage CSI Role
 ##############################################################################
 module "ebs-csi-irsa-role" {
-  count = var.enable_ebs_csi_driver ? 1 : 0
+  count = var.enable_ebs_csi_driver && !contains(keys(var.role_arns), "ebs-csi") ? 1 : 0
 
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "6.11.0"
 
   name                  = local.ebs_csi_role_name
   attach_ebs_csi_policy = true
@@ -40,9 +42,10 @@ module "ebs-csi-irsa-role" {
 # Cluster Autoscaler Role
 ##############################################################################
 module "cluster_autoscaler_irsa_role" {
-  count = var.enable_autoscaler ? 1 : 0
+  count = var.enable_autoscaler && !contains(keys(var.role_arns), "autoscaler") ? 1 : 0
 
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "6.11.0"
 
   name                             = local.cluster_autoscaler_role_name
   attach_cluster_autoscaler_policy = true
@@ -60,8 +63,10 @@ module "cluster_autoscaler_irsa_role" {
 # External DNS Role
 ##############################################################################
 module "cluster_exteranl_dns_irsa_role" {
+  count = var.enable_external_dns ? 1 : 0
 
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
+  version = "6.11.0"
 
   name                          = local.external_dns_role_name
   attach_external_dns_policy    = true

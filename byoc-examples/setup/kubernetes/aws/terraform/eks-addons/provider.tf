@@ -18,8 +18,3 @@ terraform {
 
   required_version = "~> 1.3"
 }
-
-# Data sources for cluster authentication
-data "aws_eks_cluster_auth" "cluster" {
-  name = var.cluster_name
-}
