@@ -42,20 +42,40 @@ mock_provider "aws" {
   }
 }
 mock_provider "tls" {}
+mock_provider "random" {}
+mock_provider "kubernetes" {}
+mock_provider "helm" {}
 
 override_resource {
   target = aws_iam_role.pod["console"]
   values = { id = "mock-console-role", arn = "arn:aws:iam::123456789012:role/mock-console-role" }
 }
 
+# Consumer tests replace the whole shared module. Its own tests exercise AWS
+# resources; replacing only its upstream module would leave embedded providers
+# outside this root's mock provider configuration.
 override_module {
-  target = module.eks
+  target = module.eks_cluster
   outputs = {
-    cluster_name                       = "automq-eks-demo-eks"
-    cluster_endpoint                   = "https://eks.example.test"
-    cluster_certificate_authority_data = "dGVzdA=="
-    cluster_oidc_issuer_url            = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-    oidc_provider_arn                  = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+    eks_cluster_name           = "automq-eks-demo-eks"
+    eks_cluster_endpoint       = "https://eks.example.test"
+    eks_cluster_ca_certificate = "dGVzdA=="
+    cluster_oidc_issuer_url    = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+    oidc_provider_arn          = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+    node_role_arn              = "arn:aws:iam::123456789012:role/shared-node"
+    component_role_arns = {
+      cni           = "arn:aws:iam::123456789012:role/shared-cni"
+      ebs-csi       = "arn:aws:iam::123456789012:role/shared-csi"
+      autoscaler    = "arn:aws:iam::123456789012:role/shared-autoscaler"
+      lb-controller = "arn:aws:iam::123456789012:role/shared-lb"
+    }
+    node_group_names = {
+      system     = "automq-eks-demo-system"
+      us-east-1a = "automq-eks-demo-automq-us-east-1a"
+      us-east-1b = "automq-eks-demo-automq-us-east-1b"
+      us-east-1c = "automq-eks-demo-automq-us-east-1c"
+    }
+    addon_versions = { "vpc-cni" = "v1.2.3-eksbuild.1", "coredns" = "v1.2.3-eksbuild.1", "kube-proxy" = "v1.2.3-eksbuild.1", "aws-ebs-csi-driver" = "v1.2.3-eksbuild.1" }
   }
 }
 
@@ -100,9 +120,13 @@ run "name_prefix_26_characters_is_rejected" {
 run "pod_identity_and_capacity_contract" {
   command = apply
   assert {
+    condition     = toset(one(aws_s3_bucket_server_side_encryption_configuration.ops.rule).blocked_encryption_types) == toset(["SSE-C"]) && one(aws_s3_bucket_server_side_encryption_configuration.ops.rule).bucket_key_enabled == false && one(one(aws_s3_bucket_server_side_encryption_configuration.ops.rule).apply_server_side_encryption_by_default).sse_algorithm == "AES256"
+    error_message = "The Ops bucket must preserve SSE-S3 encryption and block customer-provided encryption keys during AWS provider upgrades."
+  }
+  assert {
     condition = (aws_eks_access_entry.console.principal_arn == aws_iam_role.pod["console"].arn &&
       aws_eks_access_entry.console.principal_arn != var.deployer_role_arn &&
-      aws_eks_access_entry.console.principal_arn != aws_iam_role.node.arn &&
+      aws_eks_access_entry.console.principal_arn != module.eks_cluster.node_role_arn &&
       aws_eks_access_entry.console.type == "STANDARD" &&
       aws_eks_access_policy_association.console.principal_arn == aws_eks_access_entry.console.principal_arn &&
       aws_eks_access_policy_association.console.policy_arn == "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" &&
@@ -116,7 +140,7 @@ run "pod_identity_and_capacity_contract" {
     error_message = "The Console root must receive the completed IAM/EKS access contract."
   }
   assert {
-    condition = aws_iam_role_policy.console_discovery.role == aws_iam_role.pod["console"].id && aws_iam_role_policy.console_discovery.role != aws_iam_role.node.id && contains(
+    condition = aws_iam_role_policy.console_discovery.role == aws_iam_role.pod["console"].id && aws_iam_role.pod["console"].arn != module.eks_cluster.node_role_arn && contains(
       jsondecode(aws_iam_role_policy.console_discovery.policy).Statement[0].Action, "ec2:DescribeInstanceTypeOfferings"
       ) && alltrue([
         for action in jsondecode(aws_iam_role_policy.console_discovery.policy).Statement[0].Action : can(regex("^[a-z0-9]+:(Describe|Get|List)[A-Za-z0-9]+$", action))
@@ -124,10 +148,8 @@ run "pod_identity_and_capacity_contract" {
     error_message = "Instance-type offering discovery must be an exact read-only action on the Console Pod Role, never Node or a wildcard mutation grant."
   }
   assert {
-    condition = toset([for attachment in aws_iam_role_policy_attachment.node : attachment.policy_arn]) == toset([
-      "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy", "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly"
-    ])
-    error_message = "Node must have only worker/ECR foundation policies, never AutoMQ/CNI/CSI business access."
+    condition     = output.node_role_arn == module.eks_cluster.node_role_arn && output.node_role_arn != output.console_role_arn
+    error_message = "The public Node role must come from the shared EKS module and remain separate from Console."
   }
   assert {
     condition = alltrue([for name, role in aws_iam_role.pod : (
@@ -138,10 +160,10 @@ run "pod_identity_and_capacity_contract" {
     error_message = "Every Pod Role must bind both audience and its exact namespace/ServiceAccount."
   }
   assert {
-    condition = length(aws_eks_node_group.automq) == 3 && alltrue([for az, group in aws_eks_node_group.automq :
-      group.subnet_ids == toset([var.private_subnet_ids_by_az[az]]) && group.scaling_config[0].min_size == 1 && group.capacity_type == "ON_DEMAND" && group.ami_type == "AL2023_ARM_64_STANDARD"
+    condition = toset(keys(module.eks_cluster.node_group_names)) == toset(concat(["system"], keys(var.private_subnet_ids_by_az))) && alltrue([
+      for az in keys(var.private_subnet_ids_by_az) : module.eks_cluster.node_group_names[az] == "${var.name_prefix}-automq-${az}"
     ])
-    error_message = "Each AutoMQ AZ must have its own On-Demand ARM AL2023 capacity, not a shared desired count."
+    error_message = "The shared EKS module must supply one named AutoMQ pool per requested AZ and a system pool."
   }
   assert {
     condition = alltrue([for statement in jsondecode(aws_iam_role_policy.console_managed.policy).Statement :
@@ -160,8 +182,8 @@ run "pod_identity_and_capacity_contract" {
     error_message = "Existing managed role mutations must remain limited to owned Instance Roles."
   }
   assert {
-    condition     = length(aws_autoscaling_group_tag.autoscaler) == 14
-    error_message = "Autoscaler discovery and node-template tags must be installed on the underlying ASGs."
+    condition     = output.ebs_csi_role_arn == module.eks_cluster.component_role_arns["ebs-csi"] && output.autoscaler_role_arn == module.eks_cluster.component_role_arns["autoscaler"] && output.lb_controller_role_arn == module.eks_cluster.component_role_arns["lb-controller"]
+    error_message = "Post-cluster components must receive the shared EKS Pod roles rather than a second set of example-owned roles."
   }
 }
 

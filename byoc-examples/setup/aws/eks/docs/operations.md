@@ -94,6 +94,8 @@ terraform -chdir=automq-example/instance apply scale-in.tfplan
 
 **Expected result:** the Instance returns to an available state with three AutoMQ Pods `Ready` across the three AZs. Run the private Kafka check again. Cluster Autoscaler can remove the unneeded EC2 nodes after its scale-down delay and safety checks; continue observing the business pools until they return to the initial capacity of one node per AZ. Instance completion and EC2 node removal are separate events.
 
+Cluster Autoscaler owns the desired capacity of the three AutoMQ business pools. Terraform keeps the system pool at a desired capacity of two when you apply the foundation; Autoscaler can adjust it temporarily within its configured limits. Changing an Instance specification affects the business pools, not the system-pool target.
+
 In this default S3WAL example, the three controller Pods and their three metadata PVCs remain in place. Scaling changes the number of broker Pods and the EC2 capacity they need. Brokers use `emptyDir`, so this procedure creates no additional broker PVCs. For other storage configurations, check the actual StatefulSet volume-retention policy before planning storage cleanup.
 
 If Pods remain Pending, inspect their scheduling events, the node-group limit, AutoMQ affinity/taints, EC2 quota and Autoscaler logs. If the Instance remains `Updating` while all Pods are ready and there is no scheduling backlog, inspect the Console task/logs and its EKS Access Entry rather than changing EC2 capacity.

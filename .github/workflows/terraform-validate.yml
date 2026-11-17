@@ -8,14 +8,16 @@ on:
       - '**/*.tf'
       - '**/*.tfvars'
       - '**/*.tftest.hcl'
-      - 'byoc-examples/setup/aws/aws-automq-env/**'
+      - 'byoc-examples/setup/aws/eks/**'
+      - 'byoc-examples/setup/kubernetes/aws/terraform/**'
       - '.github/workflows/terraform-validate.yml'
   pull_request:
     paths:
       - '**/*.tf'
       - '**/*.tfvars'
       - '**/*.tftest.hcl'
-      - 'byoc-examples/setup/aws/aws-automq-env/**'
+      - 'byoc-examples/setup/aws/eks/**'
+      - 'byoc-examples/setup/kubernetes/aws/terraform/**'
       - '.github/workflows/terraform-validate.yml'
 
 jobs:
@@ -79,7 +81,7 @@ jobs:
         root: [network-example, infrastructure, console, automq-example/instance, automq-example/smoke]
     defaults:
       run:
-        working-directory: byoc-examples/setup/aws/aws-automq-env/${{ matrix.root }}
+        working-directory: byoc-examples/setup/aws/eks/${{ matrix.root }}
     steps:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
@@ -90,6 +92,11 @@ jobs:
       - name: Validate
         run: terraform validate -no-color
       - name: Mock and negative contract tests
+        env:
+          AWS_ACCESS_KEY_ID: testing
+          AWS_SECRET_ACCESS_KEY: testing
+          AWS_SESSION_TOKEN: testing
+          AWS_EC2_METADATA_DISABLED: 'true'
         run: terraform test -no-color
 
   eks-8x-chart-scripts:
@@ -106,6 +113,33 @@ jobs:
       - name: Install parser
         run: python -m pip install PyYAML==6.0.3
       - name: Render official pinned OCI Chart
-        run: python byoc-examples/setup/aws/aws-automq-env/scripts/check-chart.py
+        run: python byoc-examples/setup/aws/eks/scripts/check-chart.py
       - name: Check script syntax and documentation
-        run: python byoc-examples/setup/aws/aws-automq-env/scripts/check-static.py
+        run: python byoc-examples/setup/aws/eks/scripts/check-static.py
+
+  eks-shared-contract:
+    name: 'Shared EKS: ${{ matrix.module }}'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [eks, eks-addons]
+    defaults:
+      run:
+        working-directory: byoc-examples/setup/kubernetes/aws/terraform/${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+      - name: Initialize
+        run: terraform init -backend=false -input=false
+      - name: Validate
+        run: terraform validate -no-color
+      - name: Compatibility and explicit configuration tests
+        env:
+          AWS_ACCESS_KEY_ID: testing
+          AWS_SECRET_ACCESS_KEY: testing
+          AWS_SESSION_TOKEN: testing
+          AWS_EC2_METADATA_DISABLED: 'true'
+        run: terraform test -no-color

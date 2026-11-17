@@ -93,30 +93,38 @@ resource "kubernetes_storage_class_v1" "console" {
   allow_volume_expansion = true
   parameters             = { type = "gp3", encrypted = "true", "csi.storage.k8s.io/fstype" = "ext4" }
 }
-resource "helm_release" "lb_controller" {
-  name       = "aws-load-balancer-controller"
-  namespace  = "kube-system"
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  version    = "1.13.4"
-  wait       = true
-  timeout    = 600
-  values = [yamlencode({
-    clusterName    = local.infra.cluster_name, region = local.infra.region, vpcId = local.infra.vpc_id
-    serviceAccount = { create = true, name = "aws-load-balancer-controller", annotations = { "eks.amazonaws.com/role-arn" = local.infra.lb_controller_role_arn } }
-    nodeSelector   = { "automq.io/pool" = "system" }
-  })]
-  depends_on = [terraform_data.contract]
+# Install the common EKS components after the foundation is ready. Roles and
+# managed EKS addons were prepared by the shared EKS module in infrastructure/.
+provider "aws" {
+  region = local.infra.region
 }
-resource "helm_release" "autoscaler" {
-  name       = "cluster-autoscaler"
-  namespace  = "kube-system"
-  repository = "https://kubernetes.github.io/autoscaler"
-  chart      = "cluster-autoscaler"
-  version    = "9.59.0"
-  wait       = true
-  timeout    = 600
-  values = [yamlencode({
+module "eks_addons" {
+  source = "../../../kubernetes/aws/terraform/eks-addons"
+
+  region          = local.infra.region
+  cluster_name    = local.infra.cluster_name
+  vpc_id          = local.infra.vpc_id
+  resource_suffix = local.infra.cluster_name
+  role_arns = {
+    autoscaler    = local.infra.autoscaler_role_arn
+    lb-controller = local.infra.lb_controller_role_arn
+    ebs-csi       = local.infra.ebs_csi_role_arn
+  }
+  enable_vpc_cni                = false
+  enable_coredns                = false
+  enable_kube_proxy             = false
+  enable_pod_identity_agent     = false
+  enable_ebs_csi_driver         = false
+  enable_autoscaler             = true
+  enable_alb_ingress_controller = true
+  enable_external_dns           = false
+  enable_automq_ingress_rule    = false
+  manage_lb_service_account     = false
+  lb_controller_host_network    = false
+  autoscaler_image_tag          = "v1.36.0"
+  autoscaler_chart_version      = "9.59.0"
+  lb_controller_chart_version   = "1.13.4"
+  autoscaler_values = [yamlencode({
     cloudProvider = "aws", awsRegion = local.infra.region
     autoDiscovery = { clusterName = local.infra.cluster_name }
     image         = { repository = "registry.k8s.io/autoscaling/cluster-autoscaler", tag = "v1.36.0" }
@@ -124,6 +132,12 @@ resource "helm_release" "autoscaler" {
     nodeSelector  = { "automq.io/pool" = "system" }
     extraArgs     = { "balance-similar-node-groups" = "true", "skip-nodes-with-local-storage" = "false" }
   })]
+  lb_controller_values = [yamlencode({
+    clusterName    = local.infra.cluster_name, region = local.infra.region, vpcId = local.infra.vpc_id
+    serviceAccount = { create = true, name = "aws-load-balancer-controller", annotations = { "eks.amazonaws.com/role-arn" = local.infra.lb_controller_role_arn } }
+    nodeSelector   = { "automq.io/pool" = "system" }
+  })]
+  providers  = { aws = aws, kubernetes = kubernetes, helm = helm }
   depends_on = [terraform_data.contract]
 }
 resource "helm_release" "console" {
@@ -135,5 +149,5 @@ resource "helm_release" "console" {
   wait       = true
   timeout    = 900
   values     = [yamlencode(local.chart_values)]
-  depends_on = [kubernetes_service_account_v1.console, kubernetes_secret_v1.config, kubernetes_storage_class_v1.console, helm_release.lb_controller, helm_release.autoscaler]
+  depends_on = [kubernetes_service_account_v1.console, kubernetes_secret_v1.config, kubernetes_storage_class_v1.console, module.eks_addons]
 }

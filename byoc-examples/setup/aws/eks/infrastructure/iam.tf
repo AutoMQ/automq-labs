@@ -1,11 +1,7 @@
 locals {
-  issuer = trimprefix(module.eks.cluster_oidc_issuer_url, "https://")
+  issuer = trimprefix(module.eks_cluster.cluster_oidc_issuer_url, "https://")
   pod_subjects = {
-    console       = "system:serviceaccount:${var.console_namespace}:${var.console_service_account_name}"
-    cni           = "system:serviceaccount:kube-system:aws-node"
-    ebs-csi       = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
-    lb-controller = "system:serviceaccount:kube-system:aws-load-balancer-controller"
-    autoscaler    = "system:serviceaccount:kube-system:cluster-autoscaler"
+    console = "system:serviceaccount:${var.console_namespace}:${var.console_service_account_name}"
   }
   managed_bucket_arn = "arn:${data.aws_partition.current.partition}:s3:::automq-data-kf-*"
   managed_role_arn   = "arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:role/automq-instance-kf-*"
@@ -19,17 +15,11 @@ resource "aws_iam_role" "pod" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow", Action = "sts:AssumeRoleWithWebIdentity"
-      Principal = { Federated = module.eks.oidc_provider_arn }
+      Principal = { Federated = module.eks_cluster.oidc_provider_arn }
       Condition = { StringEquals = { "${local.issuer}:aud" = "sts.amazonaws.com", "${local.issuer}:sub" = each.value } }
     }]
   })
   tags = local.tags
-}
-
-resource "aws_iam_role_policy_attachment" "component" {
-  for_each   = { cni = "AmazonEKS_CNI_Policy", ebs-csi = "service-role/AmazonEBSCSIDriverPolicy" }
-  role       = aws_iam_role.pod[each.key].name
-  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/${each.value}"
 }
 
 # List/Describe discovery APIs below cannot all be scoped to an individual ARN.
@@ -112,34 +102,4 @@ resource "aws_iam_role_policy" "console_managed" {
       }
     ]
   })
-}
-
-resource "aws_iam_role_policy" "autoscaler" {
-  name = "${var.name_prefix}-autoscaler"
-  role = aws_iam_role.pod["autoscaler"].id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow", Resource = "*"
-        Action = ["autoscaling:DescribeAutoScalingGroups", "autoscaling:DescribeAutoScalingInstances", "autoscaling:DescribeLaunchConfigurations", "autoscaling:DescribeScalingActivities", "autoscaling:DescribeTags", "ec2:DescribeImages", "ec2:DescribeInstanceTypes", "ec2:DescribeLaunchTemplateVersions", "ec2:GetInstanceTypesFromInstanceRequirements", "eks:DescribeNodegroup"]
-      },
-      {
-        Effect = "Allow", Resource = "*"
-        Action = ["autoscaling:SetDesiredCapacity", "autoscaling:TerminateInstanceInAutoScalingGroup"]
-        Condition = { StringEquals = {
-          "aws:ResourceTag/k8s.io/cluster-autoscaler/enabled"               = "true"
-          "aws:ResourceTag/k8s.io/cluster-autoscaler/${local.cluster_name}" = "owned"
-        } }
-      }
-    ]
-  })
-}
-
-# Vendored unmodified upstream v2.13.4 policy; use the matching controller release.
-# https://github.com/kubernetes-sigs/aws-load-balancer-controller/blob/v2.13.4/docs/install/iam_policy.json
-resource "aws_iam_role_policy" "lb_controller" {
-  name   = "${var.name_prefix}-lb-controller"
-  role   = aws_iam_role.pod["lb-controller"].id
-  policy = file("${path.module}/policies/lb-controller-v2.13.4.json")
 }
