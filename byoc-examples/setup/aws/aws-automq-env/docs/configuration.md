@@ -60,6 +60,8 @@ Set `AUTOMQ_BYOC_ENDPOINT`, `AUTOMQ_BYOC_ACCESS_KEY` and `AUTOMQ_BYOC_SECRET_KEY
 
 The root creates three nodes across the three foundation AZs, with UsageBased pricing, S3WAL and SASL_PLAINTEXT. It reads the cluster **name**, private NLB subnets and business-pool scheduling from foundation state. It omits Data bucket, IAM role, DNS and namespace/ServiceAccount inputs so Console owns their lifecycle.
 
+The node root disks and Console volume explicitly enable EBS encryption. Instance metadata volumes use the Console-managed StorageClass `automq-disk-eks-gp3`; this example does not set `encrypted=true` on that StorageClass. Before creating an Instance, confirm that your AWS environment's EBS encryption settings meet your storage requirements.
+
 ### Kafka verification: `automq-example/smoke/`
 
 | Input | Required or default | Meaning and selection |
