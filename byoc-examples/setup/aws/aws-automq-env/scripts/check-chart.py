@@ -53,7 +53,8 @@ def main():
         assert target in outputs, "Terraform port-forward output must target the rendered Service."
         readme = (root / "README.md").read_text()
         assert target in readme, "README port-forward must target the rendered Service."
-        assert f"`{expected_service}` ClusterIP service" in readme, "ALB backend must target the rendered Service."
+        operations = (root / "docs" / "operations.md").read_text()
+        assert f"Ingress targeting Service `{expected_service}`, port `80`" in operations, "ALB backend must target the rendered Service on port 80."
         print("PASS: official 8.3.28 Chart renders external KSA/Secret, gp3 PVC, system scheduling and ClusterIP.")
 
 if __name__ == "__main__":
