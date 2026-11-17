@@ -48,6 +48,14 @@ resource "terraform_data" "contract" {
       error_message = "CONFIG environment, region and Ops bucket must match infrastructure state."
     }
     precondition {
+      condition = try(
+        local.infra.console_kubernetes_access.principal_arn == local.infra.console_role_arn &&
+        local.infra.console_kubernetes_access.policy_arn == "arn:${split(":", local.infra.console_role_arn)[1]}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" &&
+        local.infra.console_kubernetes_access.scope_type == "cluster", false
+      )
+      error_message = "Foundation must grant the Console Role cluster-scoped AmazonEKSClusterAdminPolicy through its EKS Access Entry before installing Console."
+    }
+    precondition {
       condition     = local.infra.kubernetes_version == "1.36" && (var.deployer_assume_role_arn == null || var.deployer_assume_role_arn != local.infra.console_role_arn)
       error_message = "This component matrix requires EKS 1.36. The deployer must not assume the Console role."
     }
@@ -66,21 +74,6 @@ resource "kubernetes_service_account_v1" "console" {
     annotations = { "eks.amazonaws.com/role-arn" = local.infra.console_role_arn }
   }
   automount_service_account_token = true
-}
-resource "kubernetes_cluster_role_binding_v1" "console" {
-  metadata {
-    name = "${local.infra.cluster_name}-console"
-  }
-  role_ref {
-    api_group = "rbac.authorization.k8s.io"
-    kind      = "ClusterRole"
-    name      = "cluster-admin"
-  }
-  subject {
-    kind      = "ServiceAccount"
-    name      = kubernetes_service_account_v1.console.metadata[0].name
-    namespace = kubernetes_namespace_v1.console.metadata[0].name
-  }
 }
 resource "kubernetes_secret_v1" "config" {
   metadata {
@@ -142,5 +135,5 @@ resource "helm_release" "console" {
   wait       = true
   timeout    = 900
   values     = [yamlencode(local.chart_values)]
-  depends_on = [kubernetes_cluster_role_binding_v1.console, kubernetes_secret_v1.config, kubernetes_storage_class_v1.console, helm_release.lb_controller, helm_release.autoscaler]
+  depends_on = [kubernetes_service_account_v1.console, kubernetes_secret_v1.config, kubernetes_storage_class_v1.console, helm_release.lb_controller, helm_release.autoscaler]
 }

@@ -22,6 +22,15 @@ variable "instance_name" {
   type    = string
   default = "aws-eks-managed-demo"
 }
+variable "instance_node_count" {
+  description = "Desired AutoMQ node count. Cluster Autoscaler adds or removes EKS capacity to schedule these Pods."
+  type        = number
+  default     = 3
+  validation {
+    condition     = try(var.instance_node_count >= 3 && floor(var.instance_node_count) == var.instance_node_count, false)
+    error_message = "instance_node_count must be an integer of at least 3."
+  }
+}
 variable "instance_type" {
   type    = string
   default = "m7g.xlarge"
@@ -33,11 +42,11 @@ data "terraform_remote_state" "infrastructure" {
 locals { infra = data.terraform_remote_state.infrastructure.outputs }
 locals {
   instance_compute_specs = {
-    # Provider 0.4.8 eagerly validates a known K8S literal against unknown remote-state
-    # fields during validate; defer it until the cluster identity is available.
+    # Provider 0.4.8 eagerly validates known K8S/UsageBased literals against
+    # unknown state/variable fields during validate; resolve them with the cluster.
     deploy_type                      = local.infra.cluster_name == "" ? null : "K8S"
-    pricing_mode                     = "UsageBased"
-    reserved_node_count              = 3
+    pricing_mode                     = local.infra.cluster_name == "" ? null : "UsageBased"
+    reserved_node_count              = var.instance_node_count
     instance_types                   = [var.instance_type]
     kubernetes_cluster_id            = local.infra.cluster_name
     kubernetes_load_balancer_subnets = values(local.infra.private_subnet_ids_by_az)

@@ -66,3 +66,30 @@ run "multiple_selector_labels_use_required_affinity" {
     error_message = "Every foundation selector label must become a required In expression in the same AND term."
   }
 }
+
+run "six_nodes_for_scale_out" {
+  command = plan
+  variables { instance_node_count = 6 }
+  assert {
+    condition     = automq_kafka_instance.demo.compute_specs.reserved_node_count == 6 && length(automq_kafka_instance.demo.compute_specs.networks) == 3
+    error_message = "Scaling must change the requested Instance count while retaining its three AZ network configuration."
+  }
+}
+run "four_nodes_is_an_allowed_integer" {
+  command = plan
+  variables { instance_node_count = 4 }
+  assert {
+    condition     = automq_kafka_instance.demo.compute_specs.reserved_node_count == 4
+    error_message = "The example must not impose an unsupported multiple-of-three node count restriction."
+  }
+}
+run "fewer_than_three_nodes_rejected" {
+  command = plan
+  variables { instance_node_count = 2 }
+  expect_failures = [var.instance_node_count]
+}
+run "fractional_nodes_rejected" {
+  command = plan
+  variables { instance_node_count = 3.5 }
+  expect_failures = [var.instance_node_count]
+}

@@ -6,7 +6,7 @@ This section provides resources for deploying AutoMQ on Amazon Web Services.
 
 ### [New EKS with Helm Console (8.x)](aws-automq-env/README.md)
 
-Create a new EKS cluster in an existing network, install Console with Pod ServiceAccount/RBAC and IRSA, and validate a managed private Kafka Instance. Requires a compatible Console image with the documented unreleased fixes. This is an independent evaluation path.
+Create a new EKS cluster in an existing network, install a released Console with Helm, IRSA and EKS Access Entry, and validate a private Kafka Instance. Managed node groups and Cluster Autoscaler provide EC2 capacity as the Instance grows or shrinks.
 
 ### [Kubernetes (EKS)](eks/README.md)
 

@@ -28,3 +28,12 @@ output "addon_versions" {
   description = "Resolved versions; supply these as addon_versions when reproducing the verified matrix."
   value       = merge({ "vpc-cni" = aws_eks_addon.vpc_cni.addon_version }, { for name, addon in aws_eks_addon.after_nodes : name => addon.addon_version })
 }
+
+output "console_kubernetes_access" {
+  description = "Console IAM authentication to EKS, ready before installing the Console release."
+  value = {
+    principal_arn = aws_eks_access_entry.console.principal_arn
+    policy_arn    = aws_eks_access_policy_association.console.policy_arn
+    scope_type    = aws_eks_access_policy_association.console.access_scope[0].type
+  }
+}

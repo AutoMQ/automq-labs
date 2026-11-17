@@ -4,7 +4,7 @@ Use this example to deploy AutoMQ BYOC in your AWS account, reuse your existing 
 
 At the end of this guide, you will have a persistent Console, a managed Kafka Instance running across three Availability Zones, and a successful Kafka produce/consume check.
 
-> **Before provisioning AWS resources:** obtain a compatible Console image from AutoMQ. The Console image must support this ServiceAccount-based EKS deployment. A published compatible image is not yet available; `8.3.28-aws` and `latest` cannot be used. Set the image supplied by AutoMQ as `console_image`.
+This guide uses the released AWS Console image `automq.azurecr.io/automq/automq-byoc-console:8.4.13-aws` with Console Helm Chart `8.3.28`. The image runs the product; the Chart installs it. These version numbers do not need to match. Pin `console_image` to the exact released image in the [component configuration](docs/configuration.md#component-versions).
 
 ## In this guide
 
@@ -13,7 +13,8 @@ At the end of this guide, you will have a persistent Console, a managed Kafka In
 3. [Parameters you need to set](#parameters-you-need-to-set)
 4. [Deploy the environment](#deploy-the-environment)
 5. [Connect and verify Kafka](#connect-and-verify-kafka)
-6. [Clean up](#clean-up)
+6. [Scale the Instance and EKS capacity](#scale-the-instance-and-eks-capacity)
+7. [Clean up](#clean-up)
 
 For other requirements, see [configuration and deployment choices](docs/configuration.md) and [operations and troubleshooting](docs/operations.md).
 
@@ -21,7 +22,7 @@ For other requirements, see [configuration and deployment choices](docs/configur
 
 ![AutoMQ deployment on a new EKS cluster in your AWS account](assets/deployment-architecture.png)
 
-The Console and Kafka Instance share the new EKS cluster but use separate node pools and identities. Applications reach Kafka through a private Network Load Balancer (NLB). Console uses its Kubernetes ServiceAccount and RBAC to manage this cluster, and its own IRSA role to call AWS APIs. Each Instance has its own Pod role, as do CNI, EBS CSI, the LB Controller and Autoscaler for their AWS API access. Nodes have no AutoMQ business permissions.
+The Console and Kafka Instance share the new EKS cluster but use separate node pools and identities. Applications reach Kafka through a private Network Load Balancer (NLB). Console obtains its own IAM role through IRSA. An EKS Access Entry grants that role permission to manage Kubernetes resources in this cluster. Each Instance has its own Pod role, as do CNI, EBS CSI, the LB Controller and Autoscaler for their AWS API access. Nodes have no AutoMQ business permissions.
 
 | Resource | Default configuration | Created and managed by |
 | --- | --- | --- |
@@ -37,7 +38,7 @@ The Console and Kafka Instance share the new EKS cluster but use separate node p
 
 The default creates five EC2 nodes before the Instance starts, each with a 40 GiB encrypted gp3 root disk. AWS charges apply to EKS, EC2, EBS, S3, load balancing, logging and other enabled services, alongside the AutoMQ subscription. Node-pool limits control available EKS capacity; they do not change the Instance's configured three-node size. An optional NAT gateway adds hourly and data-processing charges.
 
-This guide selects **Default Permissions + Helm Console + managed K8S Instance + IRSA**. Other [permission and deployment choices](docs/configuration.md#permission-and-deployment-choices) are alternatives, not additional steps to execute.
+This guide selects **Default Permissions + Helm Console + EKS Access Entry + managed K8S Instance + IRSA**. Other [permission and deployment choices](docs/configuration.md#permission-and-deployment-choices) are alternatives, not additional steps to execute.
 
 ## Before you start
 
@@ -50,15 +51,16 @@ Use these official guides when reviewing network requirements, node-pool sizing 
 | Prepare VPC, DNS and S3 access | [Prepare an AWS VPC](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/prepare-vpc) |
 | Plan node pools and Pod placement | [Prepare EKS compute capacity](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-3-prepare-eks-compute-capacity) and [SchedulingSpec](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/overview#schedulingspec) |
 | Review Console deployment and AWS workload roles | [Deploy Console on EKS](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#deploy-automq-console-on-eks) and [Instance IAM role and ServiceAccount](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-5-prepare-the-automq-workload-iam-role-and-serviceaccount) |
+| Review managed node-group autoscaling | [Cluster Autoscaler preparation](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks) |
 | Create AutoMQ management API credentials | [AutoMQ Service Accounts](https://docs.automq.com/automq-cloud/manage-identities-and-access/service-accounts) |
 
-The official guides cover several deployment paths. In this example, Terraform prepares the node pools and cluster components, and Console manages Instance Data buckets, roles and private DNS. Follow this guide's `automq.io/pool` labels, Console ServiceAccount/RBAC and IRSA configuration; do not repeat manual provisioning steps or replace them with the alternative Access Entry/EKS Pod Identity configurations. Keep the supplied [component versions](docs/configuration.md#component-versions) together when planning changes.
+The official guides cover several deployment paths. In this example, Terraform prepares the node pools and cluster components, and Console manages Instance Data buckets, roles and private DNS. Follow this guide's `automq.io/pool` labels, Console IAM Role/Access Entry and IRSA configuration. Terraform creates the Console Access Entry described in the official [EKS authorization steps](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#grant-access-to-the-eks-cluster); you do not need to repeat those commands manually. Keep the supplied [component versions](docs/configuration.md#component-versions) together when planning changes.
 
 ### Prerequisites
 
 | Prepare | Requirement |
 | --- | --- |
-| AutoMQ environment | A new AWS BYOC Environment, its complete `CONFIG`, an active subscription and the compatible Console image |
+| AutoMQ environment | A new AWS BYOC Environment, its complete `CONFIG`, an active subscription and an official released AWS Console 8.x image |
 | AWS access | An AWS CLI profile with permission to provision the listed resources and the IAM role ARN used for EKS administration |
 | Existing network | One private subnet in each of three AZs, all in the VPC and Region specified by `CONFIG`; VPC DNS support and hostnames enabled |
 | S3 access | An S3 **Gateway** Endpoint associated with all selected private route tables; its policy allows the Ops bucket and future AutoMQ Data buckets |
@@ -100,7 +102,7 @@ Only the values in this table must be supplied for the standard path. Copy the s
 | `private_subnet_ids_by_az` | `infrastructure/terraform.tfvars` | Map exactly three AZ names to their private subnet IDs |
 | `s3_vpc_endpoint_id` | `infrastructure/terraform.tfvars` | Existing S3 Gateway Endpoint associated with those subnets' route tables |
 | `deployer_role_arn` | `infrastructure/terraform.tfvars` | IAM role actually used by your AWS profile to install Kubernetes/Helm resources; use the IAM role ARN, not an STS session ARN |
-| `console_image` | `console/terraform.tfvars` | Compatible `repository:tag` supplied by AutoMQ |
+| `console_image` | `console/terraform.tfvars` | Exact released AWS Console 8.x `repository:tag` from your installation command |
 | `automq_version` | `automq-example/instance/terraform.tfvars` | Available **data-plane** version shown by the initialized Console; this is separate from Console 8.x |
 | Management endpoint and keys | `AUTOMQ_BYOC_ENDPOINT`, `AUTOMQ_BYOC_ACCESS_KEY`, `AUTOMQ_BYOC_SECRET_KEY` | Local Console address and the AutoMQ management Service Account keys created in step 3 |
 | `kafka_password` | Environment variable `TF_VAR_kafka_password` | A dedicated password of at least 16 characters for the verification Kafka user |
@@ -114,6 +116,7 @@ The main defaults you may want to review are:
 | `system_instance_type` | `m7i.large` | Your system workloads need a different x86 node size |
 | `automq_instance_type` / Instance `instance_type` | Both `m7g.xlarge` | You choose another supported ARM Instance specification; **update both values together** |
 | `automq_max_nodes_per_az` | `4` | You want a different EKS capacity ceiling per AZ |
+| Instance `instance_node_count` | `3` | You want to change the requested number of AutoMQ nodes; Cluster Autoscaler supplies EC2 capacity within the node-pool limits |
 
 Keep EKS at 1.36 for the supplied component configuration. The [complete parameter reference](docs/configuration.md#terraform-inputs) covers the remaining defaults, versions and state-path options.
 
@@ -166,7 +169,7 @@ python3 scripts/kubectl.py get nodes \
   -L automq.io/pool,topology.kubernetes.io/zone
 ```
 
-**Expected result:** five Nodes are `Ready`: two in the `system` pool and one `automq` Node in each of three AZs. Terraform outputs identify the cluster, workload roles and network used by the following stages.
+**Expected result:** five Nodes are `Ready`: two in the `system` pool and one `automq` Node in each of three AZs. Terraform also grants the Console role a `STANDARD` EKS Access Entry with cluster-scoped `AmazonEKSClusterAdminPolicy`. Outputs identify the cluster, workload roles and network used by the following stages.
 
 The stages read adjacent local Terraform state by default. Keep this directory layout intact. For a shared deployment, configure a restricted remote backend and matching state handoffs before applying; see [state and credentials](docs/configuration.md#state-and-credentials).
 
@@ -174,7 +177,7 @@ The stages read adjacent local Terraform state by default. Keep this directory l
 
 ```bash
 cp console/terraform.tfvars.example console/terraform.tfvars
-# Set console_image to the compatible image supplied by AutoMQ.
+# Set console_image = "automq.azurecr.io/automq/automq-byoc-console:8.4.13-aws".
 terraform -chdir=console init
 terraform -chdir=console plan -out=console.tfplan
 terraform -chdir=console apply console.tfplan
@@ -252,6 +255,12 @@ python3 kafka-smoke.py
 **Expected result:** `PASS: produced and consumed exactly one matching record`, followed by the unique marker. You now have a working Kafka connection with authentication and Topic/Consumer group authorization.
 
 The default `SASL_PLAINTEXT` connection authenticates clients but does not encrypt traffic. This walkthrough is for a controlled private network. Review transport encryption, access and data-retention requirements before a production rollout.
+
+## Scale the Instance and EKS capacity
+
+The example uses Cluster Autoscaler with managed node groups. Changing the Instance size changes the requested number of AutoMQ Pods. Cluster Autoscaler then adds EC2 nodes when those Pods cannot fit on existing nodes, and removes unneeded nodes after scale-in. It does not choose the Instance's node count. The default business-pool limit is four EC2 nodes per AZ.
+
+To try **three → six → three** AutoMQ nodes, follow the [scaling procedure](docs/operations.md#scale-the-instance-and-managed-node-groups). Verify the Instance becomes available after each change, the Pods remain distributed across all three AZs, EC2 capacity follows the Pod demand, and the private Kafka check still passes. Scale-in can complete before Cluster Autoscaler's node-removal delay expires; continue observing EKS capacity until it settles.
 
 ## Clean up
 

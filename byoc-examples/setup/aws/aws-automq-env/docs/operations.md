@@ -1,6 +1,6 @@
 # Operations and troubleshooting
 
-Use this page when checking a deployment, exposing Console through HTTPS, recovering a partial failure or removing the environment. The [deployment guide](../README.md) contains the standard installation path.
+Use this page to check health and authorization, scale the Instance and EKS capacity, expose Console through HTTPS, recover a partial failure or remove the environment. The [deployment guide](../README.md) contains the standard installation path.
 
 ## Check deployment health
 
@@ -20,7 +20,7 @@ python3 scripts/kubectl.py -n kube-system get pods
 | Kubernetes reports unauthorized | Current AWS profile/role versus `deployer_role_arn`, deployer Access Entry | Use the authorized deployer role. Console's runtime role is a separate identity |
 | Nodes do not become ready or images do not pull | Outbound routes/NAT, DNS, registry access, instance quota and image architecture | Restore AWS API/registry access; system nodes are x86, business nodes are ARM |
 | Console PVC stays pending | EBS CSI controller and IRSA, StorageClass, available capacity and AZ scheduling | Inspect PVC events and CSI logs before changing storage |
-| Console cannot initialize | Complete CONFIG, matching Environment/Region/Ops bucket, subscription and compatible image | Confirm the installation values with AutoMQ; do not substitute an older Console image |
+| Console cannot initialize | Complete CONFIG, matching Environment/Region/Ops bucket, subscription and released AWS Console image | Confirm the installation values and selected release with AutoMQ |
 | Instance creation fails | Console events, data-plane version/specification availability, IAM errors, selected EKS cluster and three-AZ capacity | Fix the reported precondition and recover the existing operation before retrying |
 | Kafka bootstrap connects but produce/consume fails | Private DNS and routing to **all advertised broker endpoints**, SASL credentials and Topic/Consumer group ACLs | Use the exact returned endpoint/port and the dedicated Kafka password, not management keys. For clients in another VPC, review [cross-VPC access](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/prepare-vpc#configure-cross-vpc-access) |
 | Pending Pods do not trigger capacity | Autoscaler Pod/logs, node-pool maximums, business affinity/taint compatibility and AWS quota | Check the scheduling cause and available pool capacity; node scaling does not change Instance node count |
@@ -37,13 +37,66 @@ If a Deployment has a different name, list the Deployments in `kube-system` firs
 
 ## Check runtime authorization
 
-Console manages Kubernetes with its Pod ServiceAccount and a binding to the existing `cluster-admin` ClusterRole. Its AWS API access uses its separate IRSA role. Each managed Instance, CNI, EBS CSI, LB Controller and Autoscaler uses its own Pod role.
+Console obtains its IAM role through its Pod ServiceAccount and IRSA. A `STANDARD` EKS Access Entry associates that role with cluster-scoped `AmazonEKSClusterAdminPolicy`, allowing Console to manage Kubernetes resources. The deployer has a separate Access Entry. Each Instance, CNI, EBS CSI, LB Controller and Cluster Autoscaler uses its own Pod role for AWS access.
 
-When an AWS request is denied, inspect the intended role's trust and permissions, the Pod ServiceAccount and the actual caller. IRSA trust must match the EKS OIDC issuer, audience `sts.amazonaws.com` and exact namespace/ServiceAccount. Inspect actual Node role attachments as well: AutoMQ S3, DNS, IAM management or WAL permissions must not be added to Nodes as a workaround. Pod annotations alone do not establish the caller used for a request.
+When an AWS request is denied, inspect the intended role's trust and permissions, the Pod ServiceAccount and the actual caller. For roles prepared by these Terraform roots, verify that IRSA trust matches the EKS OIDC issuer, audience `sts.amazonaws.com` and intended namespace/ServiceAccount. Check Console's EKS Access Entry and associated access policy separately from S3/IAM permissions. Inspect actual Node role attachments as well: AutoMQ S3, DNS, IAM management or WAL permissions must not be added to Nodes as a workaround. Pod annotations alone do not establish the caller used for a request.
 
 For the AWS role-to-ServiceAccount requirements, see the official [Instance IAM role and ServiceAccount guide](https://docs.automq.com/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-5-prepare-the-automq-workload-iam-role-and-serviceaccount). Use it to review the role-to-ServiceAccount relationship while keeping this example's IRSA configuration. The Console and infrastructure components retain their separate roles.
 
 For S3WAL, Instance permissions cover its Data and Ops S3 resources; metadata disk operations use the EBS CSI identity. Ordinary Pods are restricted from Node credentials with IMDSv2/hop limit 1. Review hostNetwork and infrastructure Pods separately.
+
+## Scale the Instance and managed node groups
+
+Use the deployment terminal from [Create the Kafka Instance](../README.md#4-create-the-kafka-instance), with the same AWS profile and `AUTOMQ_BYOC_ENDPOINT`, `AUTOMQ_BYOC_ACCESS_KEY` and `AUTOMQ_BYOC_SECRET_KEY` available. Keep the Console port-forward running. Confirm the Instance is available before submitting another change.
+
+There are two sizes to observe:
+
+| Size | Controlled by | What changes it |
+| --- | --- | --- |
+| AutoMQ node count | Console management API, requested by the Instance Terraform root | `instance_node_count` |
+| EC2 capacity in each managed node group | Cluster Autoscaler, bounded by the foundation minimum/maximum | Pods that cannot be scheduled, then nodes that are no longer needed |
+
+The default is three AutoMQ nodes and one business EC2 node in each AZ. The following commands temporarily override `instance_node_count` to demonstrate **three → six → three**. For a lasting size change, save the desired count in `automq-example/instance/terraform.tfvars` so later plans keep the same intent.
+
+### Scale out to six AutoMQ nodes
+
+Check that `automq_max_nodes_per_az` permits at least two business EC2 nodes per AZ and that the account has the required EC2 quota. Review the Instance plan, then apply it:
+
+```bash
+terraform -chdir=automq-example/instance plan \
+  -var='instance_node_count=6' -out=scale-out.tfplan
+terraform -chdir=automq-example/instance apply scale-out.tfplan
+```
+
+In another deployment terminal, observe the Pods and EC2-backed Kubernetes nodes:
+
+```bash
+AUTOMQ_INSTANCE_ID="$(terraform -chdir=automq-example/instance output -raw instance_id)"
+python3 scripts/kubectl.py -n "$AUTOMQ_INSTANCE_ID" get pods -o wide
+python3 scripts/kubectl.py get nodes \
+  -L automq.io/pool,topology.kubernetes.io/zone,node.kubernetes.io/instance-type
+python3 scripts/kubectl.py -n kube-system get deployments
+```
+
+Use the actual Cluster Autoscaler Deployment name from the last command to read its logs. Look for unschedulable Pods, a scale-up decision and new Nodes becoming `Ready`. With the default node sizes and scheduling, the extra AutoMQ Pods require more business-node capacity. Keep the system pool separate from this count.
+
+**Expected result:** the Instance returns to an available state with six AutoMQ Pods `Ready`, distributed across all three AZs, and sufficient business EC2 nodes to run them. On the [private Kafka client](../README.md#6-produce-and-consume-from-a-private-client), run `python3 kafka-smoke.py` again with the same endpoint and Kafka credentials. Review client errors while the size change is in progress.
+
+### Scale back to three AutoMQ nodes
+
+After the six-node Instance and Kafka check succeed, request three nodes:
+
+```bash
+terraform -chdir=automq-example/instance plan \
+  -var='instance_node_count=3' -out=scale-in.tfplan
+terraform -chdir=automq-example/instance apply scale-in.tfplan
+```
+
+**Expected result:** the Instance returns to an available state with three AutoMQ Pods `Ready` across the three AZs. Run the private Kafka check again. Cluster Autoscaler can remove the unneeded EC2 nodes after its scale-down delay and safety checks; continue observing the business pools until they return to the initial capacity of one node per AZ. Instance completion and EC2 node removal are separate events.
+
+The AutoMQ StatefulSets retain metadata PVCs on scale-in. PVCs and EBS volumes from removed Pods can remain and continue incurring storage charges after their EC2 nodes are gone. Keep those volumes under your data-retention policy and verify their ownership before any separate cleanup.
+
+If Pods remain Pending, inspect their scheduling events, the node-group limit, AutoMQ affinity/taints, EC2 quota and Autoscaler logs. If the Instance remains `Updating` while all Pods are ready and there is no scheduling backlog, inspect the Console task/logs and its EKS Access Entry rather than changing EC2 capacity.
 
 ## Recover an uncertain create operation
 
@@ -143,7 +196,7 @@ export TF_VAR_automq_config
 terraform -chdir=console destroy
 ```
 
-After the Console Pod and namespace are gone, inspect the recorded retained PV/EBS. Before deleting data, verify the PV's claim UID and CSI volume ID, `Retain` policy and `Released` state; verify the EBS volume's tags/creation identity and that it is detached/available. Delete only those exact owned resources when you intend to discard their data. Keep the Kubernetes built-in `cluster-admin` ClusterRole.
+After the Console Pod and namespace are gone, inspect the recorded retained PV/EBS. Before deleting data, verify the PV's claim UID and CSI volume ID, `Retain` policy and `Released` state; verify the EBS volume's tags/creation identity and that it is detached/available. Delete only those exact owned resources when you intend to discard their data. Preserve Kubernetes built-in roles and Access Entries owned by other administrators or services.
 
 ### 4. Remove the foundation and optional network
 

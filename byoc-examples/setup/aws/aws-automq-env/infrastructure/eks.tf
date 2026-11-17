@@ -33,6 +33,22 @@ module "eks" {
   depends_on = [terraform_data.network_contract, terraform_data.egress_contract]
 }
 
+# The Console Role depends on this cluster's OIDC provider. Keep its access
+# entry outside module.eks to avoid a cluster -> Pod Role -> OIDC cycle.
+resource "aws_eks_access_entry" "console" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = aws_iam_role.pod["console"].arn
+  type          = "STANDARD"
+  tags          = local.tags
+}
+
+resource "aws_eks_access_policy_association" "console" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = aws_eks_access_entry.console.principal_arn
+  policy_arn    = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  access_scope { type = "cluster" }
+}
+
 resource "aws_iam_role" "node" {
   name = "${var.name_prefix}-node"
   assume_role_policy = jsonencode({

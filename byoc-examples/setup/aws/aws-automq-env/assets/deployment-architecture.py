@@ -4,7 +4,8 @@ Fixed Graphviz positions keep the customer overview compact and reproducible.
 Solid blue edges show Kafka/data traffic; the dashed purple edge is Kubernetes
 management. S3 access uses the existing gateway endpoint (omitted for clarity).
 Each workload uses its own IRSA role; the drawing does not prove IAM policy.
-Cluster add-ons and the LB Controller/Autoscaler are omitted for clarity.
+Cluster add-ons and the LB Controller are omitted for clarity.
+Managed node-group capacity is supplied by Cluster Autoscaler.
 """
 from pathlib import Path
 
@@ -45,8 +46,8 @@ with Diagram(
         ]
         for key, label, x, y, width, height, fill, border, fontsize in panels:
             getcluster().node(key, label, pos=f"{x},{y}!", pin="true", shape="box", style="rounded", fillcolor=fill, color=border, width=str(width), height=str(height), fixedsize="true", labelloc="t", labeljust="l", fontsize=fontsize, fontcolor="#233448")
-        getcluster().node("eks-heading", "New EKS worker nodes", pos="1.9,3.4!", pin="true", shape="plaintext", width="3.7", height="0.35", fontsize="17", fontcolor="#233448")
-        getcluster().node("ksa-caption", "KSA + RBAC", pos="2.3,0.0!", pin="true", shape="plaintext", width="1.9", height="0.3", fontsize="14", fontcolor=CONTROL)
+        getcluster().node("eks-heading", "EKS managed node groups", pos="1.9,3.4!", pin="true", shape="plaintext", width="3.7", height="0.35", fontsize="17", fontcolor="#233448")
+        getcluster().node("access-caption", "IRSA role\nEKS Access Entry", pos="2.6,0.0!", pin="true", shape="plaintext", width="2.8", height="0.6", fontsize="14", fontcolor=CONTROL)
         with Cluster("Existing VPC  |  Private subnets", graph_attr={"bgcolor": "#F7FAFD", "color": "#9BB7CE", "fontsize": "17", "margin": "16"}):
             nlb = icon(NLB, "Internal NLB", 5.1, 4.8)
             with Cluster("New EKS worker nodes", graph_attr={"bgcolor": "#FFFFFF", "color": "#769FC3", "fontsize": "17", "margin": "16"}):
@@ -59,6 +60,7 @@ with Diagram(
         api = icon(EKS, "EKS control plane\nAWS-managed", 1.0, -0.9)
         data = icon(S3, "Data bucket\nKafka + S3WAL", 6.0, -0.7)
         ops = icon(S3, "Ops bucket", 11.1, -0.9)
+    diagram.dot.node("capacity-caption", "Cluster Autoscaler adjusts EC2 capacity within managed node-group limits.", pos="5.0,-2.85!", pin="true", shape="plaintext", width="12.0", height="0.4", fontsize="14", fontcolor="#233448")
     client >> Edge(label="Private Kafka", color=DATA, penwidth="2.0") >> nlb
     nlb >> Edge(color=DATA, penwidth="2.0") >> brokers
     for broker in brokers:

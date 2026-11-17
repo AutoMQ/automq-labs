@@ -12,11 +12,11 @@ variable "automq_config" {
   }
 }
 variable "console_image" {
-  description = "Explicit repository:tag containing the ServiceAccount, strict managed IRSA trust and S3WAL fixes. Chart AppVersion is not a compatible image default."
+  description = "Explicit repository:8.x.y-aws tag for the released AWS Console image supplied with your AutoMQ installation command. Chart AppVersion does not select this image."
   type        = string
   validation {
-    condition     = can(regex("^.+:[^/:@]+$", var.console_image)) && !can(regex(":(latest|8\\.3\\.28(-aws)?)$", var.console_image)) && !strcontains(var.console_image, "<")
-    error_message = "Specify a compatible repository:tag; latest and the incompatible 8.3.28 image are rejected."
+    condition     = can(regex("^.+:8\\.[0-9]+\\.[0-9]+-aws$", var.console_image)) && !strcontains(var.console_image, "<")
+    error_message = "Specify an explicit released AWS Console repository:8.x.y-aws tag; latest, snapshots and placeholders are rejected."
   }
 }
 variable "console_chart_path" {

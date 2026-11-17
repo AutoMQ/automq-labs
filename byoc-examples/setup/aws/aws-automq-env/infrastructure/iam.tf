@@ -74,12 +74,10 @@ resource "aws_iam_role_policy" "console_managed" {
         Action = ["s3:DeleteObject", "s3:AbortMultipartUpload"]
       },
       {
-        Sid    = "CreateTaggedInstanceRoles", Effect = "Allow", Resource = local.managed_role_arn
+        # Released Console creates the role, then applies ownership tags.
+        # Creation stays scoped to this account and CMP's Instance role names.
+        Sid    = "CreateManagedInstanceRoles", Effect = "Allow", Resource = local.managed_role_arn
         Action = ["iam:CreateRole", "iam:TagRole"]
-        Condition = {
-          StringEquals = { "aws:RequestTag/automqVendor" = "automq" }
-          StringLike   = { "aws:RequestTag/automqInstanceID" = "kf-*" }
-        }
       },
       {
         Sid    = "ReconcileOwnedInstanceRoles", Effect = "Allow", Resource = local.managed_role_arn

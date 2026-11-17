@@ -100,6 +100,22 @@ run "name_prefix_26_characters_is_rejected" {
 run "pod_identity_and_capacity_contract" {
   command = apply
   assert {
+    condition = (aws_eks_access_entry.console.principal_arn == aws_iam_role.pod["console"].arn &&
+      aws_eks_access_entry.console.principal_arn != var.deployer_role_arn &&
+      aws_eks_access_entry.console.principal_arn != aws_iam_role.node.arn &&
+      aws_eks_access_entry.console.type == "STANDARD" &&
+      aws_eks_access_policy_association.console.principal_arn == aws_eks_access_entry.console.principal_arn &&
+      aws_eks_access_policy_association.console.policy_arn == "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" &&
+    aws_eks_access_policy_association.console.access_scope[0].type == "cluster")
+    error_message = "The Console IRSA Role needs its own STANDARD Access Entry and cluster-scoped EKS admin policy, separate from deployer and Node."
+  }
+  assert {
+    condition = (output.console_kubernetes_access.principal_arn == aws_iam_role.pod["console"].arn &&
+      output.console_kubernetes_access.policy_arn == aws_eks_access_policy_association.console.policy_arn &&
+    output.console_kubernetes_access.scope_type == "cluster")
+    error_message = "The Console root must receive the completed IAM/EKS access contract."
+  }
+  assert {
     condition = aws_iam_role_policy.console_discovery.role == aws_iam_role.pod["console"].id && aws_iam_role_policy.console_discovery.role != aws_iam_role.node.id && contains(
       jsondecode(aws_iam_role_policy.console_discovery.policy).Statement[0].Action, "ec2:DescribeInstanceTypeOfferings"
       ) && alltrue([
@@ -134,8 +150,14 @@ run "pod_identity_and_capacity_contract" {
     error_message = "The K8S managed Console must not inherit EC2 deployment or PassRole privileges."
   }
   assert {
+    condition = (one([for statement in jsondecode(aws_iam_role_policy.console_managed.policy).Statement : statement if statement.Sid == "CreateManagedInstanceRoles"]).Resource == "arn:aws:iam::123456789012:role/automq-instance-kf-*" &&
+      toset(one([for statement in jsondecode(aws_iam_role_policy.console_managed.policy).Statement : statement if statement.Sid == "CreateManagedInstanceRoles"]).Action) == toset(["iam:CreateRole", "iam:TagRole"]) &&
+    !can(one([for statement in jsondecode(aws_iam_role_policy.console_managed.policy).Statement : statement if statement.Sid == "CreateManagedInstanceRoles"]).Condition))
+    error_message = "Released Console must create then tag roles only under the account's managed Instance role ARN pattern."
+  }
+  assert {
     condition     = one([for statement in jsondecode(aws_iam_role_policy.console_managed.policy).Statement : statement if statement.Sid == "ReconcileOwnedInstanceRoles"]).Condition.StringEquals["aws:ResourceTag/automqVendor"] == "automq"
-    error_message = "Managed trust repair must be limited to owned Instance Roles."
+    error_message = "Existing managed role mutations must remain limited to owned Instance Roles."
   }
   assert {
     condition     = length(aws_autoscaling_group_tag.autoscaler) == 14
