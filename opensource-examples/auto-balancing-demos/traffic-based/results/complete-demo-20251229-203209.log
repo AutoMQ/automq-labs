@@ -1,0 +1,186 @@
+[0;34m[20:32:09][0m =========================================
+[0;34m[20:32:09][0m Traffic-Based Auto-Balancing Demo
+[0;34m[20:32:09][0m =========================================
+[0;34m[20:32:09][0m Timestamp: 20251229-203209
+[0;34m[20:32:09][0m 
+[0;34m[20:32:09][0m Step 1: Starting Docker cluster...
+time="2025-12-29T20:32:09+08:00" level=warning msg="/Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/docker-compose-clean.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container automq-server3-traffic  Stopping
+ Container automq-server3-traffic  Stopped
+ Container automq-server3-traffic  Removing
+ Container automq-server3-traffic  Removed
+ Container mc-traffic  Stopping
+ Container mc-traffic  Stopped
+ Container mc-traffic  Removing
+ Container mc-traffic  Removed
+ Container minio-traffic  Stopping
+ Container minio-traffic  Stopped
+ Container minio-traffic  Removing
+ Container minio-traffic  Removed
+ Volume traffic-based_grafana-data  Removing
+ Volume traffic-based_prometheus-data  Removing
+ Network automq_net_traffic  Removing
+ Volume traffic-based_prometheus-data  Removed
+ Volume traffic-based_grafana-data  Removed
+ Network automq_net_traffic  Removed
+time="2025-12-29T20:32:59+08:00" level=warning msg="/Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/docker-compose-clean.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network automq_net_traffic  Creating
+ Network automq_net_traffic  Created
+ Volume "traffic-based_prometheus-data"  Creating
+ Volume "traffic-based_prometheus-data"  Created
+ Volume "traffic-based_grafana-data"  Creating
+ Volume "traffic-based_grafana-data"  Created
+ Container renderer-traffic  Creating
+ Container prometheus-traffic  Creating
+ Container minio-traffic  Creating
+ Container prometheus-traffic  Created
+ Container grafana-traffic  Creating
+ Container renderer-traffic  Created
+ Container minio-traffic  Created
+ Container mc-traffic  Creating
+ Container grafana-traffic  Created
+ Container mc-traffic  Created
+ Container automq-server3-traffic  Creating
+ Container automq-server1-traffic  Creating
+ Container automq-server2-traffic  Creating
+ Container automq-server2-traffic  Created
+ Container automq-server1-traffic  Created
+ Container automq-server3-traffic  Created
+ Container minio-traffic  Starting
+ Container prometheus-traffic  Starting
+ Container renderer-traffic  Starting
+ Container prometheus-traffic  Started
+ Container grafana-traffic  Starting
+ Container minio-traffic  Started
+ Container minio-traffic  Waiting
+ Container renderer-traffic  Started
+ Container grafana-traffic  Started
+ Container minio-traffic  Healthy
+ Container mc-traffic  Starting
+ Container mc-traffic  Started
+ Container automq-server3-traffic  Starting
+ Container automq-server1-traffic  Starting
+ Container automq-server2-traffic  Starting
+ Container automq-server2-traffic  Started
+ Container automq-server1-traffic  Started
+ Container automq-server3-traffic  Started
+[0;34m[20:33:07][0m Step 2: Waiting for brokers to be ready (up to 3 minutes)...
+[0;32m[20:33:37] ✅ Brokers are ready![0m
+[0;34m[20:33:37][0m Step 3: Waiting for Grafana to be ready...
+[0;32m[20:33:37] ✅ Grafana is ready![0m
+[0;34m[20:33:37][0m Step 4: Creating topic 'traffic-test' with 6 partitions...
+Created topic traffic-test.
+[0;34m[20:33:43][0m Waiting 15 seconds for topic to be fully created...
+[0;34m[20:33:58][0m Verifying brokers are still running...
+[0;32m[20:33:58] ✅ All brokers are running[0m
+[0;34m[20:33:58][0m Step 5: Creating imbalanced partition distribution (4-1-1)...
+Current partition replica assignment
+
+{"version":1,"partitions":[{"topic":"traffic-test","partition":0,"replicas":[0],"log_dirs":["any"]},{"topic":"traffic-test","partition":1,"replicas":[1],"log_dirs":["any"]},{"topic":"traffic-test","partition":2,"replicas":[2],"log_dirs":["any"]},{"topic":"traffic-test","partition":3,"replicas":[0],"log_dirs":["any"]},{"topic":"traffic-test","partition":4,"replicas":[1],"log_dirs":["any"]},{"topic":"traffic-test","partition":5,"replicas":[2],"log_dirs":["any"]}]}
+
+Save this to use as the --reassignment-json-file option during rollback
+Successfully started partition reassignments for traffic-test-0,traffic-test-1,traffic-test-2,traffic-test-3,traffic-test-4,traffic-test-5
+[0;34m[20:34:03][0m Waiting 30 seconds for reassignment to complete...
+[0;34m[20:34:33][0m Step 6: Verifying initial partition distribution...
+Topic: traffic-test	TopicId: yiMigs8IRA-FtsRTKukkDg	PartitionCount: 6	ReplicationFactor: 1	Configs: min.insync.replicas=1,segment.bytes=1073741824
+	Topic: traffic-test	Partition: 0	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 1	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 2	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 3	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 4	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 5	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+[0;34m[20:34:36][0m Step 7: Waiting 90 seconds for metrics to accumulate...
+[0;34m[20:36:06][0m Capturing screenshot: 01-before-load
+[0;34m[20:36:06][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[20:36:07][0m   Attempt 1/5: 4-1-1-
+[0;34m[20:36:27][0m   Attempt 2/5: 4-1-1-
+[0;32m[20:36:27] ✅ Metrics stable at: 4-1-1-[0m
+[0;34m[20:36:27][0m Querying partition metrics from brokers (01-before-load)...
+[0;34m[20:36:27][0m   Broker 0: 4 partitions
+[0;34m[20:36:28][0m   Broker 1: 1 partitions
+[0;34m[20:36:28][0m   Broker 2: 1 partitions
+[0;34m[20:36:28][0m Distribution: 4 1 1 
+[0;34m[20:36:28][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[20:37:04] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/screenshots/01-before-load-20251229-203209.png (30682 bytes)[0m
+[0;34m[20:37:04][0m Verifying metrics match screenshot...
+[0;34m[20:37:04][0m Querying partition metrics from brokers (01-before-load-verification)...
+[0;34m[20:37:05][0m   Broker 0: 4 partitions
+[0;34m[20:37:05][0m   Broker 1: 1 partitions
+[0;34m[20:37:05][0m   Broker 2: 1 partitions
+[0;34m[20:37:05][0m Distribution: 4 1 1 
+[0;34m[20:37:05][0m Step 9: Starting load generation (10 MB/sec)...
+[0;32m[20:37:05] ✅ Load generation started[0m
+[0;34m[20:37:05][0m Step 10: Monitoring for auto-balancing (checking every 30s for 10 minutes)...
+[0;34m[20:37:35][0m Check 1/20: Checking partition distribution...
+[0;34m[20:38:30][0m Current distribution:    2 0
+   2 1
+   1 2
+   1 none
+[0;34m[20:39:00][0m Check 2/20: Checking partition distribution...
+[0;34m[20:39:09][0m Current distribution:    2 0
+   2 1
+   2 2
+[0;32m[20:39:09] ✅ Partitions are balanced! (2-2-2)[0m
+[0;34m[20:39:39][0m Capturing screenshot: 02-during-rebalance
+[0;34m[20:39:39][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[20:39:42][0m   Attempt 1/5: 1-1-1-
+[0;34m[20:40:02][0m   Attempt 2/5: 2-2-2-
+[0;34m[20:40:23][0m   Attempt 3/5: 2-2-2-
+[0;32m[20:40:23] ✅ Metrics stable at: 2-2-2-[0m
+[0;34m[20:40:23][0m Querying partition metrics from brokers (02-during-rebalance)...
+[0;34m[20:40:24][0m   Broker 0: 2 partitions
+[0;34m[20:40:24][0m   Broker 1: 2 partitions
+[0;34m[20:40:25][0m   Broker 2: 2 partitions
+[0;34m[20:40:25][0m Distribution: 2 2 2 
+[0;34m[20:40:25][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[20:41:05] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/screenshots/02-during-rebalance-20251229-203209.png (39282 bytes)[0m
+[0;34m[20:41:05][0m Verifying metrics match screenshot...
+[0;34m[20:41:05][0m Querying partition metrics from brokers (02-during-rebalance-verification)...
+[0;34m[20:41:05][0m   Broker 0: 2 partitions
+[0;34m[20:41:06][0m   Broker 1: 2 partitions
+[0;34m[20:41:07][0m   Broker 2: 2 partitions
+[0;34m[20:41:07][0m Distribution: 2 2 2 
+[0;34m[20:41:07][0m Step 11: Continuing monitoring for 2 more minutes...
+[0;34m[20:43:07][0m Capturing screenshot: 03-after-rebalance
+[0;34m[20:43:07][0m Waiting for metrics to stabilize before screenshot...
+[0;34m[20:43:08][0m   Attempt 1/5: 2-2-2-
+[0;34m[20:43:30][0m   Attempt 2/5: 2-2-2-
+[0;32m[20:43:30] ✅ Metrics stable at: 2-2-2-[0m
+[0;34m[20:43:30][0m Querying partition metrics from brokers (03-after-rebalance)...
+[0;34m[20:43:30][0m   Broker 0: 2 partitions
+[0;34m[20:43:30][0m   Broker 1: 2 partitions
+[0;34m[20:43:30][0m   Broker 2: 2 partitions
+[0;34m[20:43:30][0m Distribution: 2 2 2 
+[0;34m[20:43:30][0m Waiting 30 seconds for Prometheus scrape and Grafana update...
+[0;32m[20:44:08] ✅ Screenshot captured: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/screenshots/03-after-rebalance-20251229-203209.png (39499 bytes)[0m
+[0;34m[20:44:08][0m Verifying metrics match screenshot...
+[0;34m[20:44:08][0m Querying partition metrics from brokers (03-after-rebalance-verification)...
+[0;34m[20:44:09][0m   Broker 0: 2 partitions
+[0;34m[20:44:11][0m   Broker 1: 2 partitions
+[0;34m[20:44:11][0m   Broker 2: 2 partitions
+[0;34m[20:44:11][0m Distribution: 2 2 2 
+[0;34m[20:44:11][0m Step 13: Final partition distribution:
+Topic: traffic-test	TopicId: yiMigs8IRA-FtsRTKukkDg	PartitionCount: 6	ReplicationFactor: 1	Configs: min.insync.replicas=1,segment.bytes=1073741824
+	Topic: traffic-test	Partition: 0	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 1	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 2	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 3	Leader: 2	Replicas: 2	Isr: 2	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 4	Leader: 1	Replicas: 1	Isr: 1	Elr: 	LastKnownElr: 
+	Topic: traffic-test	Partition: 5	Leader: 0	Replicas: 0	Isr: 0	Elr: 	LastKnownElr: 
+[0;34m[20:44:25][0m Step 14: Stopping load generation...
+[0;34m[20:44:25][0m 
+[0;34m[20:44:26][0m =========================================
+[0;34m[20:44:26][0m Demo Complete!
+[0;34m[20:44:26][0m =========================================
+[0;34m[20:44:26][0m Results directory: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results
+[0;34m[20:44:26][0m Screenshots directory: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/screenshots
+[0;34m[20:44:26][0m Log file: /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/complete-demo-20251229-203209.log
+[0;34m[20:44:26][0m 
+[0;34m[20:44:26][0m Screenshots captured:
+  /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/screenshots/01-before-load-20251229-203209.png (30K)
+  /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/screenshots/02-during-rebalance-20251229-203209.png (38K)
+  /Users/keqing/IdeaProjects/automq-labs/auto-balancing-demos/traffic-based/results/screenshots/03-after-rebalance-20251229-203209.png (39K)
+[0;34m[20:44:26][0m 
+[0;32m[20:44:26] ✅ ✅ Demo completed successfully - auto-balancing worked![0m
+[0;34m[20:44:26][0m 
+[0;34m[20:44:26][0m To clean up: docker-compose -f docker-compose-clean.yml down -v

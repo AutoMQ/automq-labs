@@ -1,0 +1,36 @@
+
+=== Partition Metrics: 01-before-load at 2025-12-29 20:36:27 ===
+Broker 0: 4 partitions
+Broker 1: 1 partitions
+Broker 2: 1 partitions
+Distribution: 4 1 1 
+
+=== Partition Metrics: 01-before-load-verification at 2025-12-29 20:37:04 ===
+Broker 0: 4 partitions
+Broker 1: 1 partitions
+Broker 2: 1 partitions
+Distribution: 4 1 1 
+
+=== Partition Metrics: 02-during-rebalance at 2025-12-29 20:40:23 ===
+Broker 0: 2 partitions
+Broker 1: 2 partitions
+Broker 2: 2 partitions
+Distribution: 2 2 2 
+
+=== Partition Metrics: 02-during-rebalance-verification at 2025-12-29 20:41:05 ===
+Broker 0: 2 partitions
+Broker 1: 2 partitions
+Broker 2: 2 partitions
+Distribution: 2 2 2 
+
+=== Partition Metrics: 03-after-rebalance at 2025-12-29 20:43:30 ===
+Broker 0: 2 partitions
+Broker 1: 2 partitions
+Broker 2: 2 partitions
+Distribution: 2 2 2 
+
+=== Partition Metrics: 03-after-rebalance-verification at 2025-12-29 20:44:08 ===
+Broker 0: 2 partitions
+Broker 1: 2 partitions
+Broker 2: 2 partitions
+Distribution: 2 2 2 
