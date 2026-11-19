@@ -198,6 +198,17 @@ Grant the database user CONNECT, schema USAGE, and SELECT/INSERT/UPDATE
 permissions. Its search path must resolve `orders` to this table. The example
 uses the existing table with automatic creation and schema evolution disabled.
 
+Before deploying the Connect Cluster, create an AKS node pool for its workers
+or select an existing pool with enough available CPU and memory. This example
+needs capacity for one `TIER1` worker in addition to existing Kafka and system
+workloads. `automq_connect_cluster` deploys workers onto the selected nodes;
+it does not create or resize AKS node pools.
+
+Set `node_pool_name` to the selected pool and match its labels and taints in
+`scheduling_spec`. The example selects `kubernetes.azure.com/agentpool` and
+tolerates `dedicated=automq:NoSchedule`; update these settings if you use a
+different pool.
+
 Then fill in the `locals` block in [connector/main.tf](connector/main.tf):
 
 | Local value | Information to provide |
