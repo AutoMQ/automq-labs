@@ -56,7 +56,9 @@ The default Cluster uses three Availability Zones and S3 WAL.
    ```
 
 Continue with the [detailed walkthrough](#detailed-walkthrough) for credential
-handling, version selection, validation, and operational guidance.
+handling, version selection, validation, and operational guidance. To grant
+AutoMQ support access to the Console host, follow
+[SSM Operations Access](ssm-operations-access/README.md) after deployment.
 
 ## Architecture
 
@@ -224,7 +226,9 @@ the Cluster because the Console-managed path requires broader IAM, DNS, and
 data-bucket lifecycle permissions than the selected EC2 minimal policy.
 
 SSH ingress is not opened. For host diagnostics, get the instance ID and use
-AWS Systems Manager Session Manager:
+AWS Systems Manager Session Manager. See
+[SSM Operations Access](ssm-operations-access/README.md) for the instance and operator
+permissions:
 
 ```bash
 terraform output -raw console_instance_id
