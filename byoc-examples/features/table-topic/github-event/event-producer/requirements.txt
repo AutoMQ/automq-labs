@@ -1,0 +1,5 @@
+requests
+python-dateutil
+confluent-kafka[schema-registry,avro]
+attrs>=21.2.0
+fastavro
