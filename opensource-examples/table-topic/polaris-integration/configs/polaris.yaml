@@ -1,0 +1,14 @@
+server:
+  applicationConnectors:
+    - type: http
+      port: 8181
+polaris:
+  realms:
+    allowedRealms: ["POLARIS"]
+  realmContext:
+    requireHeader: true
+    headerName: "Polaris-Realm"
+security:
+  auth:
+    type: "fixed"
+    token: "test-token"
