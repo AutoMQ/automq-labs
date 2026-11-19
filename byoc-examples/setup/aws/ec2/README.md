@@ -58,6 +58,10 @@ The default Cluster uses three Availability Zones and S3 WAL.
 Continue with the [detailed walkthrough](#detailed-walkthrough) for credential
 handling, version selection, validation, and operational guidance.
 
+For a separate pure private deployment template, use
+[`automq-console-private`](automq-console-private/README.md). The original
+`automq-console` template above is unchanged.
+
 ## Architecture
 
 ![AWS EC2 BYOC architecture showing the public Console, three private broker subnets, private DNS, IAM roles, and S3 traffic through a Gateway VPC Endpoint](images/aws-ec2-architecture.svg)
