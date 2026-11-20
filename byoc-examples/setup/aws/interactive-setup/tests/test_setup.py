@@ -147,6 +147,17 @@ class Tests(unittest.TestCase):
         self.assertFalse(any('glue:' in a.lower() for s in console['Statement'] for a in s['Action']))
         self.assertEqual(cluster['Statement'][0]['Condition']['StringEquals']['s3:ResourceAccount'], '123456789012')
 
+    def test_console_can_read_generated_and_existing_managed_policies(self):
+        state = fixture()
+        ssm_policy = 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+        state['attached_policies'] = [ssm_policy]
+        cluster, console = policies(state)
+        reads = next(statement for statement in console['Statement'] if statement['Sid'] == 'ReadPolicies')
+        prefix = 'arn:aws:iam::123456789012:policy/automq-setup-test-123'
+        expected = [f'{prefix}-cluster-role-{i}' for i in range(1, len(split_policy(cluster)) + 1)]
+        self.assertCountEqual(reads['Resource'], [*expected, f'{prefix}-console-role-*', ssm_policy])
+        self.assertCountEqual(reads['Action'], ['iam:GetPolicy', 'iam:GetPolicyVersion'])
+
     def test_launch_template_network_interface_tags(self):
         _, console = policies(fixture())
         statement = next(s for s in console['Statement'] if s['Sid'] == 'TagNetworkInterfaceDuringRun')

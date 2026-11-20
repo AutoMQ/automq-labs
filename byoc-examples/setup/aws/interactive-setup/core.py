@@ -243,8 +243,11 @@ def policies(state):
     for statement in cluster['Statement']:
         if not state.get('data_bucket') and statement['Sid'] in ['DataBucketList', 'DataObjects']:
             statement['Condition'] = {'StringEquals': {'s3:ResourceAccount': account}}
-    generated = [f'arn:aws:iam::{account}:policy/automq-setup-{state["name"]}-cluster-role-{i}'
+    policy_prefix = f'arn:aws:iam::{account}:policy/automq-setup-{state["name"]}'
+    generated = [f'{policy_prefix}-cluster-role-{i}'
                  for i in range(1, len(split_policy(cluster)) + 1)]
+    # CMP reads every managed policy attached to Console Role during browser initialization.
+    generated.append(f'{policy_prefix}-console-role-*')
     bindings['<attached-policy-arn>'] = sorted(set(bindings['<attached-policy-arn>'] + generated))
     console_modules = json.loads((TEMPLATES / 'console-policy-modules.json').read_text())
     console_keys = ['base', 'ops-cross-account', 'discovery',
