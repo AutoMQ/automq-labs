@@ -50,6 +50,7 @@ class EC2CreateBranches(unittest.TestCase):
                     {'listenerName': name, 'cidrs': state['client_cidrs']} for name in names
                 ])
                 cluster, console = policies(state)
+                cluster_sids = {entry['Sid']: entry for entry in cluster['Statement']}
                 console_sids = {entry['Sid']: entry for entry in console['Statement']}
                 if bucket:
                     self.assertEqual(console_sids['ReadDataBucket']['Resource'], ['arn:aws:s3:::user-data'])
@@ -59,7 +60,14 @@ class EC2CreateBranches(unittest.TestCase):
                 if dns == 'public':
                     self.assertEqual(console_sids['AssumeHomeDNSRole']['Resource'], [role])
                     self.assertNotIn('ManagePrivateDNS', console_sids)
-                    self.assertNotIn('hostedzone/', json.dumps(cluster))
+                    self.assertEqual(cluster_sids['TlsAssumeRole']['Resource'], [role])
+                    if 'tls' in transport:
+                        self.assertEqual(cluster_sids['TlsDns']['Resource'], ['arn:aws:route53:::hostedzone/ZTEST'])
+                        self.assertCountEqual(cluster_sids['TlsDns']['Action'], [
+                            'route53:GetHostedZone', 'route53:ListResourceRecordSets', 'route53:ChangeResourceRecordSets'
+                        ])
+                    else:
+                        self.assertNotIn('TlsDns', cluster_sids)
                 else:
                     self.assertEqual(console_sids['ManagePrivateDNS']['Resource'], ['arn:aws:route53:::hostedzone/ZTEST'])
                     self.assertNotIn('AssumeHomeDNSRole', console_sids)

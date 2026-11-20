@@ -239,7 +239,12 @@ def policies(state):
         bindings['<amp-workspace-arn>'] = state['metrics']['prometheusArn']
     cluster_modules = json.loads((TEMPLATES / 'cluster-policy-modules.json').read_text())
     cluster_keys = ['base', 'eks-volumes' if state.get('deploy_type') == 'K8S' else 'ec2-volumes']
-    cluster_keys += ['TlsAssumeRole'] if state.get('dns_mode') == 'public' else ['TlsDns']
+    public_dns = state.get('dns_mode') == 'public'
+    if public_dns:
+        cluster_keys.append('TlsAssumeRole')
+    # CMP requires these actions on the cluster role when validating TLS.
+    if not public_dns or 'tls' in state.get('transport', []):
+        cluster_keys.append('TlsDns')
     if state.get('metrics', {}).get('prometheusArn'): cluster_keys.append('amp')
     cluster = combine(cluster_modules, cluster_keys, bindings)
     for statement in cluster['Statement']:
