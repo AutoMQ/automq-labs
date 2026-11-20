@@ -41,12 +41,15 @@ For a new Console, have a private access route and an EC2 key pair ready.
 | Combine user-managed resources with EFS and Public DNS | Three AZs with one Broker each. Reuse the Console and network. Select a user-managed bucket and Broker security group, EFS WAL and a CMP-managed EFS security group. Select Public DNS and both SASL over TLS and mTLS. Supply the client CA. | The request references the selected bucket and Broker group. Home supplies the Public Zone and server certificate. EFS has an available mount target in each selected AZ. Verify Kafka in both directions. Run once with resources prepared in the wizard and again with equivalent resources prepared before opening it. |
 | Reuse an EFS security group | Repeat the EFS case with a pre-existing NFS security group and pre-existing EFS mount-target subnets. | The signed request and CMP's file system details use the selected group. CMP creates the file system and mount targets. |
 
-The new-Console and mixed EFS cases have cloud results from earlier runs.
-The mixed EFS run reused a Console, VPC, route table and S3 Gateway Endpoint.
-It used a bucket, Broker security group and Broker Role created for that run.
-The scenario that selects only pre-existing customer dependencies has offline
-coverage. An existing EFS or FSx file system ID is outside the CMP create
-request. The guide supports reusing the surrounding subnets and security groups.
+The new-Console, mixed EFS and reuse cases passed in AWS. The mixed EFS run
+reused a Console, VPC, route table and S3 Gateway Endpoint. It used a bucket,
+Broker security group and Broker Role created for that run. The reuse case
+used an empty test bucket and private certificate prepared before launching
+the wizard. It reached `Running` with three Brokers, validated all three
+private TLS endpoints, and produced and consumed a Kafka record.
+
+The guide supports reusing EFS and FSx subnets and security groups. CMP
+provisions the file system when creating the cluster.
 
 ## Execute and verify a case
 
@@ -118,6 +121,9 @@ Run the checks from a host that reaches the private Broker addresses. Wait
 until the host's default resolver returns all Broker addresses. Use the
 bootstrap hostnames from the verifier so the Kafka clients can check
 certificate names.
+
+For the SASL-only case, verify port 9112 and use the SASL configuration for
+both the producer and consumer.
 
 Create a one-partition test Topic, a temporary SASL user, and a client
 certificate signed by the configured client CA. Grant both Kafka principals

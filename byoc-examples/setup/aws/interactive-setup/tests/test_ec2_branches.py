@@ -86,6 +86,11 @@ class EC2CreateBranches(unittest.TestCase):
                 else:
                     self.assertEqual(console_sids['ManagePrivateDNS']['Resource'], ['arn:aws:route53:::hostedzone/ZTEST'])
                     self.assertNotIn('AssumeHomeDNSRole', console_sids)
+                    if 'tls' in transport:
+                        self.assertEqual(cluster_sids['TlsAssumeRole']['Action'], ['sts:AssumeRole'])
+                        self.assertEqual(cluster_sids['TlsAssumeRole']['Resource'], [state['cluster_role']['Arn']])
+                    else:
+                        self.assertNotIn('TlsAssumeRole', cluster_sids)
 
     def test_incomplete_tls_inputs_are_rejected_before_serializing(self):
         state = dict(fixture(), transport=['tls'], auth=['sasl'], dns_mode='private')

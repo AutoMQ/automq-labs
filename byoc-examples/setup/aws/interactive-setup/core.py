@@ -219,6 +219,8 @@ def split_policy(policy, limit=6144):
 def policies(state):
     account, region = state['account'], state['home']['region']
     prefix = f'arn:aws:ec2:{region}:{account}:'
+    public_dns = state.get('dns_mode') == 'public'
+    tls_enabled = 'tls' in state.get('transport', [])
     bindings = {
         '<account-id>': account, '<region>': region,
         '<ops-bucket>': state['home']['opsBucket']['bucketName'],
@@ -228,22 +230,24 @@ def policies(state):
         '<compute-subnet-arn>': [prefix + 'subnet/' + x['SubnetId'] for x in state.get('subnets', [state['subnet']])],
         '<user-security-group-arn>': [prefix + 'security-group/' + x['GroupId'] for x in state.get('cluster_security_groups', [])],
         '<cluster-role-arn>': state['cluster_role']['Arn'],
+        '<tls-assume-role-arn>': state['cluster_role']['Arn'],
         '<managed-ec2-resource-arn>': [prefix + k + '/*' for k in ['instance', 'volume', 'key-pair', 'launch-template', 'security-group']],
         '<attached-policy-arn>': state.get('attached_policies', []),
     }
     if state.get('eks'):
         bindings.update({'<eks-cluster-arn>': state['eks']['arn'], '<eks-name>': state['eks']['name']})
-    if state.get('public_dns'):
+    if public_dns and state.get('public_dns'):
         bindings.update({'<home-dns-role-arn>': state['public_dns']['crossAccountRole'], '<tls-assume-role-arn>': state['public_dns']['crossAccountRole']})
     if state.get('metrics', {}).get('prometheusArn'):
         bindings['<amp-workspace-arn>'] = state['metrics']['prometheusArn']
     cluster_modules = json.loads((TEMPLATES / 'cluster-policy-modules.json').read_text())
     cluster_keys = ['base', 'eks-volumes' if state.get('deploy_type') == 'K8S' else 'ec2-volumes']
-    public_dns = state.get('dns_mode') == 'public'
-    if public_dns:
+    # CMP checks for AssumeRole on TLS clusters, including Private DNS. Scope
+    # Private DNS to the selected role and keep its existing trust policy.
+    if public_dns or tls_enabled:
         cluster_keys.append('TlsAssumeRole')
     # CMP requires these actions on the cluster role when validating TLS.
-    if not public_dns or 'tls' in state.get('transport', []):
+    if not public_dns or tls_enabled:
         cluster_keys.append('TlsDns')
     if state.get('metrics', {}).get('prometheusArn'): cluster_keys.append('amp')
     cluster = combine(cluster_modules, cluster_keys, bindings)
