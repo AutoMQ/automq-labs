@@ -24,29 +24,48 @@ python3 tests/live_aws_precreate.py --run --region us-east-1 \
   --output "$HOME/automq-precreate-$(date +%Y%m%d-%H%M%S)"
 ```
 
-## Cloud cases
+## Release cloud cases
+
+Run two cloud cases before release. Use the offline suite for routine
+changes and the targeted cases below when a dependency or permission path
+changes.
 
 Start each case with a new cluster name and a new private output directory.
-Use a test VPC with DNS support and DNS hostnames enabled, private subnets,
-and routes for Home, the Console image registry, and the required AWS
-services. Use an AWS CLI identity in the same account as the test environment.
-Use a Home environment with an available UsageBased subscription or trial.
-For a new Console, have a private access route and an EC2 key pair ready.
+Start with a test VPC that has DNS support and DNS hostnames enabled. Provide
+private routes for Home, the Console image registry, and required AWS
+services. Use an AWS CLI identity in the test account and a Home environment
+with an available UsageBased subscription or trial. For a new Console, have
+a private access route and an EC2 key pair ready.
 
 | Case | Select in the guide | Evidence to check |
 | --- | --- | --- |
-| Reuse customer resources | Existing Console, VPC, compute subnets, S3 Gateway Endpoint, an unused user-owned data bucket, associated Private Hosted Zone, Broker security group, and EC2 IAM roles. Select EBS WAL and SASL over TLS. Supply a server certificate and key for the existing zone. | Skip all resource preparation commands. Verify the signed request carries the existing bucket, zone, subnets, group, and Broker Role. Verify IAM grants target the selected roles. Existing IAM attachments remain attached. |
-| Prepare missing resources | New EC2 Console in an existing VPC. In the resource menus, use **Show preparation command** for a missing subnet, Private Hosted Zone, user-managed bucket, security groups, and EC2 roles and profiles. Select S3 WAL and SASL plaintext. | Execute the displayed scripts, refresh, and select the resulting IDs. Review how the new subnet reaches dependencies. If the S3 Gateway Endpoint exists, the generated command adds only missing route tables and preserves its policy. Check the Console launch receipt and its instance profile. |
-| Reuse networking with CMP-managed resources | Existing Console and roles, VPC, subnets and S3 Gateway Endpoint. Select CMP-managed bucket and Broker security group, Private DNS, and a VPC client source. | The request omits customer bucket and group IDs. CMP reports managed resources. Listener ingress uses the selected client CIDR. The Console policy grants the required create operations. |
-| Combine user-managed resources with EFS and Public DNS | Three AZs with one Broker each. Reuse the Console and network. Select a user-managed bucket and Broker security group, EFS WAL and a CMP-managed EFS security group. Select Public DNS and both SASL over TLS and mTLS. Supply the client CA. | The request references the selected bucket and Broker group. Home supplies the Public Zone and server certificate. EFS has an available mount target in each selected AZ. Verify Kafka in both directions. Run once with resources prepared in the wizard and again with equivalent resources prepared before opening it. |
-| Reuse an EFS security group | Repeat the EFS case with a pre-existing NFS security group and pre-existing EFS mount-target subnets. | The signed request and CMP's file system details use the selected group. CMP creates the file system and mount targets. |
+| Provision new resources | New EC2 Console and three AZs with one Broker each. Prepare the subnets, S3 Gateway Endpoint, EC2 roles and profiles, and Console security group with the generated scripts. Select a CMP-managed data bucket and Broker and EFS security groups, EFS WAL, Public DNS, SASL over TLS, and mTLS. Supply the client CA. | Check the Console launch receipt and profile, managed bucket and groups, and VPC CIDRs on both listeners. Verify Home supplies the server certificate and EFS has an available mount target in each AZ. Verify Kafka in both directions and reject mTLS connections with no client certificate. |
+| Reuse customer resources | Existing Console, compute subnets, S3 Gateway Endpoint, an unused user-owned data bucket, associated Private Hosted Zone, Broker security group, and EC2 IAM roles. Select single-AZ EBS WAL and SASL over TLS. Supply a server certificate and key for the existing zone. | Skip resource preparation. Match the signed request and live cluster to the existing bucket, zone, subnets, group, and Broker Role. Verify TLS hostnames and Kafka read and write. |
 
-The new-Console, mixed EFS and reuse cases passed in AWS. The mixed EFS run
-reused a Console, VPC, route table and S3 Gateway Endpoint. It used a bucket,
-Broker security group and Broker Role created for that run. The reuse case
-used an empty test bucket and private certificate prepared before launching
-the wizard. It reached `Running` with three Brokers, validated all three
-private TLS endpoints, and produced and consumed a Kafka record.
+Both cases use the generated authorization and signed create commands. Check
+CMP `Running`, EC2 status checks, and a successful Kafka round trip.
+
+## Targeted cloud cases
+
+Retest the affected case when a change crosses one of these boundaries.
+
+- For preparation scripts, run the opt-in preparation test. If S3 route
+  handling changed, retest an existing endpoint that needs another route
+  table and verify its policy after the update.
+- For Public DNS or managed certificate changes, repeat the three-AZ EFS
+  case with a user-owned bucket and Broker group. Check that the cluster uses
+  those resources and that both TLS listeners work through Home-managed DNS.
+- For EFS security group changes, repeat the EFS case with existing NFS
+  security groups and mount-target subnets. Compare them with the request
+  and CMP file system details. For FSx, a customer KMS key, or cross-VPC
+  connectivity, run the affected path directly.
+
+The reuse case passed in AWS with three Brokers, private TLS on all three
+endpoints, and a Kafka round trip. Earlier cloud runs covered new Console
+installation with a CMP-managed bucket and, in a separate cluster, three-AZ
+EFS and both Public DNS TLS listeners with a user-owned bucket and Broker
+group. The new-resource release case combines those paths and is pending its
+first full cloud run.
 
 The guide supports reusing EFS and FSx subnets and security groups. CMP
 provisions the file system when creating the cluster.
