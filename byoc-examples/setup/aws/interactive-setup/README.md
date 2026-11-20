@@ -51,7 +51,8 @@ bash prepare-console-ec2.sh
 ```
 
 The AWS CLI command uses the selected private subnet, security group, SSH key
-and instance profile. It returns `InstanceId`, `PrivateIp` and `DataVolumeId`.
+and instance profile. It records `InstanceId`, `PrivateIp` and `DataVolumeId` in
+`console-launch.json`.
 Use your private network route to copy the files listed in
 `CONSOLE-INSTALL.txt` to the host and run `bash install-console.sh <DataVolumeId>`.
 The installer mounts the encrypted EBS data volume, then starts the Home image
@@ -98,6 +99,40 @@ private. Generate it shortly before submission and sign again if the payload
 or Console origin changes. `create-response.json` contains the API response.
 Check the cluster's status in Console before retrying a request with an unknown
 result.
+
+## Clean up a test deployment
+
+Keep the original output directory and the signed create directory with its
+`request.json`, `create-target.json` and successful `create-response.json`. If
+you ran the create request elsewhere, copy those files back into the signed
+create directory in the original output bundle. Keep `console-launch.json` for
+a new EC2 Console and `console-eks.uid` for a new EKS Console.
+
+From the original output directory, run:
+
+```bash
+bash cleanup.sh          # Preview
+bash cleanup.sh --apply  # Execute
+```
+
+CMP deletes the recorded cluster and handles its managed resources. The script
+waits until CMP no longer finds the cluster before removing a new Console. For
+EC2, it terminates the recorded instance and deletes its dedicated EBS data
+volume. For EKS, it uninstalls the recorded Helm release. The Retain policy
+preserves the EKS persistent volume. Separately prepared dependencies such as
+IAM roles, DNS zones, network resources, and S3 buckets stay in place.
+
+The script keeps an existing Console. Use `--cluster-only` if you want to
+keep a new Console or it manages other clusters. If the bundle contains
+multiple create results, use `--receipt /path/to/signed-create` to select the
+successful one. Use `--console-url` if the private Console address or tunnel
+port changes. The service account needs permission to read and delete the
+cluster and, when removing Console, to list its other clusters. EC2 cleanup
+uses the AWS CLI identity for the recorded account. EKS cleanup uses Helm
+and kubectl with the recorded context.
+
+If the command stops waiting for a deletion, rerun it with `--apply` to
+resume. Keep the output bundle until cleanup completes.
 
 ## Compatibility and tests
 

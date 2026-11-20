@@ -32,16 +32,28 @@ def signature(body, access_key, secret_key, now, method="POST", path=CREATE_PATH
     return stamp, auth
 
 
-def curl_config(url, request_file, credential_file, now=None, request_reference=None):
+def console_origin(url):
     parsed = urlsplit(url)
-    if parsed.scheme not in ['http', 'https'] or not parsed.hostname or parsed.username or parsed.password or parsed.path not in ['', '/'] or parsed.query or parsed.fragment or any(ord(c) < 32 for c in url):
+    if (parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.username is not None
+            or parsed.password is not None or parsed.path not in ('', '/') or parsed.query or parsed.fragment
+            or any(c.isspace() or ord(c) < 32 for c in url)):
         raise ValueError('Use the Console origin, such as http://127.0.0.1:8080, without a path or credentials.')
+    return url.rstrip('/')
+
+
+def service_credentials(credential_file):
     credentials = json.loads(Path(credential_file).read_text())
     ak, sk = credentials['accessKey'], credentials['secretKey']
-    if any(v.startswith('REPLACE_') for v in [ak, sk]):
+    if any(isinstance(v, str) and v.startswith('REPLACE_') for v in [ak, sk]):
         raise ValueError('Replace accessKey and secretKey in cmp-credentials.json with your existing CMP service-account credentials.')
-    if not all(re.fullmatch(r'[A-Za-z0-9]+', v) for v in [ak, sk]):
+    if not all(isinstance(v, str) and re.fullmatch(r'[A-Za-z0-9]+', v) for v in [ak, sk]):
         raise ValueError('This command supports CMP alphanumeric access keys and secret keys.')
+    return ak, sk
+
+
+def curl_config(url, request_file, credential_file, now=None, request_reference=None):
+    origin = console_origin(url)
+    ak, sk = service_credentials(credential_file)
     request = Path(request_file).resolve()
     body = request.read_bytes()
     json.loads(body)
@@ -49,7 +61,7 @@ def curl_config(url, request_file, credential_file, now=None, request_reference=
     def quoted(v):
         return '"' + v.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r') + '"'
     return '\n'.join([
-        'url = ' + quoted(url.rstrip('/') + CREATE_PATH), 'request = "POST"',
+        'url = ' + quoted(origin + CREATE_PATH), 'request = "POST"',
         'header = "Content-Type: application/json"', 'header = ' + quoted('X-automq-date: ' + stamp),
         'header = ' + quoted('Authorization: ' + auth), 'data-binary = ' + quoted('@' + (request_reference or str(request))),
     ]) + '\n'
@@ -67,6 +79,7 @@ def generate_bundle(url, request_file, credential_file, output):
         save('request.json', body)
         config = curl_config(url, output / 'request.json', credential_file, request_reference='request.json')
         save('request.curl', config)
+        save('create-target.json', json.dumps({'consoleUrl': console_origin(url)}) + '\n')
         save('create-cluster.sh', '''#!/usr/bin/env bash
 set -euo pipefail
 umask 077
@@ -94,7 +107,7 @@ printf '%s\n' 'Response saved to create-response.json. Check Console for task st
 If Home remains INSTALLED, check Console initialization, the Ops Bucket policy, environment metadata and Home synchronization. If CMP returns Instance.NoAvailableSubscription, check billing availability before signing and submitting again.
 ''')
     except Exception:
-        for name in ['request.json', 'request.curl', 'create-cluster.sh', 'BEFORE-CREATE.md']:
+        for name in ['request.json', 'request.curl', 'create-target.json', 'create-cluster.sh', 'BEFORE-CREATE.md']:
             (output / name).unlink(missing_ok=True)
         output.rmdir()
         raise

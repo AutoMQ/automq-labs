@@ -599,3 +599,4 @@ class AWSWizard(Wizard):
             else:
                 self.ui.show('Console EC2 launch: bash prepare-console-ec2.sh. See CONSOLE-INSTALL.txt for the host installation.')
         self.ui.show('Sign the reviewed cluster request with generate-curl.sh. Run the generated curl where Console is reachable after installation, initialization and billing checks.')
+        self.ui.show('Keep the create response and Console installation receipt. Run bash cleanup.sh to preview removal of this deployment.')

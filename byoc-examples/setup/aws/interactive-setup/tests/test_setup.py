@@ -260,6 +260,7 @@ class FullStoryTests(unittest.TestCase):
             self.assertIn('ec2 run-instances', launch)
             self.assertIn('--no-associate-public-ip-address', launch)
             self.assertIn('DataVolumeId:BlockDeviceMappings', launch)
+            self.assertIn('mv console-launch.json.tmp console-launch.json', launch)
             self.assertNotIn(encoded, launch)
             devices = json.loads((path / 'console-devices.json').read_text())
             data = next(item['Ebs'] for item in devices if item['DeviceName'] == '/dev/sdf')
@@ -369,6 +370,8 @@ class OfflineCurlTests(unittest.TestCase):
             with patch('subprocess.run', side_effect=AssertionError('Generation must not execute commands')), patch('socket.socket.connect', side_effect=AssertionError('Generation must not connect')):
                 generate_bundle('http://cmp.internal:8080', request, credential, output)
             self.assertEqual((output / 'request.json').read_bytes(), request.read_bytes())
+            self.assertEqual(json.loads((output / 'create-target.json').read_text()),
+                             {'consoleUrl': 'http://cmp.internal:8080'})
             config = (output / 'request.curl').read_text()
             self.assertIn('data-binary = "@request.json"', config)
             self.assertIn('http://cmp.internal:8080/api/v1/instances', config)

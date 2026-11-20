@@ -32,7 +32,14 @@ def generate_console(directory, state):
     launch_result = ("Reservations[0].Instances[0].{InstanceId:InstanceId,PrivateIp:PrivateIpAddress,"
                      "DataVolumeId:BlockDeviceMappings[?DeviceName=='/dev/sdf'].Ebs.VolumeId | [0]}")
     query = aws_command(region, 'ec2', 'describe-instances', '--query', launch_result, '--output', 'json') + ' --instance-ids "$SETUP_INSTANCE_ID"'
-    write_private(directory / 'prepare-console-ec2.sh', '#!/usr/bin/env bash\nset -euo pipefail\ncd -- "$(dirname -- "$0")"\nSETUP_INSTANCE_ID=$(' + cmd + ')\n' + wait + '\n' + query + '\n')
+    write_private(directory / 'prepare-console-ec2.sh', '\n'.join([
+        '#!/usr/bin/env bash', 'set -euo pipefail', 'umask 077', 'cd -- "$(dirname -- "$0")"',
+        'SETUP_INSTANCE_ID=$(' + cmd + ')',
+        """printf '{"InstanceId":"%s"}\\n' "$SETUP_INSTANCE_ID" > console-launch.json.tmp""",
+        'mv console-launch.json.tmp console-launch.json',
+        wait, query + ' > console-launch.json.tmp', 'mv console-launch.json.tmp console-launch.json',
+        'cat console-launch.json', '',
+    ]))
     disk = (TEMPLATES / 'console-data-disk.sh').read_text()
     check_mount = (TEMPLATES / 'automq-console-check-mount').read_text()
     unit = (TEMPLATES / 'automq-console.service').read_text()
@@ -74,7 +81,7 @@ sudo systemctl status automq-console --no-pager
 '''
     write_private(directory / 'install-console.sh', preamble + disk + '\n' + post)
     write_private(directory / 'CONSOLE-INSTALL.txt', f'''Execute authorization scripts first. Verify IAM propagation before launching EC2.
-Run bash prepare-console-ec2.sh locally. Record InstanceId, PrivateIp and DataVolumeId from its JSON output.
+Run bash prepare-console-ec2.sh locally. It saves InstanceId, PrivateIp and DataVolumeId in console-launch.json.
 Use your existing private-network SSH route and selected key {config['key_name']} to reach the new EC2 private IP.
 Copy install-console.sh, runtime.env, automq-console-check-mount, automq-console.service to a private directory on that EC2.
 Run bash install-console.sh <DataVolumeId> on the new EC2.

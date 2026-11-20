@@ -39,7 +39,10 @@ def generate_eks_console(directory,state):
         helm+' template automq-console ./console-chart --namespace automq-console --values console-values.json > console-rendered.yaml',
         helm+' install automq-console ./console-chart --namespace automq-console --values console-values.json --wait --timeout 10m',
         kubectl(cluster,'-n',name,'rollout','status','statefulset/'+name,'--timeout=600s'),
-        kubectl(cluster,'-n',name,'get','pvc,pods,service')]
+        kubectl(cluster,'-n',name,'get','pvc,pods,service'),
+        kubectl(cluster,'-n',name,'get','statefulset',name,'-o','jsonpath={.metadata.uid}') + ' > console-eks.uid.tmp',
+        'test -s console-eks.uid.tmp',
+        'mv console-eks.uid.tmp console-eks.uid']
     script(directory,'install-console-eks.sh',lines)
     script(directory,'access-console.sh',[kubectl(cluster,'-n',name,'port-forward','service/'+name+'-web-loadbalancer','8080:80','--address','127.0.0.1')])
     write_private(directory/'CONSOLE-INSTALL.md',f'''# EKS Console installation

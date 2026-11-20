@@ -327,7 +327,11 @@ def new_api_credentials():
 def create_command(directory, state):
     credentials = state.get('api_credentials') or {'accessKey': 'REPLACE_CMP_ACCESS_KEY', 'secretKey': 'REPLACE_CMP_SECRET_KEY'}
     write_private(directory / 'cmp-credentials.json', credentials)
-    write_private(directory / 'cmp-sign.py', (Path(__file__).parent / 'cmp_sign.py').read_text())
+    signer = (Path(__file__).parent / 'cmp_sign.py').read_text()
+    write_private(directory / 'cmp-sign.py', signer)
+    write_private(directory / 'cmp_sign.py', signer)
+    write_private(directory / 'cleanup.py', (Path(__file__).parent / 'cleanup.py').read_text())
+    write_private(directory / 'cleanup.sh', '#!/usr/bin/env bash\nset -euo pipefail\numask 077\ncd -- "$(dirname -- "$0")"\nexec python3 cleanup.py "$@"\n')
     write_private(directory / 'generate-curl.sh', '#!/usr/bin/env bash\nset -euo pipefail\numask 077\ncd -- "$(dirname -- "$0")"\n[ "$#" -eq 2 ] || { echo \'Usage: bash generate-curl.sh CONSOLE_URL NEW_OUTPUT_DIRECTORY\'; exit 1; }\n# Offline generation only. The URL must be reachable from the eventual execution machine.\npython3 cmp-sign.py "$1" --request cluster-request.json --credentials cmp-credentials.json --output "$2"\n')
 
 
@@ -342,6 +346,8 @@ def export(directory, state):
         'listeners': state.get('listeners'), 'eks': state.get('eks', {}).get('name'),
         'peakBytesInMiBps': state['peak'], 'dnsZone': state['zone']['Id'],
         'clusterRole': state['cluster_role']['Arn'], 'consoleRole': state['console_role']['Arn'],
+        'consoleMode': state.get('console_mode'), 'consoleDeploy': state.get('console_deploy'),
+        'consoleEksArn': state.get('console_eks', {}).get('arn'),
         'network': state['network'], 'vpcServiceAccess': state.get('service_access'), 'policyReview': 'user-confirmed',
         'cloudDeployment': 'not executed', 'submission': 'offline signing reads the credential file; user transfers the signed curl bundle and executes it in the Console network',
     })
