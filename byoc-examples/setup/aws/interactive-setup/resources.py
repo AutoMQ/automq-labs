@@ -28,11 +28,17 @@ def sg_rules(state, filesystem=False):
     if filesystem:
         ports = [2049] if state['filesystem']['fileSystemType']=='EFS_PROVISIONED' else [22,111,443,635,2049,4045,4046]
         return [(p,cidr,'AutoMQ to file system') for p in ports]
-    result = [(r['port'],'0.0.0.0/0',r['protocol']+' client access') for r in state['listeners']]
+    client_cidrs = state.get('client_cidrs', ['0.0.0.0/0'])
+    result = [(r['port'], source, r['protocol']+' client access') for r in state['listeners'] for source in client_cidrs]
     result += [(22,cidr,'Console SSH management'),(9090,cidr,'Metrics collection'),(9102,cidr,'Internal broker communication'),(9103,cidr,'Internal controller communication')]
     if 'anonymous' in state.get('auth',[]): result.append((9093,cidr,'Plaintext controller communication'))
-    if state.get('schema'): result.append((8081,'0.0.0.0/0','Schema Registry clients'))
-    return result
+    if state.get('schema'):
+        result.extend((8081, source, 'Schema Registry clients') for source in client_cidrs)
+    # A client listener and an internal listener can share a port and CIDR.
+    unique = {}
+    for port, source, purpose in result:
+        unique.setdefault((port, source), (port, source, purpose))
+    return list(unique.values())
 
 
 def sg_command(directory, state, purpose, rules):
@@ -52,13 +58,11 @@ def validate_sg(group, vpc, rules):
     missing = []
     for port,cidr,purpose in rules:
         matched = False
+        network = ipaddress.ip_network(cidr)
         for rule in group.get('IpPermissions',[]):
             if rule['IpProtocol'] not in ['tcp','6','-1']: continue
             if rule['IpProtocol'] != '-1' and not rule.get('FromPort',0) <= port <= rule.get('ToPort',-1): continue
             ranges = rule.get('IpRanges',[])
-            if cidr == '0.0.0.0/0':
-                matched |= bool(ranges or rule.get('Ipv6Ranges') or rule.get('UserIdGroupPairs'))
-            else:
-                matched |= any(ipaddress.ip_network(cidr).subnet_of(ipaddress.ip_network(x['CidrIp'])) for x in ranges)
+            matched |= any(network.subnet_of(ipaddress.ip_network(x['CidrIp'])) for x in ranges)
         if not matched: missing.append(f'TCP {port}: {purpose}, source {cidr}')
     if missing: raise SetupError('Missing inbound rules: ' + '; '.join(missing))

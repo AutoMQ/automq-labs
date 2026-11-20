@@ -22,7 +22,7 @@ class AWSWizard(Wizard):
         'instance_type': 'Instance type', 'payment': 'EC2 purchase option', 'payment_term': 'Reserved term',
         'client_network': 'Application network', 'transport': 'Kafka transport', 'authentication': 'Kafka authentication',
         'dns_mode': 'DNS mode', 'dns': 'DNS resources', 'certificate': 'Server certificate',
-        'private_key': 'Server private key', 'client_ca': 'Client CA certificate',
+        'private_key': 'Server private key', 'client_ca': 'TLS trust bundle',
         'schema': 'Schema Registry', 'metrics_mode': 'Metrics export', 'metrics_target': 'Metrics destination',
         'custom_tags': 'Custom tags', 'eks_target': 'AutoMQ EKS cluster', 'workload_namespace': 'AutoMQ namespace', 'workload_serviceaccount': 'AutoMQ ServiceAccount', 'eks_capacity': 'EKS compute capacity',
         'eks_schedule': 'EKS scheduling', 'lb_subnets': 'Kafka NLB subnets', 'eks_prerequisites': 'EKS prerequisites',
@@ -51,7 +51,9 @@ class AWSWizard(Wizard):
                  'payment_term': not eks and s.get('payment', {}).get('paymentType') == 'RESERVED',
                  'certificate': s.get('dns_mode') == 'private' and 'tls' in s.get('transport', []),
                  'private_key': s.get('dns_mode') == 'private' and 'tls' in s.get('transport', []),
-                 'client_ca': 'mtls' in s.get('auth', []), 'metrics_target': s.get('metrics_auth') != 'off',
+                 'client_ca': 'mtls' in s.get('auth', []) or
+                              (not eks and s.get('dns_mode') == 'private' and 'tls' in s.get('transport', [])),
+                 'metrics_target': s.get('metrics_auth') != 'off',
                  'console_deployment': new, 'console_eks': new and console_eks, 'console_eks_subnets': new and console_eks,
                  'console_subnet': not (new and console_eks),
                  'console_source': new and not console_eks, 'console_sg': new and not console_eks,
@@ -204,7 +206,19 @@ class AWSWizard(Wizard):
 
     def client_network(self):
         self.state['client_network'] = self.option('Application location', [('vpc', 'Selected VPC'), ('other', 'Other network')])
-        if self.state['client_network'] == 'other': self.ui.show('Arrange network access and private DNS association/forwarding where applicable. DNS visibility alone does not provide network connectivity.')
+        if self.state['client_network'] == 'other':
+            self.ui.show('Arrange network access and private DNS association or forwarding where applicable.')
+        if self.state['deploy_type'] != 'IAAS':
+            return
+        if self.state['client_network'] == 'vpc':
+            self.state['client_cidrs'] = [self.state['vpc']['CidrBlock']]
+            return
+        raw = self.ui.prompt('Client IPv4 CIDRs, separated by commas')
+        try:
+            networks = [ipaddress.IPv4Network(item.strip(), strict=True) for item in raw.split(',')]
+        except ValueError:
+            raise SetupError('Enter valid IPv4 networks separated by commas.') from None
+        self.state['client_cidrs'] = list(dict.fromkeys(str(network) for network in networks))
 
     def transport(self):
         self.state['transport'] = self.multi('Kafka transport', ['plaintext', 'tls'], str, current='1')
@@ -220,11 +234,11 @@ class AWSWizard(Wizard):
     def dns(self):
         if self.state['dns_mode'] == 'private': return super().dns()
         from home import prepare_public_dns
-        self.ui.confirm('Home will create or reuse the environment public zone, DNS Role and optional TLS certificate. Confirm platform management and scoped AssumeRole permissions.')
+        self.ui.confirm('Home will create or reuse the environment Public Zone and DNS Role. If TLS is enabled, CMP requests the server certificate during cluster creation.')
         with operation(self.ui.show, 'Preparing public DNS through Home'):
-            result = prepare_public_dns(self.state['home'], 'tls' in self.state['transport'])
+            result = prepare_public_dns(self.state['home'])
         self.state['public_dns'] = result
-        self.state['zone'] = {'Id': result['hostedZoneId'], 'Name': result.get('domainName', '')}
+        self.state['zone'] = {'Id': result['hostedZoneId']}
 
     def certificate(self):
         from certificates import certificate_info, preparation
@@ -242,9 +256,18 @@ class AWSWizard(Wizard):
         self.state['tls_material']['privateKey'] = pem
 
     def client_ca(self):
-        from certificates import certificate_info
-        _, pem = self.file('Client CA certificate file path')
-        certificate_info(pem, ca=True)
+        from certificates import certificate_info, verify_server_chain
+        private = self.state['dns_mode'] == 'private'
+        if 'mtls' not in self.state['auth']:
+            if self.option('Server CA', [('skip', 'Skip CA upload'), ('file', 'Provide a server CA bundle')]) == 'skip':
+                return
+        elif private:
+            self.ui.show('CMP uses one trust bundle. Include the issuers needed to verify both the server chain and client certificates.')
+        _, pem = self.file('CA trust bundle PEM path')
+        if private:
+            verify_server_chain(self.state['tls_material']['certificateChain'], pem, self.state['zone']['Name'])
+        else:
+            certificate_info(pem, ca=True)
         self.state.setdefault('tls_material', {})['certificateAuthority'] = pem
 
     def schema(self):
@@ -288,12 +311,19 @@ class AWSWizard(Wizard):
         mode = self.option('Data Bucket', [('managed','CMP creates and manages'),('existing','Choose existing / show preparation command')])
         self.state['data_bucket'] = None
         if mode == 'managed': return super().data_bucket()
-        row = self.ui.choose('Data Bucket', lambda: self.aws.read('s3api','list-buckets')['Buckets'], lambda x: f'{x["Name"]} | arn:aws:s3:::{x["Name"]}', lambda x: x['Name'], prepare=lambda:bucket_command(self.directory,self.state))
+        ops_bucket = self.state['home']['opsBucket']['bucketName']
+        row = self.ui.choose('Data Bucket',
+            lambda: [bucket for bucket in self.aws.read('s3api', 'list-buckets')['Buckets'] if bucket['Name'] != ops_bucket],
+            lambda x: f'{x["Name"]} | arn:aws:s3:::{x["Name"]}', lambda x: x['Name'],
+            prepare=lambda: bucket_command(self.directory, self.state))
         name = row['Name']
         with operation(self.ui.show,'Checking Bucket Region and lifecycle'):
             region = self.aws.read('s3api','get-bucket-location','--bucket',name).get('LocationConstraint') or 'us-east-1'
             if region == 'EU': region = 'eu-west-1'
             if region != self.aws.region: raise SetupError('Bucket must be in the selected Region.')
+            bucket_tags = self.aws.read('s3api', 'get-bucket-tagging', '--bucket', name)['TagSet']
+            if any(tag['Key'] == 'automqVendor' and tag['Value'] == 'automq' for tag in bucket_tags):
+                raise SetupError('Choose a user-managed Data Bucket. This Bucket is tagged as CMP-managed.')
             rules = self.aws.read('s3api','get-bucket-lifecycle-configuration','--bucket',name).get('Rules',[])
             if any(r.get('Status') == 'Enabled' and any(k in r for k in ['Expiration','NoncurrentVersionExpiration','AbortIncompleteMultipartUpload','Transitions','NoncurrentVersionTransitions']) for r in rules):
                 raise SetupError('Bucket lifecycle may remove or transition AutoMQ data. Resolve the rules and refresh.')
@@ -306,7 +336,7 @@ class AWSWizard(Wizard):
         for port,cidr,purpose in rules: self.ui.show(f'TCP {port} | {cidr} | {purpose}')
         mode = self.option('Security group preparation', [('managed','CMP creates and manages'),('existing','Choose existing / show preparation command')])
         if mode == 'managed':
-            self.ui.confirm('CMP Policy will include tagged security-group creation, rule management and required network permissions. Confirm delegation.')
+            self.ui.confirm('CMP will create a security group using the displayed client and internal rules. Confirm the required Policy.')
             return []
         def fetch():
             return self.aws.read('ec2','describe-security-groups','--filters',f'Name=vpc-id,Values={self.state["vpc"]["VpcId"]}')['SecurityGroups']

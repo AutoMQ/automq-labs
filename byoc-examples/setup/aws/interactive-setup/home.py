@@ -1,6 +1,7 @@
 """Read the environment's billing prerequisites from the trusted Home endpoint."""
 import base64
 import json
+import re
 import urllib.error
 import urllib.request
 from core import SetupError
@@ -39,18 +40,20 @@ def read_subscription(home):
     return subscription_status(body)
 
 
-def prepare_public_dns(home, enable_tls):
+def prepare_public_dns(home):
+    """Prepare the environment DNS role without requesting a server certificate."""
     auth = base64.b64encode((home['clientId'] + ':' + home['clientSecret']).encode()).decode()
     request = urllib.request.Request(HOME_ORIGIN + '/agentapi/v1/environments/public-dns-zones',
-        data=json.dumps({'enableTls': enable_tls}).encode(), method='POST',
+        data=json.dumps({'enableTls': False}).encode(), method='POST',
         headers={'Authorization': 'Basic ' + auth, 'Content-Type': 'application/json'})
     try:
         with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
             body = json.loads(response.read(1024 * 1024))
     except (urllib.error.URLError, TimeoutError, ValueError):
         raise SetupError('Home public DNS preparation failed. Check credentials and Home availability; do not substitute wildcard permissions.') from None
-    import re
-    if not isinstance(body, dict) or not re.fullmatch(r'(?:/hostedzone/)?Z[A-Z0-9]+', body.get('hostedZoneId', '')) or not re.fullmatch(r'arn:aws:iam::\d{12}:role/.+', body.get('crossAccountRole', '')):
+    zone = body.get('hostedZoneId') if isinstance(body, dict) else None
+    role = body.get('crossAccountRole') if isinstance(body, dict) else None
+    if (not isinstance(zone, str) or not re.fullmatch(r'(?:/hostedzone/)?Z[A-Z0-9]+', zone)
+            or not isinstance(role, str) or not re.fullmatch(r'arn:aws:iam::\d{12}:role/[\w+=,.@/-]+', role)):
         raise SetupError('Home response is missing a valid Zone ID or DNS Role ARN.')
-    if enable_tls and (not isinstance(body.get('tlsCertificate'),dict) or not all(body['tlsCertificate'].get(k) for k in ['certificateChain','privateKey'])): raise SetupError('Home did not return the required TLS certificate.')
-    return body
+    return {'hostedZoneId': zone.split('/')[-1], 'crossAccountRole': role}

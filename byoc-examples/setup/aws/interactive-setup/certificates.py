@@ -21,8 +21,8 @@ def certificate_info(pem, domain=None, ca=False):
     if ssl.cert_time_to_seconds(start) > time.time(): raise SetupError('Certificate is not valid yet.')
     if domain:
         names = openssl(['x509','-noout','-ext','subjectAltName'], pem)
-        domain = domain.rstrip('.')
-        if '*.' + domain not in re.findall(r'DNS:([^,\s]+)', names):
+        domain = domain.rstrip('.').lower()
+        if '*.' + domain not in re.findall(r'dns:([^,\s]+)', names.lower()):
             raise SetupError(f'Certificate SAN must include *.{domain} for generated broker hostnames.')
     if ca:
         info = openssl(['x509','-noout','-ext','basicConstraints'], pem)
@@ -33,6 +33,29 @@ def validate_key(cert, key):
     public = openssl(['x509','-pubkey','-noout'], cert)
     key_public = openssl(['pkey','-pubout','-passin','pass:'], key)
     if public.strip() != key_public.strip(): raise SetupError('Certificate and private key do not match.')
+
+
+def verify_server_chain(chain, trust, domain):
+    """Validate the private-zone certificate as CMP does, 30 days ahead."""
+    certificate_info(chain, domain)
+    certificate_info(trust, ca=True)
+    entries = re.findall(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', chain, re.S)
+    if not entries:
+        raise SetupError('Enter a PEM server certificate chain.')
+    with tempfile.TemporaryDirectory() as temp:
+        directory = Path(temp)
+        leaf, intermediates, authorities = (directory / name for name in ('server.pem', 'intermediate.pem', 'ca.pem'))
+        leaf.write_text(entries[0] + '\n')
+        authorities.write_text(trust)
+        args = ['verify', '-trusted', str(authorities), '-partial_chain', '-purpose', 'sslserver',
+                '-verify_hostname', 'broker.' + domain.rstrip('.'), '-attime', str(int(time.time()) + 30 * 86400)]
+        if len(entries) > 1:
+            intermediates.write_text('\n'.join(entries[1:]) + '\n')
+            args += ['-untrusted', str(intermediates)]
+        try:
+            openssl([*args, str(leaf)], '')
+        except SetupError:
+            raise SetupError('The CA bundle must verify the server chain for the selected zone 30 days from now. Check the issuers, SAN and certificate expiry.') from None
 
 
 def preparation(directory, domain):

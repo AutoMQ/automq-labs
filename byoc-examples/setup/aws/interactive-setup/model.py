@@ -4,6 +4,13 @@ import json
 import math
 from core import SetupError
 
+SYSTEM_LISTENER_NAMES = {
+    'PLAINTEXT': 'PLAINTEXT',
+    'SASL_PLAINTEXT': 'BROKER_SASL',
+    'SASL_SSL': 'BROKER_SASL_SSL',
+    'SSL': 'BROKER_MTLS',
+}
+
 
 def cluster_version(home):
     image_tag = home.get('image', '').rpartition(':')[2]
@@ -80,10 +87,28 @@ def request(state):
                     kubernetesLoadBalancerSubnets=[x['SubnetId'] for x in state['lb_subnets']])
         if state.get('schedule'):
             spec['scheduleSpec'] = state['schedule']
-    security = {'dataEncryptionMode': 'CPMK', 'authenticationMethods': state.get('auth', ['sasl']),
-                'transitEncryptionModes': state.get('transport', ['plaintext']), 'tlsHostnameValidationEnabled': True}
-    security.update(state.get('tls_material', {}))
+    auth = state.get('auth', ['sasl'])
+    transport = state.get('transport', ['plaintext'])
+    chosen_listeners = listeners(transport, auth)
+    security = {'dataEncryptionMode': 'CPMK', 'authenticationMethods': auth,
+                'transitEncryptionModes': transport, 'tlsHostnameValidationEnabled': True}
+    if 'tls' in transport:
+        material = state.get('tls_material', {})
+        if state.get('dns_mode') != 'public':
+            if not material.get('certificateChain') or not material.get('privateKey'):
+                raise SetupError('Private-zone TLS requires the server certificate chain and private key.')
+            security.update(certificateChain=material['certificateChain'], privateKey=material['privateKey'])
+        ca = material.get('certificateAuthority')
+        if 'mtls' in auth and not ca:
+            raise SetupError('mTLS requires a CA trust bundle.')
+        if ca and ('mtls' in auth or state.get('dns_mode') != 'public'):
+            security['certificateAuthority'] = ca
     features = {'walMode': state.get('wal', 'EBSWAL'), 'schemaRegistryEnabled': state.get('schema', False), 'security': security}
+    if spec['deployType'] == 'IAAS' and state.get('client_cidrs') and not spec.get('securityGroups'):
+        features['inboundRules'] = [
+            {'listenerName': SYSTEM_LISTENER_NAMES[listener['protocol']], 'cidrs': state['client_cidrs']}
+            for listener in chosen_listeners
+        ]
     if state.get('metrics'):
         features['metricsExporter'] = {'prometheus': copy.deepcopy(state['metrics'])}
     if state.get('instance_configs'):

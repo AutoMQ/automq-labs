@@ -231,6 +231,7 @@ class FullStoryTests(unittest.TestCase):
                 if op == 'describe-images': return {'Images': [{'ImageId': 'ami-test', 'RootDeviceName': '/dev/xvda', 'Architecture': 'x86_64', 'State': 'available'}]}
                 if op == 'list-hosted-zones-by-vpc': return {'HostedZoneSummaries': [{'HostedZoneId': 'ZTEST', 'Name': zone['Name']}]}
                 if op == 'get-hosted-zone': return {'HostedZone': zone, 'VPCs': [{'VPCId': 'vpc-123', 'VPCRegion': 'us-east-1'}]}
+                if op == 'list-tags-for-resource': return {'ResourceTagSet': {'Tags': []}}
                 if op == 'describe-security-groups': return {'SecurityGroups': [{'GroupId': 'sg-test', 'GroupName': 'console', 'VpcId': 'vpc-123', 'IpPermissions': [{'IpProtocol': 'tcp', 'FromPort': port, 'ToPort': port, 'IpRanges': [{'CidrIp': '10.0.0.0/16'}]} for port in [22, 8080]], 'IpPermissionsEgress': [{'IpProtocol': '-1', 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]}]}]}
                 if op == 'describe-key-pairs': return {'KeyPairs': [{'KeyName': 'test-key', 'KeyPairId': 'key-test'}]}
                 if op == 'get-parameter': return {'Parameter': {'Value': 'ami-test'}}

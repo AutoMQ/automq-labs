@@ -399,7 +399,7 @@ class Wizard:
             return
 
     def dns(self):
-        self.ui.show('Private DNS resolves cluster addresses within the VPC; this story uses no TLS certificates.')
+        self.ui.show('Select a Private Hosted Zone associated with the VPC, or generate a command to create one.')
         zone = self.ui.choose('Select private hosted zone',
             lambda: self.aws.read('route53', 'list-hosted-zones-by-vpc', '--vpc-id', self.state['vpc']['VpcId'], '--vpc-region', self.aws.region)['HostedZoneSummaries'],
             lambda x: f'{x["Name"]} | {x["HostedZoneId"]}', lambda x: x['HostedZoneId'],
@@ -407,6 +407,11 @@ class Wizard:
         detail = self.aws.read('route53', 'get-hosted-zone', '--id', zone['HostedZoneId'])
         if not detail['HostedZone']['Config']['PrivateZone'] or not any(v['VPCId'] == self.state['vpc']['VpcId'] and v['VPCRegion'] == self.aws.region for v in detail.get('VPCs', [])):
             raise SetupError('Select a private hosted zone associated with this VPC and Region.')
+        zone_id = zone['HostedZoneId'].split('/')[-1]
+        zone_tags = self.aws.read('route53', 'list-tags-for-resource', '--resource-type', 'hostedzone',
+                                  '--resource-id', zone_id)['ResourceTagSet']['Tags']
+        if any(tag['Key'] == 'automqVendor' and tag['Value'] == 'automq' for tag in zone_tags):
+            raise SetupError('Choose a user-managed Private Hosted Zone. This zone is tagged as CMP-managed.')
         self.state['zone'] = detail['HostedZone']
 
     def data_bucket(self):

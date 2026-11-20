@@ -134,10 +134,12 @@ class FullAWSStories(unittest.TestCase):
                         if op=='get-parameter': return {'Parameter':{'Value':'ami-test'}}
                         if op=='list-hosted-zones-by-vpc': return {'HostedZoneSummaries':[{'Name':'test.internal.','HostedZoneId':'ZTEST'}]}
                         if op=='get-hosted-zone': return {'HostedZone':{'Id':'/hostedzone/ZTEST','Name':'test.internal.','Config':{'PrivateZone':True}},'VPCs':[{'VPCId':'vpc-123','VPCRegion':'us-east-1'}]}
+                        if op=='list-tags-for-resource': return {'ResourceTagSet': {'Tags': []}}
                         if op=='describe-security-groups': return {'SecurityGroups':[{'GroupName':'console','GroupId':'sg-test','VpcId':'vpc-123','IpPermissions':[{'IpProtocol':'-1','IpRanges':[{'CidrIp':'10.0.0.0/16'}]}],'IpPermissionsEgress':[]}]}
                         if op=='describe-key-pairs': return {'KeyPairs':[{'KeyName':'key','KeyPairId':'key-id'}]}
                         if op=='list-buckets': return {'Buckets':[{'Name':'existing-data'}]}
                         if op=='get-bucket-location': return {'LocationConstraint':None}
+                        if op=='get-bucket-tagging': return {'TagSet':[]}
                         if op=='get-bucket-lifecycle-configuration': return {'Rules':[]}
                         if op=='get-open-id-connect-provider': return {'ClientIDList':['sts.amazonaws.com']}
                         if op=='list-roles': return {'Roles':roles}

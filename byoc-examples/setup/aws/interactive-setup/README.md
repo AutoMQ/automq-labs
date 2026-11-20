@@ -100,6 +100,23 @@ or Console origin changes. `create-response.json` contains the API response.
 Check the cluster's status in Console before retrying a request with an unknown
 result.
 
+## Choose EC2 storage, DNS, and Kafka access
+
+| Choice | What the guide submits or prepares |
+| --- | --- |
+| CMP-managed Data Bucket | CMP creates the bucket. The generated policies include the AWS permissions for that path. |
+| User-managed Data Bucket | Select a bucket in the same account and Region, or run the AWS CLI preparation script first. The guide checks lifecycle rules and ownership tags, then scopes the generated policies to that bucket. |
+| Private DNS | Select an associated Private Hosted Zone or run the AWS CLI preparation script. The create request references the selected zone ID. |
+| Public DNS | Home prepares the environment's Public Zone and DNS role. CMP requests the server certificate at cluster creation when TLS is enabled. Broker reachability depends on the VPC, routes, and security groups. |
+| Private DNS with TLS | Provide the server certificate chain and matching private key. The server certificate must cover broker hostnames in the chosen zone. If you provide a CA, the guide checks that it can verify the chain 30 days from now. |
+| mTLS | Provide a CA trust bundle for the client certificates. With Private DNS, the same bundle must also verify the server chain. With Public DNS, CMP obtains the server certificate from Home. |
+
+EC2 supports SASL over plaintext or TLS, anonymous plaintext, and mTLS. You
+can enable multiple compatible listeners. With a CMP-managed security group,
+the request includes the selected IPv4 client CIDRs for each enabled Kafka
+listener. For a user-managed security group, the guide checks the existing
+rules against those CIDRs and can generate commands to prepare a group.
+
 ## Clean up a test deployment
 
 Keep the original output directory and the signed create directory with its

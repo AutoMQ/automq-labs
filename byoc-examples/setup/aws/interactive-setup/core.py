@@ -53,9 +53,9 @@ class AWS:
                 'describe-instance-types', 'describe-launch-template-versions', 'describe-instance-type-offerings', 'describe-instances', 'describe-key-pairs'},
         'iam': {'list-roles', 'get-role', 'list-instance-profiles-for-role',
                 'list-attached-role-policies', 'get-open-id-connect-provider'},
-        'route53': {'list-hosted-zones-by-vpc', 'get-hosted-zone'},
+        'route53': {'list-hosted-zones-by-vpc', 'get-hosted-zone', 'list-tags-for-resource'},
         'ssm': {'get-parameter'},
-        's3api': {'list-buckets', 'get-bucket-location', 'get-bucket-lifecycle-configuration'},
+        's3api': {'list-buckets', 'get-bucket-location', 'get-bucket-lifecycle-configuration', 'get-bucket-tagging'},
         'eks': {'list-clusters', 'describe-cluster', 'list-nodegroups', 'describe-nodegroup', 'list-addons', 'describe-addon', 'list-pod-identity-associations', 'describe-pod-identity-association', 'list-access-entries', 'describe-access-entry', 'list-associated-access-policies'},
         'amp': {'list-workspaces', 'describe-workspace'},
     }
@@ -76,6 +76,8 @@ class AWS:
         if result.returncode:
             if operation == 'get-bucket-lifecycle-configuration' and '(NoSuchLifecycleConfiguration)' in result.stderr:
                 return {'Rules': []}
+            if operation == 'get-bucket-tagging' and '(NoSuchTagSet)' in result.stderr:
+                return {'TagSet': []}
             code = re.search(r'\(([^)]+)\) when calling', result.stderr or '')
             raise SetupError(f'{service}:{operation} failed ({code[1] if code else "AWS CLI error"}). Retry after checking credentials and read permissions.')
         try:
