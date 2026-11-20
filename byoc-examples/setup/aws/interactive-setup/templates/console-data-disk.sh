@@ -8,7 +8,7 @@ SETUP_BLKID_STATUS=0
 SETUP_FSTYPE=$(sudo blkid -p -s TYPE -o value "$SETUP_DEVICE") || SETUP_BLKID_STATUS=$?
 [ "$SETUP_BLKID_STATUS" -eq 0 ] || [ "$SETUP_BLKID_STATUS" -eq 2 ] || exit 1
 if [ -z "$SETUP_FSTYPE" ]; then
-  SETUP_SIGNATURES=$(sudo wipefs -n --noheadings -o TYPE "$SETUP_DEVICE")
+  SETUP_SIGNATURES=$(sudo wipefs --no-act --noheadings --output TYPE "$SETUP_DEVICE")
   [ -z "$SETUP_SIGNATURES" ] || { echo 'The data volume has an existing disk signature.'; exit 1; }
   [ -z "$(lsblk -nro MOUNTPOINTS "$SETUP_DEVICE" | tr -d '[:space:]')" ] || exit 1
   sudo mkfs.xfs "$SETUP_DEVICE"

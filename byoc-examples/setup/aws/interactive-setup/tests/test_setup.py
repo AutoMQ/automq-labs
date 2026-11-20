@@ -259,7 +259,9 @@ class FullStoryTests(unittest.TestCase):
             self.assertIn('--network=host', unit)
             self.assertIn('src=/data/automq-console,dst=/root', unit)
             self.assertIn('automq-byoc-console:8.4.7-aws', unit)
-            self.assertIn('SETUP_VOLUME_ID=${1:', (path / 'install-console.sh').read_text())
+            install = (path / 'install-console.sh').read_text()
+            self.assertIn('SETUP_VOLUME_ID=${1:', install)
+            self.assertIn('wipefs --no-act --noheadings --output TYPE', install)
             self.assertIn('CONFIG=' + encoded, (path / 'runtime.env').read_text())
             for service, op in calls:
                 self.assertIn(op, AWS.ALLOWED[service])
