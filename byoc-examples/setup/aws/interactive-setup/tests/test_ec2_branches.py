@@ -21,17 +21,25 @@ class EC2CreateBranches(unittest.TestCase):
         security_modes = [
             (['plaintext'], ['anonymous'], ['PLAINTEXT']),
             (['plaintext'], ['sasl'], ['BROKER_SASL']),
+            (['plaintext'], ['sasl', 'anonymous'], ['BROKER_SASL', 'PLAINTEXT']),
             (['tls'], ['sasl'], ['BROKER_SASL_SSL']),
             (['tls'], ['mtls'], ['BROKER_MTLS']),
             (['tls'], ['sasl', 'mtls'], ['BROKER_SASL_SSL', 'BROKER_MTLS']),
+            (['plaintext', 'tls'], ['sasl'], ['BROKER_SASL', 'BROKER_SASL_SSL']),
+            (['plaintext', 'tls'], ['sasl', 'anonymous'], ['BROKER_SASL', 'PLAINTEXT', 'BROKER_SASL_SSL']),
+            (['plaintext', 'tls'], ['anonymous', 'mtls'], ['PLAINTEXT', 'BROKER_MTLS']),
             (['plaintext', 'tls'], ['sasl', 'mtls'],
              ['BROKER_SASL', 'BROKER_SASL_SSL', 'BROKER_MTLS']),
+            (['plaintext', 'tls'], ['sasl', 'anonymous', 'mtls'],
+             ['BROKER_SASL', 'PLAINTEXT', 'BROKER_SASL_SSL', 'BROKER_MTLS']),
         ]
-        for bucket, dns, (transport, auth, names) in product((None, 'user-data'), ('private', 'public'), security_modes):
-            with self.subTest(bucket=bucket, dns=dns, transport=transport, auth=auth):
+        for bucket, dns, existing_sg, (transport, auth, names) in product(
+                (None, 'user-data'), ('private', 'public'), (False, True), security_modes):
+            with self.subTest(bucket=bucket, dns=dns, existing_sg=existing_sg, transport=transport, auth=auth):
                 state = fixture()
                 state.update(data_bucket=bucket, dns_mode=dns, transport=transport, auth=auth,
                              client_cidrs=['10.0.0.0/16', '172.16.1.0/24'])
+                state['cluster_security_groups'] = [{'GroupId': 'sg-test'}] if existing_sg else []
                 role = 'arn:aws:iam::999999999999:role/home-dns'
                 state['public_dns'] = {'crossAccountRole': role}
                 state['tls_material'] = {'certificateChain': 'test-leaf', 'privateKey': 'test-key',
@@ -46,12 +54,19 @@ class EC2CreateBranches(unittest.TestCase):
                 self.assertEqual('privateKey' in security, dns == 'private' and 'tls' in transport)
                 self.assertEqual('certificateAuthority' in security,
                                  'tls' in transport and (dns == 'private' or 'mtls' in auth))
-                self.assertEqual(features['inboundRules'], [
-                    {'listenerName': name, 'cidrs': state['client_cidrs']} for name in names
-                ])
+                if existing_sg:
+                    self.assertEqual(spec['securityGroups'], ['sg-test'])
+                    self.assertNotIn('inboundRules', features)
+                else:
+                    self.assertNotIn('securityGroups', spec)
+                    self.assertEqual(features['inboundRules'], [
+                        {'listenerName': name, 'cidrs': state['client_cidrs']} for name in names
+                    ])
                 cluster, console = policies(state)
                 cluster_sids = {entry['Sid']: entry for entry in cluster['Statement']}
                 console_sids = {entry['Sid']: entry for entry in console['Statement']}
+                console_actions = {action for entry in console['Statement'] for action in entry['Action']}
+                self.assertEqual('ec2:CreateSecurityGroup' in console_actions, not existing_sg)
                 if bucket:
                     self.assertEqual(console_sids['ReadDataBucket']['Resource'], ['arn:aws:s3:::user-data'])
                     self.assertNotIn('CreateDataBucket', console_sids)
@@ -127,6 +142,37 @@ class EC2CreateBranches(unittest.TestCase):
             wizard.option = MagicMock(return_value='existing')
             with self.assertRaisesRegex(SetupError, 'CMP-managed'):
                 wizard.data_bucket()
+
+    def test_bucket_reuse_requires_same_region_and_safe_lifecycle(self):
+        cases = [
+            ('selected Region', [{'LocationConstraint': 'us-west-2'}]),
+            ('Bucket lifecycle', [{'LocationConstraint': None}, {'TagSet': []},
+                                  {'Rules': [{'Status': 'Enabled', 'Expiration': {'Days': 1}}]}]),
+        ]
+        for message, responses in cases:
+            with self.subTest(message=message), tempfile.TemporaryDirectory() as temp:
+                wizard = AWSWizard(Path(temp) / 'out', ui=MagicMock())
+                wizard.state = fixture()
+                wizard.option = MagicMock(return_value='existing')
+                wizard.ui.choose.return_value = {'Name': 'existing-data'}
+                wizard.aws = MagicMock(spec=AWS, region='us-east-1')
+                wizard.aws.read.side_effect = responses
+                with self.assertRaisesRegex(SetupError, message):
+                    wizard.data_bucket()
+                self.assertIsNone(wizard.state['data_bucket'])
+
+    def test_private_zone_reuse_requires_vpc_association(self):
+        with tempfile.TemporaryDirectory() as temp:
+            wizard = AWSWizard(Path(temp) / 'out', ui=MagicMock())
+            wizard.state = dict(fixture(), dns_mode='private')
+            wizard.ui.choose.return_value = {'HostedZoneId': 'ZOTHER'}
+            wizard.aws = MagicMock(spec=AWS, region='us-east-1')
+            wizard.aws.read.return_value = {
+                'HostedZone': {'Id': 'ZOTHER', 'Config': {'PrivateZone': True}},
+                'VPCs': [{'VPCId': 'vpc-other', 'VPCRegion': 'us-east-1'}],
+            }
+            with self.assertRaisesRegex(SetupError, 'associated with this VPC'):
+                wizard.dns()
 
     def test_zones_tagged_as_managed_are_rejected(self):
         reader = MagicMock(spec=AWS)

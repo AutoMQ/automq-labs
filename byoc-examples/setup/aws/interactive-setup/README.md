@@ -165,3 +165,7 @@ PATH.
 ```bash
 python -m unittest discover -s byoc-examples/setup/aws/interactive-setup/tests -v
 ```
+
+The [EC2 regression cases](tests/EC2.md) cover reused and newly prepared
+dependencies. They include a cloud runbook and a verifier that checks a
+running cluster against the original setup bundle.
