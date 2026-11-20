@@ -1,0 +1,162 @@
+{
+  "base": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "DataBucketList",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<data-bucket>"
+        ]
+      },
+      {
+        "Sid": "DataObjects",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:AbortMultipartUpload",
+          "s3:PutObjectTagging",
+          "s3:DeleteObject"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<data-bucket>/*"
+        ]
+      },
+      {
+        "Sid": "OpsBucketList",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<ops-bucket>"
+        ]
+      },
+      {
+        "Sid": "OpsObjects",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<ops-bucket>/*"
+        ]
+      },
+      {
+        "Sid": "DescribeStorage",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DescribeVolumes",
+          "ec2:DescribeAvailabilityZones"
+        ],
+        "Resource": [
+          "*"
+        ]
+      }
+    ]
+  },
+  "ec2-volumes": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "Ec2VolumeAttachment",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:AttachVolume",
+          "ec2:DetachVolume"
+        ],
+        "Resource": [
+          "*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      }
+    ]
+  },
+  "eks-volumes": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "EksVolumeDetach",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DetachVolume"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "EksDetachFromInstance",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DetachVolume"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:instance/*"
+        ]
+      }
+    ]
+  },
+  "amp": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "AmpRemoteWrite",
+        "Effect": "Allow",
+        "Action": [
+          "aps:RemoteWrite"
+        ],
+        "Resource": [
+          "<amp-workspace-arn>"
+        ]
+      }
+    ]
+  },
+  "TlsDns": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "TlsDns",
+        "Effect": "Allow",
+        "Action": [
+          "route53:GetHostedZone",
+          "route53:ListResourceRecordSets",
+          "route53:ChangeResourceRecordSets"
+        ],
+        "Resource": [
+          "arn:aws:route53:::hostedzone/<zone-id>"
+        ]
+      }
+    ]
+  },
+  "TlsAssumeRole": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "TlsAssumeRole",
+        "Effect": "Allow",
+        "Action": [
+          "sts:AssumeRole"
+        ],
+        "Resource": [
+          "<tls-assume-role-arn>"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+mountpoint -q /data
+SETUP_EXPECTED_UUID=$(cat /etc/automq-console/data.uuid)
+[ "$(findmnt -n -o UUID --target /data)" = "$SETUP_EXPECTED_UUID" ]

@@ -1,0 +1,20 @@
+[Unit]
+Description=AutoMQ Console
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+RequiresMountsFor=/data
+BindsTo=data.mount
+After=data.mount
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/libexec/automq-console-check-mount
+ExecStart=/usr/bin/docker run --rm --name automq-console --restart=no --network=host --mount type=bind,src=/data/automq-console,dst=/root --env-file /etc/automq-console/runtime.env <home-console-image>
+ExecStop=/usr/bin/docker stop -t 30 automq-console
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

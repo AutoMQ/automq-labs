@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "automq-byoc-console.fullname" . }}
+  labels:
+    {{- include "automq-byoc-console.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "automq-byoc-console.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "automq-byoc-console.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "automq-byoc-console.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+      serviceAccountName: {{ required "serviceAccount.name is required" .Values.serviceAccount.name | quote }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ include "automq-byoc-console.imageRepository" . }}:{{ include "automq-byoc-console.imageTag" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: web
+              containerPort: 8080
+              protocol: TCP
+          env:
+            {{- with .Values.automqByocConsole.config.existingSecret }}
+            - name: CONFIG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ . | quote }}
+                  key: config
+            {{- end }}
+            - name: CONSOLE_INITIAL_USER
+              value: "admin"
+            - name: CONSOLE_INITIAL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.automqByocConsole.config.existingSecret | quote }}
+                  key: password
+            - name: CONSOLE_INITIAL_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.automqByocConsole.config.existingSecret | quote }}
+                  key: accessKey
+            - name: CONSOLE_INITIAL_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.automqByocConsole.config.existingSecret | quote }}
+                  key: secretKey
+            - name: CLOUD_PROVIDER
+              value: {{ .Values.cloudProvider | quote }}
+            - name: HOME
+              value: "/data"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Duser.home=/data"
+            - name: DEPLOY_TYPE
+              value: "K8S"
+            - name: VPC
+              value: {{ .Values.aws.network.vpcId | quote }}
+            - name: SCOPE
+              value: {{ .Values.aws.account | quote }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: automq-byoc-console-storage
+              mountPath: /data
+          securityContext:
+            runAsUser: 1000
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: automq-byoc-console-storage
+          persistentVolumeClaim:
+            claimName: {{ include "automq-byoc-console.fullname" . }}
+      {{- with .Values.nodeAffinities }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+              {{- range . }}
+                - key: {{ .key }}
+                  operator: In
+                  values:
+                  {{- range .values }}
+                    - {{ . }}
+                  {{- end }}
+              {{- end }}
+      {{- end }}

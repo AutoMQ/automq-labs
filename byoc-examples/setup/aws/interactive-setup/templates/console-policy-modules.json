@@ -1,0 +1,1096 @@
+{
+  "base": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ListRoles",
+        "Effect": "Allow",
+        "Action": [
+          "iam:ListRoles"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "ReadRoles",
+        "Effect": "Allow",
+        "Action": [
+          "iam:GetRole",
+          "iam:GetRolePolicy",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListInstanceProfilesForRole"
+        ],
+        "Resource": [
+          "arn:aws:iam::<account-id>:role/*"
+        ]
+      },
+      {
+        "Sid": "ReadProfiles",
+        "Effect": "Allow",
+        "Action": [
+          "iam:GetInstanceProfile"
+        ],
+        "Resource": [
+          "arn:aws:iam::<account-id>:instance-profile/*"
+        ]
+      },
+      {
+        "Sid": "ReadPolicies",
+        "Effect": "Allow",
+        "Action": [
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion"
+        ],
+        "Resource": [
+          "<attached-policy-arn>"
+        ]
+      },
+      {
+        "Sid": "OpsBucket",
+        "Effect": "Allow",
+        "Action": [
+          "s3:GetLifecycleConfiguration",
+          "s3:PutLifecycleConfiguration",
+          "s3:ListBucket",
+          "s3:PutBucketTagging",
+          "s3:GetBucketPolicy",
+          "s3:CreateBucket"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<ops-bucket>"
+        ]
+      },
+      {
+        "Sid": "OpsObjects",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<ops-bucket>/*"
+        ]
+      }
+    ]
+  },
+  "ops-cross-account": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "OpsBucketPolicy",
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutBucketPolicy"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<ops-bucket>"
+        ]
+      }
+    ]
+  },
+  "data-managed": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "CreateDataBucket",
+        "Effect": "Allow",
+        "Action": [
+          "s3:CreateBucket"
+        ],
+        "Resource": [
+          "arn:aws:s3:::automq-data-*"
+        ]
+      },
+      {
+        "Sid": "ManageDataBucket",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket",
+          "s3:GetLifecycleConfiguration",
+          "s3:GetBucketTagging",
+          "s3:PutBucketTagging"
+        ],
+        "Resource": [
+          "arn:aws:s3:::automq-data-*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "s3:ResourceAccount": "<account-id>"
+          }
+        }
+      }
+    ]
+  },
+  "data-existing": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ReadDataBucket",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket",
+          "s3:GetLifecycleConfiguration"
+        ],
+        "Resource": [
+          "arn:aws:s3:::<data-bucket>"
+        ]
+      }
+    ]
+  },
+  "discovery": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "DiscoverNetwork",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeInstanceTypeOfferings",
+          "ec2:DescribeVpcs",
+          "ec2:DescribeVpcEndpoints",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeImages",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSecurityGroupRules",
+          "ec2:DescribeTags"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "DiscoverBucketsAndZones",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListAllMyBuckets",
+          "route53:ListHostedZones",
+          "route53:ListHostedZonesByName",
+          "route53:ListHostedZonesByVPC"
+        ],
+        "Resource": [
+          "*"
+        ]
+      }
+    ]
+  },
+  "ec2": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ReadEC2",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DescribeKeyPairs",
+          "ec2:DescribeVolumes",
+          "ec2:DescribeLaunchTemplates",
+          "ec2:DescribeLaunchTemplateVersions",
+          "ec2:DescribeInstances",
+          "ec2:DescribeInstanceAttribute",
+          "autoscaling:DescribeAutoScalingGroups"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "ReadSSM",
+        "Effect": "Allow",
+        "Action": [
+          "ssm:GetParameters"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "RunNewCompute",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:RunInstances"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:instance/*",
+          "arn:aws:ec2:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "RunDependencies",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:RunInstances"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>::image/*",
+          "<compute-subnet-arn>",
+          "<user-security-group-arn>",
+          "arn:aws:ec2:<region>:<account-id>:network-interface/*",
+          "arn:aws:ec2:<region>:<account-id>:launch-template/*",
+          "arn:aws:ec2:<region>:<account-id>:key-pair/*"
+        ]
+      },
+      {
+        "Sid": "UseManagedSecurityGroups",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:RunInstances"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:security-group/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateVolume",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateVolume"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateKeyPair",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateKeyPair"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:key-pair/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateLaunchTemplate",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateLaunchTemplate"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:launch-template/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "ManageTemplates",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateLaunchTemplateVersion",
+          "ec2:ModifyLaunchTemplate",
+          "ec2:DeleteLaunchTemplate"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:launch-template/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "ManageInstances",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:TerminateInstances",
+          "ec2:StopInstances",
+          "ec2:RebootInstances"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:instance/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "ManageVolumes",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DeleteVolume"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "BindVolumes",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:AttachVolume",
+          "ec2:DetachVolume"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:instance/*",
+          "arn:aws:ec2:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "DeleteKeyPair",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DeleteKeyPair"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:key-pair/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "PassClusterRole",
+        "Effect": "Allow",
+        "Action": [
+          "iam:PassRole"
+        ],
+        "Resource": [
+          "<cluster-role-arn>"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "iam:PassedToService": "ec2.amazonaws.com"
+          }
+        }
+      },
+      {
+        "Sid": "CreateServiceLinkedRoleautoscaling",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreateServiceLinkedRole"
+        ],
+        "Resource": [
+          "*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "iam:AWSServiceName": "autoscaling.amazonaws.com"
+          }
+        }
+      }
+    ]
+  },
+  "asg": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "CreateASG",
+        "Effect": "Allow",
+        "Action": [
+          "autoscaling:CreateAutoScalingGroup"
+        ],
+        "Resource": [
+          "arn:aws:autoscaling:<region>:<account-id>:autoScalingGroup:*:autoScalingGroupName/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "ManageASG",
+        "Effect": "Allow",
+        "Action": [
+          "autoscaling:AttachInstances",
+          "autoscaling:DetachInstances",
+          "autoscaling:SuspendProcesses",
+          "autoscaling:ResumeProcesses",
+          "autoscaling:UpdateAutoScalingGroup",
+          "autoscaling:DeleteAutoScalingGroup"
+        ],
+        "Resource": [
+          "arn:aws:autoscaling:<region>:<account-id>:autoScalingGroup:*:autoScalingGroupName/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "UpdateASGTags",
+        "Effect": "Allow",
+        "Action": [
+          "autoscaling:CreateOrUpdateTags"
+        ],
+        "Resource": [
+          "arn:aws:autoscaling:<region>:<account-id>:autoScalingGroup:*:autoScalingGroupName/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "StringEqualsIfExists": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "RemoveASGTags",
+        "Effect": "Allow",
+        "Action": [
+          "autoscaling:DeleteTags"
+        ],
+        "Resource": [
+          "arn:aws:autoscaling:<region>:<account-id>:autoScalingGroup:*:autoScalingGroupName/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "ForAllValues:StringNotEquals": {
+            "aws:TagKeys": [
+              "automqVendor"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "ec2-tags": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "TagEC2DuringCreate",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateTags"
+        ],
+        "Resource": [
+          "<managed-ec2-resource-arn>"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "ec2:CreateAction": [
+              "RunInstances",
+              "CreateVolume",
+              "CreateKeyPair",
+              "CreateLaunchTemplate",
+              "CreateSecurityGroup"
+            ],
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "TagNetworkInterfaceDuringRun",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateTags"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:network-interface/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "ec2:CreateAction": "RunInstances",
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "UpdateEC2Tags",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateTags"
+        ],
+        "Resource": [
+          "<managed-ec2-resource-arn>"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "StringEqualsIfExists": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "RemoveEC2Tags",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:DeleteTags"
+        ],
+        "Resource": [
+          "<managed-ec2-resource-arn>"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "ForAllValues:StringNotEquals": {
+            "aws:TagKeys": [
+              "automqVendor"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "managed-sg": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "CreateSG",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateSecurityGroup"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:security-group/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateSGInVPC",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateSecurityGroup"
+        ],
+        "Resource": [
+          "<vpc-arn>"
+        ]
+      },
+      {
+        "Sid": "ManageSG",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:DeleteSecurityGroup"
+        ],
+        "Resource": [
+          "arn:aws:ec2:<region>:<account-id>:security-group/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      }
+    ]
+  },
+  "eks": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ListOIDCProviders",
+        "Effect": "Allow",
+        "Action": [
+          "iam:ListOpenIDConnectProviders"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "ReadOIDCProviders",
+        "Effect": "Allow",
+        "Action": [
+          "iam:GetOpenIDConnectProvider"
+        ],
+        "Resource": [
+          "arn:aws:iam::<account-id>:oidc-provider/*"
+        ]
+      },
+      {
+        "Sid": "ListEKS",
+        "Effect": "Allow",
+        "Action": [
+          "eks:ListClusters",
+          "elasticloadbalancing:DescribeTargetGroups"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "ReadEKS",
+        "Effect": "Allow",
+        "Action": [
+          "eks:DescribeCluster",
+          "eks:ListNodegroups",
+          "eks:ListAccessEntries",
+          "eks:ListPodIdentityAssociations"
+        ],
+        "Resource": [
+          "<eks-cluster-arn>"
+        ]
+      },
+      {
+        "Sid": "ReadEKSNodes",
+        "Effect": "Allow",
+        "Action": [
+          "eks:DescribeNodegroup"
+        ],
+        "Resource": [
+          "arn:aws:eks:<region>:<account-id>:nodegroup/<eks-name>/*/*"
+        ]
+      },
+      {
+        "Sid": "ReadEKSAccess",
+        "Effect": "Allow",
+        "Action": [
+          "eks:DescribeAccessEntry",
+          "eks:ListAssociatedAccessPolicies"
+        ],
+        "Resource": [
+          "arn:aws:eks:<region>:<account-id>:access-entry/<eks-name>/*"
+        ]
+      },
+      {
+        "Sid": "ReadPodAssociations",
+        "Effect": "Allow",
+        "Action": [
+          "eks:DescribePodIdentityAssociation"
+        ],
+        "Resource": [
+          "arn:aws:eks:<region>:<account-id>:podidentityassociation/<eks-name>/*"
+        ]
+      }
+    ]
+  },
+  "dns-private": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ManagePrivateDNS",
+        "Effect": "Allow",
+        "Action": [
+          "route53:GetHostedZone",
+          "route53:ListResourceRecordSets",
+          "route53:ChangeResourceRecordSets"
+        ],
+        "Resource": [
+          "arn:aws:route53:::hostedzone/<private-zone-id>"
+        ]
+      }
+    ]
+  },
+  "dns-public": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "AssumeHomeDNSRole",
+        "Effect": "Allow",
+        "Action": [
+          "sts:AssumeRole"
+        ],
+        "Resource": [
+          "<home-dns-role-arn>"
+        ]
+      }
+    ]
+  },
+  "efs": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ReadEFS",
+        "Effect": "Allow",
+        "Action": [
+          "elasticfilesystem:DescribeFileSystems",
+          "elasticfilesystem:DescribeMountTargets",
+          "elasticfilesystem:DescribeMountTargetSecurityGroups",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeNetworkInterfaceAttribute",
+          "ec2:DescribeRouteTables"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "CreateEFS",
+        "Effect": "Allow",
+        "Action": [
+          "elasticfilesystem:CreateFileSystem"
+        ],
+        "Resource": [
+          "*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "TagEFSDuringCreate",
+        "Effect": "Allow",
+        "Action": [
+          "elasticfilesystem:TagResource"
+        ],
+        "Resource": [
+          "arn:aws:elasticfilesystem:<region>:<account-id>:file-system/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "elasticfilesystem:CreateAction": "CreateFileSystem",
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "ManageEFS",
+        "Effect": "Allow",
+        "Action": [
+          "elasticfilesystem:CreateMountTarget",
+          "elasticfilesystem:DeleteMountTarget",
+          "elasticfilesystem:UpdateFileSystem",
+          "elasticfilesystem:DeleteFileSystem"
+        ],
+        "Resource": [
+          "arn:aws:elasticfilesystem:<region>:<account-id>:file-system/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "UpdateEFSTags",
+        "Effect": "Allow",
+        "Action": [
+          "elasticfilesystem:TagResource"
+        ],
+        "Resource": [
+          "arn:aws:elasticfilesystem:<region>:<account-id>:file-system/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "StringEqualsIfExists": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "RemoveEFSTags",
+        "Effect": "Allow",
+        "Action": [
+          "elasticfilesystem:UntagResource"
+        ],
+        "Resource": [
+          "arn:aws:elasticfilesystem:<region>:<account-id>:file-system/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "ForAllValues:StringNotEquals": {
+            "aws:TagKeys": [
+              "automqVendor"
+            ]
+          }
+        }
+      },
+      {
+        "Sid": "EFSMountTargetENI",
+        "Effect": "Allow",
+        "Action": [
+          "ec2:CreateNetworkInterface",
+          "ec2:DeleteNetworkInterface"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "CreateServiceLinkedRoleelasticfilesystem",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreateServiceLinkedRole"
+        ],
+        "Resource": [
+          "*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "iam:AWSServiceName": "elasticfilesystem.amazonaws.com"
+          }
+        }
+      }
+    ]
+  },
+  "fsx": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ReadFSx",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:DescribeVolumes",
+          "fsx:DescribeStorageVirtualMachines",
+          "fsx:DescribeFileSystems",
+          "ec2:DescribeRouteTables",
+          "ec2:DescribeNetworkInterfaceAttribute",
+          "ec2:DescribeNetworkInterfaces"
+        ],
+        "Resource": [
+          "*"
+        ]
+      },
+      {
+        "Sid": "CreateFSx",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:CreateFileSystem"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:file-system/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateSVM",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:CreateStorageVirtualMachine"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:storage-virtual-machine/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateSVMOnFS",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:CreateStorageVirtualMachine"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:file-system/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateFSxVolume",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:CreateVolume"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateVolumeOnSVM",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:CreateVolume"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:storage-virtual-machine/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "TagNewFSx",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:TagResource"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:file-system/*",
+          "arn:aws:fsx:<region>:<account-id>:storage-virtual-machine/*",
+          "arn:aws:fsx:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "UpdateFSxTags",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:TagResource"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:file-system/*",
+          "arn:aws:fsx:<region>:<account-id>:storage-virtual-machine/*",
+          "arn:aws:fsx:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "StringEqualsIfExists": {
+            "aws:RequestTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "RemoveFSxTags",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:UntagResource"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:file-system/*",
+          "arn:aws:fsx:<region>:<account-id>:storage-virtual-machine/*",
+          "arn:aws:fsx:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          },
+          "ForAllValues:StringNotEquals": {
+            "aws:TagKeys": [
+              "automqVendor"
+            ]
+          }
+        }
+      },
+      {
+        "Sid": "ManageFSx",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:UpdateFileSystem",
+          "fsx:DeleteFileSystem"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:file-system/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "DeleteSVM",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:DeleteStorageVirtualMachine"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:storage-virtual-machine/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "ManageFSxVolumes",
+        "Effect": "Allow",
+        "Action": [
+          "fsx:UpdateVolume",
+          "fsx:DeleteVolume"
+        ],
+        "Resource": [
+          "arn:aws:fsx:<region>:<account-id>:volume/*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "aws:ResourceTag/automqVendor": "automq"
+          }
+        }
+      },
+      {
+        "Sid": "CreateServiceLinkedRolefsx",
+        "Effect": "Allow",
+        "Action": [
+          "iam:CreateServiceLinkedRole"
+        ],
+        "Resource": [
+          "*"
+        ],
+        "Condition": {
+          "StringEquals": {
+            "iam:AWSServiceName": "fsx.amazonaws.com"
+          }
+        }
+      }
+    ]
+  },
+  "pricing": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "ReadPricing",
+        "Effect": "Allow",
+        "Action": [
+          "pricing:DescribeServices",
+          "pricing:GetAttributeValues",
+          "pricing:GetProducts"
+        ],
+        "Resource": [
+          "*"
+        ]
+      }
+    ]
+  }
+}

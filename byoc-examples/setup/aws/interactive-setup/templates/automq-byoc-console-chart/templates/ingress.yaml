@@ -1,0 +1,45 @@
+{{- $protocol := upper .Values.ingress.alb.protocol }}
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "automq-byoc-console.fullname" . }}
+  labels:
+    {{- include "automq-byoc-console.labels" . | nindent 4 }}
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: "HTTP"
+    {{- if eq $protocol "HTTPS" }}
+    alb.ingress.kubernetes.io/certificate-arn: {{ required
+      "ingress.alb.certificateArn is required when HTTPS Ingress is enabled"
+      .Values.ingress.alb.certificateArn | quote }}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    {{- else if eq $protocol "HTTP" }}
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    {{- else }}
+    {{- fail "ingress.alb.protocol must be HTTP or HTTPS" }}
+    {{- end }}
+    alb.ingress.kubernetes.io/healthcheck-path: {{ .Values.ingress.alb.healthCheckPath | quote }}
+    alb.ingress.kubernetes.io/healthcheck-protocol: "HTTP"
+    alb.ingress.kubernetes.io/load-balancer-attributes: {{ printf
+      "idle_timeout.timeout_seconds=%v" .Values.ingress.alb.idleTimeoutSeconds | quote }}
+    alb.ingress.kubernetes.io/scheme: {{ .Values.ingress.alb.scheme | quote }}
+    alb.ingress.kubernetes.io/subnets: {{ join "," (required
+      "aws.network.subnetIds is required when Ingress is enabled"
+      .Values.aws.network.subnetIds) | quote }}
+    alb.ingress.kubernetes.io/target-type: "ip"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - {{- with .Values.ingress.host }}
+      host: {{ . | quote }}
+      {{- end }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path }}
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: {{ printf "%s-web-loadbalancer" (include "automq-byoc-console.fullname" .) | trunc 63 | trimSuffix "-" }}
+                port:
+                  name: web
+{{- end }}

@@ -1,0 +1,56 @@
+[
+  {
+    "type": "r6in.large",
+    "cpu": 2,
+    "memoryGiB": 16,
+    "architecture": "x86",
+    "walModes": [
+      "EBSWAL"
+    ]
+  },
+  {
+    "type": "r6i.large",
+    "cpu": 2,
+    "memoryGiB": 16,
+    "architecture": "x86",
+    "walModes": [
+      "EBSWAL"
+    ]
+  },
+  {
+    "type": "m7g.xlarge",
+    "cpu": 4,
+    "memoryGiB": 16,
+    "architecture": "arm",
+    "walModes": [
+      "S3WAL"
+    ]
+  },
+  {
+    "type": "m7g.2xlarge",
+    "cpu": 8,
+    "memoryGiB": 32,
+    "architecture": "arm",
+    "walModes": [
+      "S3WAL"
+    ]
+  },
+  {
+    "type": "c6g.2xlarge",
+    "cpu": 8,
+    "memoryGiB": 16,
+    "architecture": "arm",
+    "walModes": [
+      "EBSWAL"
+    ]
+  },
+  {
+    "type": "m7g.4xlarge",
+    "cpu": 16,
+    "memoryGiB": 64,
+    "architecture": "arm",
+    "walModes": [
+      "S3WAL"
+    ]
+  }
+]
