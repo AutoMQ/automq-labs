@@ -1,8 +1,18 @@
+---
+last_updated: 2026-11-20
+---
+
 # AutoMQ on AWS
 
 This section provides resources for deploying AutoMQ on Amazon Web Services.
 
 ## Setup Options
+
+### [Interactive setup guide](interactive-setup/)
+
+Start with an existing VPC. The guide discovers AWS resources and generates IAM
+policies, optional Console installation commands, and a signed curl request to
+create an AutoMQ cluster.
 
 ### [Kubernetes (EKS)](eks/README.md)
 

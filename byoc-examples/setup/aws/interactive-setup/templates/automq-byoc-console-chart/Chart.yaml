@@ -1,0 +1,5 @@
+apiVersion: v2
+appVersion: 8.4.13
+description: AutoMQ BYOC Console for Kubernetes
+name: automq-byoc-console-chart
+version: 8.4.13
