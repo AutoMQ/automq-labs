@@ -22,6 +22,14 @@ mock_provider "aws" {
       value = "ami-example"
     }
   }
+
+  mock_data "aws_s3_bucket" {
+    defaults = {
+      arn           = "arn:aws:s3:::automq-ops-example"
+      region        = "us-east-1"
+      bucket_region = "us-east-1"
+    }
+  }
 }
 
 mock_provider "http" {
@@ -56,6 +64,33 @@ variables {
       bucketName = "automq-ops-example"
     }
   }))
+}
+
+run "existing_ops_bucket_is_not_managed" {
+  command = plan
+
+  variables {
+    create_ops_bucket = false
+  }
+
+  assert {
+    condition = (
+      length(aws_s3_bucket.ops) == 0 &&
+      length(aws_s3_bucket_public_access_block.ops) == 0 &&
+      length(aws_s3_bucket_server_side_encryption_configuration.ops) == 0
+    )
+    error_message = "Existing ops buckets must not be created, deleted, or have their public-access or encryption configuration managed by this root."
+  }
+
+  assert {
+    condition     = length(data.aws_s3_bucket.ops) == 1 && data.aws_s3_bucket.ops[0].bucket == "automq-ops-example"
+    error_message = "Existing ops bucket mode must read the bucket named by CONFIG."
+  }
+
+  assert {
+    condition     = output.ops_bucket_name == "automq-ops-example"
+    error_message = "Existing ops bucket mode must preserve the CONFIG bucket name in Console outputs."
+  }
 }
 
 run "console_stack_is_self_contained" {
@@ -159,7 +194,14 @@ run "console_stack_is_self_contained" {
   }
 
   assert {
-    condition     = output.ops_bucket_name == "automq-ops-example" && aws_s3_bucket.ops.bucket == "automq-ops-example"
+    condition = (
+      output.ops_bucket_name == "automq-ops-example" &&
+      length(aws_s3_bucket.ops) == 1 &&
+      aws_s3_bucket.ops[0].bucket == "automq-ops-example" &&
+      length(aws_s3_bucket_public_access_block.ops) == 1 &&
+      length(aws_s3_bucket_server_side_encryption_configuration.ops) == 1 &&
+      length(data.aws_s3_bucket.ops) == 0
+    )
     error_message = "The ops bucket name from CONFIG must be created by the Console root."
   }
 
