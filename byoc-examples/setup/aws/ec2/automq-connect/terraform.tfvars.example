@@ -1,0 +1,77 @@
+# Required: existing EKS cluster NAME, not its ARN, in the Console's AWS account
+# and Region. Authentication mode must be API or API_AND_CONFIG_MAP; this root
+# checks it but does not change it. Network access must already be configured.
+kubernetes_cluster_id = "REPLACE_WITH_YOUR_EKS_CLUSTER_NAME"
+aws_region            = "us-east-1"
+# aws_region must match the Region exported by the adjacent Console state.
+
+# Optional: this profile is used by both AWS and Kubernetes authentication.
+# Alternatively leave it unset and use the normal AWS credential chain,
+# including AWS_PROFILE. A preconfigured kubeconfig is not required.
+# aws_profile = "my-aws-profile"
+
+# Required: exact ACTIVE version of the plugin registered in your Console.
+# This root references the plugin and does not register it. If using managed
+# debezium-mysql instead, select its actual name and version from the catalog.
+plugin_name    = "mysql-debezium-cdc"
+plugin_version = "REPLACE_WITH_ACTIVE_PLUGIN_VERSION"
+
+# New dedicated Kubernetes objects owned by this root; choose unused names.
+# The namespace and ServiceAccount will be removed during terraform destroy.
+connect_namespace       = "automq-connect"
+connect_service_account = "automq-connect"
+
+# A new worker IAM role is always created with trust restricted to the above
+# namespace/ServiceAccount and the existing EKS IAM OIDC provider.
+# Its inline policy grants read-only plugin download access under the configured
+# prefix in the Console state's Ops bucket, including prefix-scoped ListBucket.
+# connect_worker_role_name   = "your-unique-connect-worker-role"
+# connect_plugin_s3_prefix   = "automq/connect-plugins" # No wildcards or edge slashes.
+# connect_worker_policy_arns = [] # Additional existing managed policy ARNs.
+# Packages elsewhere in S3, SSE-KMS encryption, or other AWS dependencies need
+# corresponding additional permissions through connect_worker_policy_arns.
+
+# The shared IAM OIDC provider for this EKS cluster must already exist.
+# The Terraform identity needs its own Kubernetes namespace/ServiceAccount
+# permissions, IAM role/policy management, Put/Get/DeleteRolePolicy on the
+# existing Console role, and EKS access-entry/policy-association management.
+#
+# This root adds an inline EKS read policy to the existing Console role and
+# grants it target-cluster access through a STANDARD EKS access entry plus
+# cluster-scoped AmazonEKSClusterAdminPolicy. It does not replace that role or
+# authorize the local Terraform identity. These added grants are deleted on
+# destroy; resolve existing entry/association/policy ownership before applying.
+# See README.md; do not manage the same grants from multiple Terraform states.
+
+# Buffer IAM/EKS propagation after creating or changing Console authorization.
+# Unchanged applies do not repeat the wait. This buffer is not a readiness
+# guarantee; use "2m" for a longer wait or "0s" to disable it.
+# console_eks_access_wait_duration = "60s"
+
+# Both adjacent deployments are read automatically; no CONFIG or API key copy.
+# Console state must export region, ops_bucket_name, and console_role_arn as
+# well as API outputs. The existing Console role receives the added EKS grants.
+# console_state_path = "../automq-console/terraform.tfstate"
+# kafka_state_path   = "../automq-cluster/terraform.tfstate"
+
+# For a maintained SSM tunnel from local port 18080 to Console port 8080:
+# console_endpoint_override = "http://127.0.0.1:18080"
+
+# Fixed worker capacity on existing nodes; no EKS node groups are provisioned.
+# connect_cluster_name = "aws-mysql-connect-demo"
+# worker_count         = 1
+# worker_resource_spec = "TIER1"
+# connect_version      = "REPLACE_WITH_A_CONNECT_WORKER_VERSION_FROM_YOUR_CONSOLE"
+
+# Optional placement for existing node labels and taints.
+# kubernetes_scheduling_spec = <<-YAML
+# nodeSelector:
+#   workload: automq-connect
+# tolerations:
+#   - key: dedicated
+#     operator: Equal
+#     value: automq
+#     effect: NoSchedule
+# YAML
+
+# tags = { purpose = "evaluation" }
