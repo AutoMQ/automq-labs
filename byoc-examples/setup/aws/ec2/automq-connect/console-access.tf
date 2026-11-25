@@ -78,26 +78,34 @@ resource "aws_eks_access_policy_association" "console" {
   }
 }
 
-# Successful authorization writes can precede their visibility to the runtime.
+# Successful IAM, EKS access, and ingress writes can precede runtime visibility.
 # This buffer reduces first-apply races; AWS propagation can still take longer.
 resource "time_sleep" "console_eks_access" {
   depends_on = [
     aws_iam_role_policy.console_eks,
     aws_eks_access_policy_association.console,
+    aws_vpc_security_group_ingress_rule.console_eks_api,
+    aws_vpc_security_group_ingress_rule.console_workers,
   ]
 
   create_duration = var.console_eks_access_wait_duration
 
   triggers = {
-    wait_duration         = var.console_eks_access_wait_duration
-    console_iam_policy_id = aws_iam_role_policy.console_eks.id
-    console_eks_access_id = aws_eks_access_policy_association.console.id
+    wait_duration           = var.console_eks_access_wait_duration
+    console_iam_policy_id   = aws_iam_role_policy.console_eks.id
+    console_eks_access_id   = aws_eks_access_policy_association.console.id
+    console_eks_api_rule_id = aws_vpc_security_group_ingress_rule.console_eks_api.security_group_rule_id
+    console_worker_rule_ids = jsonencode({
+      for group_id, rule in aws_vpc_security_group_ingress_rule.console_workers : group_id => rule.security_group_rule_id
+    })
   }
 
   lifecycle {
     replace_triggered_by = [
       aws_iam_role_policy.console_eks,
       aws_eks_access_policy_association.console,
+      aws_vpc_security_group_ingress_rule.console_eks_api,
+      aws_vpc_security_group_ingress_rule.console_workers,
     ]
   }
 }

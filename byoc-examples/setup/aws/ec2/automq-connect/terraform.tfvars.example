@@ -1,6 +1,7 @@
 # Required: existing EKS cluster NAME, not its ARN, in the Console's AWS account
-# and Region. Authentication mode must be API or API_AND_CONFIG_MAP; this root
-# checks it but does not change it. Network access must already be configured.
+# and Region, in the same VPC as the Console. Private EKS API access must be
+# enabled, and authentication mode must be API or API_AND_CONFIG_MAP. The root
+# checks these EKS settings without changing them.
 kubernetes_cluster_id = "REPLACE_WITH_YOUR_EKS_CLUSTER_NAME"
 aws_region            = "us-east-1"
 # aws_region must match the Region exported by the adjacent Console state.
@@ -35,6 +36,8 @@ connect_service_account = "automq-connect"
 # The Terraform identity needs its own Kubernetes namespace/ServiceAccount
 # permissions, IAM role/policy management, Put/Get/DeleteRolePolicy on the
 # existing Console role, and EKS access-entry/policy-association management.
+# It also needs EC2 DescribeSecurityGroups/DescribeSecurityGroupRules,
+# AuthorizeSecurityGroupIngress/RevokeSecurityGroupIngress, and CreateTags.
 #
 # This root adds an inline EKS read policy to the existing Console role and
 # grants it target-cluster access through a STANDARD EKS access entry plus
@@ -43,14 +46,23 @@ connect_service_account = "automq-connect"
 # destroy; resolve existing entry/association/policy ownership before applying.
 # See README.md; do not manage the same grants from multiple Terraform states.
 
-# Buffer IAM/EKS propagation after creating or changing Console authorization.
+# Console-to-EKS API (443) and Console-to-worker REST (8083) ingress rules are
+# automatic. Worker SG defaults to the EKS primary cluster SG for standard
+# managed nodes/VPC CNI; no SG IDs need to be entered for that default.
+# For custom node or Pod SGs only, override the actual worker group set:
+# connect_worker_security_group_ids = []
+# Routes, NACLs, NetworkPolicy, worker-to-Kafka, and MySQL access remain external.
+# Console egress is not changed; the Console example already allows outbound.
+
+# Buffer propagation after Console authorization or ingress-rule changes.
 # Unchanged applies do not repeat the wait. This buffer is not a readiness
 # guarantee; use "2m" for a longer wait or "0s" to disable it.
 # console_eks_access_wait_duration = "60s"
 
 # Both adjacent deployments are read automatically; no CONFIG or API key copy.
-# Console state must export region, ops_bucket_name, and console_role_arn as
-# well as API outputs. The existing Console role receives the added EKS grants.
+# Console state must export region, ops_bucket_name, console_role_arn, and
+# console_security_group_id as well as API outputs. The root adds EKS grants
+# to the existing Console role and ingress sourced from its security group.
 # console_state_path = "../automq-console/terraform.tfstate"
 # kafka_state_path   = "../automq-cluster/terraform.tfstate"
 

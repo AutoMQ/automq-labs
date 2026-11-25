@@ -39,6 +39,12 @@ mock_provider "aws" {
       access_config = [{
         authentication_mode = "API_AND_CONFIG_MAP"
       }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+        endpoint_public_access    = true
+      }]
       certificate_authority = [{
         data = "dGVzdC1jYQ=="
       }]
@@ -47,6 +53,13 @@ mock_provider "aws" {
           issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
         }]
       }]
+    }
+  }
+
+  mock_data "aws_security_group" {
+    defaults = {
+      arn    = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-11111111111111111"
+      vpc_id = "vpc-11111111111111111"
     }
   }
 
@@ -95,6 +108,7 @@ override_data {
       region                     = "us-east-1"
       ops_bucket_name            = "automq-ops-example"
       console_role_arn           = "arn:aws:iam::123456789012:role/example-console"
+      console_security_group_id  = "sg-11111111111111111"
       console_endpoint           = "http://console.example:8080"
       console_initial_access_key = "example-access-key"
       console_initial_secret_key = "example-secret-key"
@@ -248,6 +262,29 @@ run "creates_connect_cluster_from_adjacent_states" {
 
   assert {
     condition = (
+      aws_vpc_security_group_ingress_rule.console_eks_api.security_group_id == "sg-22222222222222222" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.referenced_security_group_id == "sg-11111111111111111" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.ip_protocol == "tcp" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.from_port == 443 &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.to_port == 443 &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.cidr_ipv4 == null &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.cidr_ipv6 == null &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.prefix_list_id == null &&
+      toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == toset(["sg-22222222222222222"]) &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].security_group_id == "sg-22222222222222222" &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].referenced_security_group_id == "sg-11111111111111111" &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].ip_protocol == "tcp" &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].from_port == 8083 &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].to_port == 8083 &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].cidr_ipv4 == null &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].cidr_ipv6 == null &&
+      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].prefix_list_id == null
+    )
+    error_message = "The default network grants must expose only EKS API TCP 443 and Worker REST TCP 8083 on the primary EKS SG, exclusively to the Console SG."
+  }
+
+  assert {
+    condition = (
       length(jsondecode(aws_iam_role_policy.console_eks.policy).Statement) == 5 &&
       alltrue([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement.Effect == "Allow"]) &&
       toset(flatten([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement.Action])) == toset([
@@ -305,6 +342,12 @@ run "existing_eks_and_worker_settings_propagate" {
       endpoint = "https://eks.example.test"
       access_config = [{
         authentication_mode = "API_AND_CONFIG_MAP"
+      }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+        endpoint_public_access    = true
       }]
       certificate_authority = [{
         data = "dGVzdC1jYQ=="
@@ -399,6 +442,7 @@ run "console_role_paths_are_not_passed_to_the_iam_policy_api" {
         region                     = "us-east-1"
         ops_bucket_name            = "automq-ops-example"
         console_role_arn           = "arn:aws:iam::123456789012:role/team/path/example-console"
+        console_security_group_id  = "sg-11111111111111111"
         console_endpoint           = "http://console.example:8080"
         console_initial_access_key = "example-access-key"
         console_initial_secret_key = "example-secret-key"
@@ -431,6 +475,12 @@ run "api_only_eks_authentication_is_supported" {
       access_config = [{
         authentication_mode = "API"
       }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+        endpoint_public_access    = true
+      }]
       certificate_authority = [{
         data = "dGVzdC1jYQ=="
       }]
@@ -459,6 +509,12 @@ run "config_map_only_eks_authentication_is_rejected" {
       endpoint = "https://eks.example.test"
       access_config = [{
         authentication_mode = "CONFIG_MAP"
+      }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+        endpoint_public_access    = true
       }]
       certificate_authority = [{
         data = "dGVzdC1jYQ=="
@@ -561,6 +617,7 @@ run "malformed_console_state_is_rejected_before_creation" {
         region                     = "us-east-1"
         ops_bucket_name            = "automq-ops-example"
         console_role_arn           = "arn:aws:iam::123456789012:role/example-console"
+        console_security_group_id  = "sg-11111111111111111"
         console_endpoint           = "http://console.example:8080"
         console_initial_access_key = "example-access-key"
         console_initial_secret_key = "example-secret-key"
@@ -705,6 +762,12 @@ run "inactive_eks_clusters_are_rejected" {
       access_config = [{
         authentication_mode = "API_AND_CONFIG_MAP"
       }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+        endpoint_public_access    = true
+      }]
       certificate_authority = [{
         data = "dGVzdC1jYQ=="
       }]
@@ -730,6 +793,12 @@ run "eks_clusters_in_another_account_are_rejected" {
       endpoint = "https://eks.example.test"
       access_config = [{
         authentication_mode = "API_AND_CONFIG_MAP"
+      }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+        endpoint_public_access    = true
       }]
       certificate_authority = [{
         data = "dGVzdC1jYQ=="
@@ -776,6 +845,7 @@ run "console_roles_in_another_account_are_rejected" {
         region                     = "us-east-1"
         ops_bucket_name            = "automq-ops-example"
         console_role_arn           = "arn:aws:iam::999999999999:role/foreign-console"
+        console_security_group_id  = "sg-11111111111111111"
         console_endpoint           = "http://console.example:8080"
         console_initial_access_key = "example-access-key"
         console_initial_secret_key = "example-secret-key"
@@ -1075,4 +1145,127 @@ run "invalid_mysql_connection_and_capture_inputs_are_rejected" {
     var.mysql_table,
     var.topic_prefix,
   ]
+}
+
+run "custom_worker_security_groups_receive_only_rest_access" {
+  command = apply
+
+  variables {
+    connect_worker_security_group_ids = ["sg-33333333", "sg-44444444444444444"]
+  }
+
+  assert {
+    condition = (
+      aws_vpc_security_group_ingress_rule.console_eks_api.security_group_id == "sg-22222222222222222" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.referenced_security_group_id == "sg-11111111111111111" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.from_port == 443 &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.to_port == 443 &&
+      toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == toset(["sg-33333333", "sg-44444444444444444"]) &&
+      alltrue([for sg_id, rule in aws_vpc_security_group_ingress_rule.console_workers :
+        rule.security_group_id == sg_id &&
+        rule.referenced_security_group_id == "sg-11111111111111111" &&
+        rule.ip_protocol == "tcp" && rule.from_port == 8083 && rule.to_port == 8083 &&
+        rule.cidr_ipv4 == null && rule.cidr_ipv6 == null && rule.prefix_list_id == null
+      ])
+    )
+    error_message = "Explicit Worker SGs must receive only the Console-to-REST grant, while API access continues to target the primary EKS SG."
+  }
+}
+
+run "invalid_worker_security_group_ids_are_rejected" {
+  command = plan
+
+  variables {
+    connect_worker_security_group_ids = ["sg-not-a-real-id"]
+  }
+
+  expect_failures = [var.connect_worker_security_group_ids]
+}
+
+run "console_security_groups_in_another_vpc_are_rejected" {
+  command = plan
+
+  override_data {
+    target = data.aws_security_group.console[0]
+    values = {
+      arn    = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-11111111111111111"
+      vpc_id = "vpc-99999999999999999"
+    }
+  }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "console_security_groups_in_another_account_are_rejected" {
+  command = plan
+
+  override_data {
+    target = data.aws_security_group.console[0]
+    values = {
+      arn    = "arn:aws:ec2:us-east-1:999999999999:security-group/sg-11111111111111111"
+      vpc_id = "vpc-11111111111111111"
+    }
+  }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "worker_security_groups_in_another_vpc_are_rejected" {
+  command = plan
+
+  override_data {
+    target = data.aws_security_group.workers["sg-22222222222222222"]
+    values = {
+      arn    = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-22222222222222222"
+      vpc_id = "vpc-99999999999999999"
+    }
+  }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "worker_security_groups_in_another_account_are_rejected" {
+  command = plan
+
+  override_data {
+    target = data.aws_security_group.workers["sg-22222222222222222"]
+    values = {
+      arn    = "arn:aws:ec2:us-east-1:999999999999:security-group/sg-22222222222222222"
+      vpc_id = "vpc-11111111111111111"
+    }
+  }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "eks_private_api_access_is_required" {
+  command = plan
+
+  override_data {
+    target = data.aws_eks_cluster.target
+    values = {
+      arn      = "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks-cluster"
+      status   = "ACTIVE"
+      endpoint = "https://eks.example.test"
+      access_config = [{
+        authentication_mode = "API_AND_CONFIG_MAP"
+      }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = false
+        endpoint_public_access    = true
+      }]
+      certificate_authority = [{
+        data = "dGVzdC1jYQ=="
+      }]
+      identity = [{
+        oidc = [{
+          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+        }]
+      }]
+    }
+  }
+
+  expect_failures = [terraform_data.preflight]
 }

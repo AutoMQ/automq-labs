@@ -48,6 +48,21 @@ output "console_eks_access_entry_arn" {
   value       = aws_eks_access_entry.console.access_entry_arn
 }
 
+output "console_security_group_id" {
+  description = "Existing Console security group used as the source of the managed ingress rules"
+  value       = local.console_security_group_id
+}
+
+output "eks_api_security_group_id" {
+  description = "EKS primary cluster security group receiving Console HTTPS access"
+  value       = local.eks_api_security_group_id
+}
+
+output "connect_worker_security_group_ids" {
+  description = "Worker security groups receiving Console REST access on TCP 8083"
+  value       = local.connect_worker_security_group_ids
+}
+
 output "mysql_connector_id" {
   description = "MySQL Debezium Connector ID, or null when MySQL CDC is disabled"
   value       = try(automq_connector.mysql[0].id, null)

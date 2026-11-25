@@ -9,7 +9,7 @@ resource "terraform_data" "preflight" {
   lifecycle {
     precondition {
       condition     = local.console_state_valid
-      error_message = "The Console state must export environment_id, region, ops_bucket_name, console_role_arn, console_endpoint, console_initial_access_key, and console_initial_secret_key. Check console_state_path and complete the Console deployment first."
+      error_message = "The Console state must export environment_id, region, ops_bucket_name, console_role_arn, console_security_group_id, console_endpoint, console_initial_access_key, and console_initial_secret_key. Check console_state_path and complete the Console deployment first."
     }
 
     precondition {
@@ -25,6 +25,43 @@ resource "terraform_data" "preflight" {
     precondition {
       condition     = data.aws_eks_cluster.target.status == "ACTIVE"
       error_message = "The external EKS cluster must be ACTIVE before creating Connect resources."
+    }
+
+    precondition {
+      condition     = local.eks_api_security_group_valid
+      error_message = "The external EKS cluster must expose a valid primary cluster security group."
+    }
+
+    precondition {
+      condition     = try(data.aws_eks_cluster.target.vpc_config[0].endpoint_private_access == true, false)
+      error_message = "Enable private endpoint access on the external EKS cluster so the Console can reach its API inside the VPC."
+    }
+
+    precondition {
+      condition     = try(data.aws_security_group.console[0].vpc_id == local.eks_vpc_id, false)
+      error_message = "The Console security group and EKS cluster must be in the same VPC for this example's automatic network access."
+    }
+
+    precondition {
+      condition     = try(split(":", data.aws_security_group.console[0].arn)[4] == data.aws_caller_identity.current.account_id, false)
+      error_message = "The Console security group must belong to the current AWS account."
+    }
+
+    precondition {
+      condition = alltrue([
+        for group in data.aws_security_group.workers : group.vpc_id == local.eks_vpc_id
+      ])
+      error_message = "Every Connect worker security group must belong to the EKS cluster's VPC."
+    }
+
+    precondition {
+      condition = alltrue([
+        for group in data.aws_security_group.workers : try(
+          split(":", group.arn)[4] == data.aws_caller_identity.current.account_id,
+          false,
+        )
+      ])
+      error_message = "Every Connect worker security group must belong to the current AWS account."
     }
 
     precondition {

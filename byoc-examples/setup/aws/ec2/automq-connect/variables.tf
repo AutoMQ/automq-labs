@@ -45,7 +45,7 @@ variable "kubernetes_cluster_id" {
 }
 
 variable "console_eks_access_wait_duration" {
-  description = "Buffer for Console IAM and EKS access propagation before creating the Connect Cluster; 0s disables the wait"
+  description = "Buffer for Console IAM, EKS access, and security group propagation before creating the Connect Cluster; 0s disables the wait"
   type        = string
   default     = "60s"
   nullable    = false
@@ -53,6 +53,20 @@ variable "console_eks_access_wait_duration" {
   validation {
     condition     = can(regex("^[0-9]+(s|m)$", var.console_eks_access_wait_duration))
     error_message = "console_eks_access_wait_duration must use seconds or minutes, such as 60s or 2m; use 0s to disable the wait."
+  }
+}
+
+variable "connect_worker_security_group_ids" {
+  description = "Security groups actually attached to Connect worker node or Pod ENIs; empty uses the EKS primary cluster security group for the default managed-node deployment"
+  type        = set(string)
+  default     = []
+  nullable    = false
+
+  validation {
+    condition = alltrue([
+      for group_id in var.connect_worker_security_group_ids : can(regex("^sg-([0-9a-f]{8}|[0-9a-f]{17})$", group_id))
+    ])
+    error_message = "connect_worker_security_group_ids must contain valid AWS security group IDs."
   }
 }
 

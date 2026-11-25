@@ -6,8 +6,9 @@ last_updated: 2026-11-25
 
 Create a dedicated Kubernetes namespace, ServiceAccount, worker IAM role, and
 AutoMQ Connect Cluster, and authorize the existing Console role to manage that
-EKS cluster. The Cluster uses the Kafka
-Instance from `../automq-cluster` and installs your registered
+EKS cluster. Terraform also opens Console-to-EKS API and Console-to-worker
+REST ingress automatically. The Cluster uses the Kafka Instance from
+`../automq-cluster` and installs your registered
 `mysql-debezium-cdc` plugin. The Console and Kafka brokers run on EC2; Connect
 workers run on EKS.
 
@@ -19,7 +20,8 @@ also creates the Connector and its CDC data Topic. Debezium creates its own
 schema history Topic when it starts. Terraform-managed Connect resources share
 one state.
 
-Terraform does not create MySQL or change network connectivity. The existing
+Terraform does not create MySQL. Apart from the scoped Console ingress rules
+below, existing network connectivity remains externally managed. The existing
 EKS cluster, shared IAM OIDC provider, plugin, Console, and Kafka Instance retain
 their original ownership. Running workers and CDC storage/traffic consume
 billable resources.
@@ -33,14 +35,15 @@ billable resources.
 - Use a Console release that supports the Connect Cluster API used by AutoMQ
   Terraform Provider `0.4.10`. The adjacent Console example's default image,
   `8.3.16-aws`, is not a compatibility guarantee for this API.
-- Prepare an existing EKS cluster in the Kafka Instance's AWS account and
-  Region. Set `aws_region` to that Region; its default is `us-east-1`, and it
-  must match the Region exported by the Console state. For this
-  quick start, use the same VPC as the Console and brokers. The Console must
-  reach the Kubernetes API and worker Pod REST endpoints; workers must resolve
-  Kafka private DNS names and reach the private Kafka listeners. The Terraform
-  machine must also reach the Kubernetes API. Check routing, security groups,
-  and network policies, including communication between Connect workers.
+- Use an existing EKS cluster in the same AWS account, Region, and VPC as the
+  Console, with private EKS API access enabled. These are
+  checked prerequisites; this root does not change the EKS configuration.
+  `aws_region` defaults to `us-east-1` and must match the Console state.
+- The Terraform machine must reach the Kubernetes API. Workers must resolve
+  Kafka private DNS names and reach the brokers, and Connect workers must
+  communicate with one another. Routes, NACLs, NetworkPolicy, and worker-to-Kafka
+  security-group access remain external prerequisites. Console ingress to the
+  API and worker REST ports is configured automatically as described below.
 - EKS authentication mode must be `API` or `API_AND_CONFIG_MAP`, so that access
   entries can be used. This root checks the mode but does not change it.
 - Ensure schedulable EKS node capacity for the worker tier. The default is one
@@ -59,7 +62,7 @@ Three identities have separate responsibilities:
 
 | Identity | Required access |
 | --- | --- |
-| Your Terraform AWS identity | Read EKS/OIDC metadata; manage the worker role and policies, the Console's inline EKS policy, and its EKS access entry/association; create/delete the namespace and ServiceAccount through Kubernetes |
+| Your Terraform AWS identity | Read EKS/OIDC/security-group metadata; manage the worker role and policies, Console EKS authorization, and scoped ingress rules; create/delete the namespace and ServiceAccount through Kubernetes |
 | Existing Console EC2 runtime IAM role | Receive an EKS read-only IAM policy and cluster-scoped Kubernetes administrator access to the target EKS cluster |
 | New worker IRSA role | Trust only the created ServiceAccount through this EKS OIDC provider; read plugin packages under the configured prefix in the Console's Ops bucket |
 
@@ -72,7 +75,12 @@ The Terraform identity also needs `iam:PutRolePolicy`, `iam:GetRolePolicy`, and
 `iam:DeleteRolePolicy` on the existing Console role, plus permission to manage
 EKS access entries and policy associations, including their read and tag
 operations. Worker role creation and policy management require the usual IAM
-permissions for those resources.
+permissions for those resources. It also needs
+`ec2:DescribeSecurityGroups`, `ec2:DescribeSecurityGroupRules`,
+`ec2:AuthorizeSecurityGroupIngress`, `ec2:ModifySecurityGroupRules`,
+`ec2:RevokeSecurityGroupIngress`, `ec2:CreateTags`, and `ec2:DeleteTags` for the
+new rules. These EC2 operations are performed by the
+Terraform identity, not added to the Console runtime role.
 
 ### Console authorization managed by this root
 
@@ -92,18 +100,39 @@ authorization check expects the `arn:aws` cluster-admin policy ARN.
 
 The existing Console role, EC2 instance, and instance profile retain their
 original ownership. This root owns the added inline policy, access entry, and
-association. After creating or changing those grants, Terraform waits for
-`console_eks_access_wait_duration` before creating the Connect Cluster. The
-default `60s` buffers IAM/EKS permission propagation; it cannot guarantee that
-every permission update has propagated. Use a longer value such as `2m` if
-needed, or `0s` to disable the buffer. An unchanged apply does not repeat the
-wait. This root does not configure VPC routing, peering, DNS, or security groups.
+association. If one of those authorization resources already exists, resolve
+its Terraform ownership before applying. Import it explicitly only when this
+root will become its sole owner; do not manage the same authorization from
+multiple states. Destroying this root revokes the grants it manages.
 
-If the access entry, association, or inline policy already exists, resolve its
-Terraform ownership before applying. Import it explicitly only when this root
-will become its sole owner; do not manage the same authorization from multiple
-states. Consider any other workloads using that Console-to-EKS authorization,
-because destroying this root revokes the grants it manages.
+### Console network access managed by this root
+
+No new security-group input is required for standard EKS managed nodes with
+ordinary VPC CNI networking. Terraform reads `console_security_group_id` from
+the Console state and the primary cluster security group from EKS, then adds:
+
+- TCP `443` ingress to the EKS primary cluster security group from the Console
+  security group, for the private Kubernetes API.
+- TCP `8083` ingress to the worker security group from the Console security
+  group, for Connect REST calls.
+
+Workers default to using the EKS primary cluster security group. If your node
+or Pod networking uses different groups, set
+`connect_worker_security_group_ids` to those actual groups. An empty set uses
+the default; multiple worker groups create one REST ingress rule per group.
+The root adds two rules by default, or `1 + N` for `N` selected worker groups.
+
+These are ingress rules on existing security groups, with the Console group
+as their source. Terraform does not change Console egress; the Console example
+already permits all outbound traffic. It does not add routes, peering, DNS,
+NACL or NetworkPolicy rules, worker-to-Kafka access, or MySQL port `3306`
+access. Those paths must still support the selected deployment.
+
+After creating or changing IAM/EKS authorization or these ingress rules,
+Terraform waits for `console_eks_access_wait_duration` before creating the
+Connect Cluster. The default `60s` is a propagation buffer, not a readiness
+guarantee. Use a longer value such as `2m` if needed, or `0s` to disable it.
+An unchanged apply does not repeat the wait.
 
 ### Existing IAM OIDC provider
 
@@ -177,9 +206,10 @@ kafka_state_path   = "../automq-cluster/terraform.tfstate"
 ```
 
 The Console state supplies the environment, Region, Ops bucket name, Console
-role ARN, and AutoMQ API credentials; the Kafka state supplies the Instance ID.
-The Console state must export `region`, `ops_bucket_name`, and
-`console_role_arn`. Terraform checks that `aws_region` matches that Region and
+role ARN, Console security-group ID, and AutoMQ API credentials; the Kafka
+state supplies the Instance ID. The Console state must export `region`,
+`ops_bucket_name`, `console_role_arn`, and `console_security_group_id`.
+Terraform checks that `aws_region` matches that Region and
 that its AWS identity belongs to the Console's account and partition. The role
 ARN identifies the existing principal receiving the EKS authorization above;
 this root does not create or replace that role or its EC2 instance profile.
@@ -213,8 +243,9 @@ The main inputs are:
 | `worker_count` / `worker_resource_spec` | `1` / `TIER1` | Fixed worker capacity |
 | `connect_version` | `null` | Use the Console's default Connect worker version |
 | `kubernetes_scheduling_spec` | `null` | Optional YAML matching existing node labels and taints |
+| `connect_worker_security_group_ids` | `[]` | Optional worker node/Pod SGs; empty uses the EKS primary cluster SG |
 | `console_endpoint_override` | `null` | Optional reachable Console API URL |
-| `console_eks_access_wait_duration` | `60s` | Buffer after Console IAM/EKS authorization changes; for example `2m` or `0s` |
+| `console_eks_access_wait_duration` | `60s` | Buffer after Console IAM/EKS authorization or ingress-rule changes; for example `2m` or `0s` |
 
 The new worker role trusts only this namespace and ServiceAccount. Its inline
 policy grants `s3:GetObject` for plugin packages under the configured prefix
@@ -253,6 +284,9 @@ terraform output -raw connect_service_account
 terraform output -raw connect_iam_role_arn
 terraform output -raw console_role_arn
 terraform output -raw console_eks_access_entry_arn
+terraform output -raw console_security_group_id
+terraform output -raw eks_api_security_group_id
+terraform output -json connect_worker_security_group_ids
 terraform output -raw connect_cluster_id
 terraform output -raw connect_cluster_state
 ```
@@ -266,9 +300,10 @@ If Terraform fails while reading EKS or creating Kubernetes objects, check its
 AWS identity, Kubernetes access, API endpoint reachability, authentication
 mode, and existing OIDC provider. Access-entry failures can also indicate
 insufficient EKS management permissions or an existing grant owned elsewhere.
-For later worker failures, check Console authorization, node scheduling,
-image/plugin downloads, and private Kafka
-connectivity. A reachable Console login page alone does not establish these
+For later failures, review the emitted security-group IDs and confirm whether
+your workers use the default primary group or need the worker-group override.
+Also check Console authorization, node scheduling, image/plugin downloads, and
+private Kafka connectivity. A reachable Console login page alone does not establish these
 prerequisites.
 
 If the first apply reports `DescribeCluster` `AccessDenied`, confirm that the
@@ -477,7 +512,9 @@ Terraform also deletes the Connect Cluster, dedicated namespace,
 ServiceAccount, worker IAM role, its inline plugin-download policy, and its
 managed-policy attachments. It also deletes the Console's added inline EKS
 policy, access entry, and cluster-admin association, revoking this root's Console-to-EKS
-authorization. The existing Console role and EC2 instance profile remain.
+authorization. It revokes only the ingress rules created by this root: two
+by default, or `1 + N` with `N` selected worker groups. The external EKS cluster,
+security groups, existing Console role, and EC2 instance profile remain.
 AutoMQ removes the worker
 deployment. Confirm cleanup completes before dismantling the surrounding
 environment. Existing EKS infrastructure, its shared IAM OIDC provider, the
