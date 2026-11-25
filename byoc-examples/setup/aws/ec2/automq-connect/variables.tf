@@ -223,14 +223,13 @@ variable "tags" {
   nullable    = false
 }
 variable "aws_region" {
-  description = "AWS Region of the external EKS cluster; must match the Console and Kafka instance Region"
+  description = "Optional AWS Region override; null inherits the Console state Region, and an explicit value must match it"
   type        = string
-  default     = "us-east-1"
-  nullable    = false
+  default     = null
 
   validation {
-    condition     = can(regex("^[a-z]{2}(-[a-z]+)+-[0-9]+$", var.aws_region))
-    error_message = "aws_region must be an AWS Region name such as us-east-1."
+    condition     = var.aws_region == null ? true : can(regex("^[a-z]{2}(-[a-z]+)+-[0-9]+$", var.aws_region))
+    error_message = "aws_region must be null or an AWS Region name such as us-east-1."
   }
 }
 

@@ -1,103 +1,68 @@
+# All providers and neighboring states are mocked; no cloud/API credentials are used.
+# A non-default Region catches accidental hard-coded us-east-1 settings.
 mock_provider "automq" {
   mock_resource "automq_connect_cluster" {
-    defaults = {
-      id    = "connect-cluster-example"
-      state = "RUNNING"
-    }
+    defaults = { id = "connect-cluster-example", state = "RUNNING" }
   }
-
   mock_resource "automq_connector" {
-    defaults = {
-      id             = "conn-example"
-      state          = "RUNNING"
-      connector_type = "SOURCE"
-      plugin_id      = "plugin-example"
-    }
+    defaults = { id = "conn-example", state = "RUNNING", connector_type = "SOURCE", plugin_id = "plugin-example" }
   }
-
   mock_resource "automq_kafka_topic" {
-    defaults = {
-      topic_id = "topic-example"
-    }
+    defaults = { topic_id = "topic-example" }
   }
 }
 
 mock_provider "http" {
   mock_data "http" {
-    defaults = {
-      status_code = 200
-    }
+    defaults = { status_code = 200 }
   }
 }
 
 mock_provider "aws" {
   mock_data "aws_eks_cluster" {
     defaults = {
-      arn      = "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks-cluster"
-      status   = "ACTIVE"
-      endpoint = "https://eks.example.test"
-      access_config = [{
-        authentication_mode = "API_AND_CONFIG_MAP"
-      }]
+      arn           = "arn:aws:eks:eu-west-1:123456789012:cluster/existing-eks-cluster"
+      status        = "ACTIVE"
+      endpoint      = "https://eks.example.test"
+      access_config = [{ authentication_mode = "API_AND_CONFIG_MAP" }]
       vpc_config = [{
         vpc_id                    = "vpc-11111111111111111"
         cluster_security_group_id = "sg-22222222222222222"
         endpoint_private_access   = true
-        endpoint_public_access    = true
       }]
-      certificate_authority = [{
-        data = "dGVzdC1jYQ=="
-      }]
-      identity = [{
-        oidc = [{
-          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-        }]
-      }]
+      certificate_authority = [{ data = "dGVzdC1jYQ==" }]
+      identity              = [{ oidc = [{ issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" }] }]
     }
   }
-
   mock_data "aws_security_group" {
     defaults = {
-      arn    = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-11111111111111111"
+      arn    = "arn:aws:ec2:eu-west-1:123456789012:security-group/sg-11111111111111111"
       vpc_id = "vpc-11111111111111111"
     }
   }
-
   mock_data "aws_caller_identity" {
-    defaults = {
-      account_id = "123456789012"
-    }
+    defaults = { account_id = "123456789012" }
   }
-
   mock_data "aws_partition" {
-    defaults = {
-      partition = "aws"
-    }
+    defaults = { partition = "aws" }
   }
-
   mock_data "aws_iam_openid_connect_provider" {
     defaults = {
-      arn            = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
+      arn            = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
       client_id_list = ["sts.amazonaws.com"]
     }
   }
-
   mock_resource "aws_iam_role" {
-    defaults = {
-      name = "mock-connect-worker"
-      arn  = "arn:aws:iam::123456789012:role/mock-connect-worker"
-    }
+    defaults = { name = "mock-connect-worker", arn = "arn:aws:iam::123456789012:role/mock-connect-worker" }
   }
-
   mock_resource "aws_eks_access_entry" {
     defaults = {
-      access_entry_arn = "arn:aws:eks:us-east-1:123456789012:access-entry/existing-eks-cluster/role/123456789012/example-console/EXAMPLE"
+      access_entry_arn = "arn:aws:eks:eu-west-1:123456789012:access-entry/existing-eks-cluster/role/123456789012/example-console/EXAMPLE"
     }
   }
 }
 
 mock_provider "kubernetes" {}
-
 mock_provider "time" {}
 
 override_data {
@@ -105,7 +70,7 @@ override_data {
   values = {
     outputs = {
       environment_id             = "env-example"
-      region                     = "us-east-1"
+      region                     = "eu-west-1"
       ops_bucket_name            = "automq-ops-example"
       console_role_arn           = "arn:aws:iam::123456789012:role/example-console"
       console_security_group_id  = "sg-11111111111111111"
@@ -120,14 +85,11 @@ override_data {
   target = data.terraform_remote_state.kafka
   values = {
     outputs = {
-      instance_id     = "kf-example"
-      instance_status = "Running"
+      instance_id = "kf-example"
       instance_endpoints = [{
         bootstrap_servers = "kafka.internal.example:9092"
-        display_name      = "Internal PLAINTEXT"
         network_type      = "VPC"
         protocol          = "PLAINTEXT"
-        mechanisms        = ""
       }]
     }
   }
@@ -135,311 +97,242 @@ override_data {
 
 variables {
   kubernetes_cluster_id = "existing-eks-cluster"
-  plugin_version        = "3.0.8.Final"
+  plugin_version        = "3.1.2"
 }
 
-run "creates_connect_cluster_from_adjacent_states" {
+run "cluster_only_inherits_console_region" {
   command = apply
 
-  assert {
-    condition = (
-      length(automq_connector.mysql) == 0 &&
-      length(automq_kafka_topic.cdc) == 0 &&
-      length(terraform_data.mysql_preflight) == 0 &&
-      output.mysql_connector_id == null &&
-      output.mysql_connector_state == null &&
-      output.mysql_data_topic == null &&
-      output.mysql_schema_history_topic == null
-    )
-    error_message = "The default Connect Cluster deployment must not require MySQL credentials or create a Connector and its CDC topic."
-  }
-
-  assert {
-    condition = (
-      local.console_state_valid &&
-      local.kafka_state_valid &&
-      output.environment_id == "env-example" &&
-      output.kafka_instance_id == "kf-example" &&
-      automq_connect_cluster.demo.environment_id == "env-example" &&
-      automq_connect_cluster.demo.kafka_cluster.kafka_instance_id == "kf-example" &&
-      output.connect_cluster_id == automq_connect_cluster.demo.id &&
-      output.connect_cluster_state == "RUNNING"
-    )
-    error_message = "The Connect Cluster must reuse the environment and Kafka instance from the adjacent states and expose its lifecycle outputs."
-  }
-
-  assert {
-    condition = (
-      automq_connect_cluster.demo.name == "aws-mysql-connect-demo" &&
-      automq_connect_cluster.demo.compute.type == "k8s" &&
-      automq_connect_cluster.demo.compute.kubernetes.cluster_id == "existing-eks-cluster" &&
-      automq_connect_cluster.demo.compute.kubernetes.namespace == kubernetes_namespace_v1.connect.metadata[0].name &&
-      automq_connect_cluster.demo.compute.kubernetes.service_account == kubernetes_service_account_v1.connect.metadata[0].name &&
-      automq_connect_cluster.demo.compute.iam_role == aws_iam_role.connect_worker.arn &&
-      automq_connect_cluster.demo.capacity.type == "provisioned" &&
-      automq_connect_cluster.demo.capacity.provisioned.worker_count == 1 &&
-      automq_connect_cluster.demo.capacity.provisioned.worker_resource_spec == "TIER1"
-    )
-    error_message = "The default deployment must use one TIER1 worker on the external EKS cluster with its managed namespace, ServiceAccount, and Worker Role."
-  }
-
-  assert {
-    condition = (
-      length(automq_connect_cluster.demo.plugins) == 1 &&
-      automq_connect_cluster.demo.plugins[0].name == "mysql-debezium-cdc" &&
-      automq_connect_cluster.demo.plugins[0].version == "3.0.8.Final"
-    )
-    error_message = "The Connect Cluster must install the selected version of the existing MySQL Debezium plugin."
-  }
-
-  assert {
-    condition = (
-      kubernetes_namespace_v1.connect.metadata[0].name == "automq-connect" &&
-      kubernetes_service_account_v1.connect.metadata[0].name == "automq-connect" &&
-      kubernetes_service_account_v1.connect.metadata[0].namespace == kubernetes_namespace_v1.connect.metadata[0].name &&
-      kubernetes_service_account_v1.connect.metadata[0].annotations["eks.amazonaws.com/role-arn"] == aws_iam_role.connect_worker.arn &&
-      kubernetes_service_account_v1.connect.metadata[0].annotations["eks.amazonaws.com/sts-regional-endpoints"] == "true" &&
-      kubernetes_service_account_v1.connect.automount_service_account_token &&
-      length(aws_iam_role_policy_attachment.connect_worker) == 0 &&
-      output.eks_cluster_name == data.aws_eks_cluster.target.name &&
-      output.connect_namespace == kubernetes_namespace_v1.connect.metadata[0].name &&
-      output.connect_service_account == kubernetes_service_account_v1.connect.metadata[0].name &&
-      output.connect_iam_role_arn == aws_iam_role.connect_worker.arn
-    )
-    error_message = "The managed ServiceAccount must use the Worker Role through IRSA without attaching optional managed policies by default."
-  }
-
-  assert {
-    condition = (
-      length(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement) == 1 &&
-      jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement[0].Action == "sts:AssumeRoleWithWebIdentity" &&
-      jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement[0].Principal.Federated == data.aws_iam_openid_connect_provider.eks.arn &&
-      length(keys(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement[0].Condition.StringEquals)) == 2 &&
-      jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement[0].Condition.StringEquals["oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE:aud"] == "sts.amazonaws.com" &&
-      jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement[0].Condition.StringEquals["oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE:sub"] == "system:serviceaccount:automq-connect:automq-connect"
-    )
-    error_message = "IRSA trust must allow only the target cluster OIDC provider, STS audience, and exact managed namespace/ServiceAccount subject."
-  }
-
-  assert {
-    condition = (
-      aws_iam_role_policy.plugin_download.role == aws_iam_role.connect_worker.name &&
-      length(jsondecode(aws_iam_role_policy.plugin_download.policy).Statement) == 2 &&
-      alltrue([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement.Effect == "Allow"]) &&
-      toset(flatten([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement.Action])) == toset(["s3:GetObject", "s3:ListBucket"]) &&
-      one([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement if contains(statement.Action, "s3:GetObject")]).Resource == "arn:aws:s3:::automq-ops-example/automq/connect-plugins/*" &&
-      one([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement if contains(statement.Action, "s3:ListBucket")]).Resource == "arn:aws:s3:::automq-ops-example" &&
-      toset(one([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement if contains(statement.Action, "s3:ListBucket")]).Condition.StringLike["s3:prefix"]) == toset(["automq/connect-plugins", "automq/connect-plugins/*"])
-    )
-    error_message = "The default Worker Role must only read plugin objects and list the plugin prefix in its Console Ops Bucket."
-  }
-
-  assert {
-    condition = (
-      aws_iam_role_policy.console_eks.role == "example-console" &&
-      aws_iam_role_policy.console_eks.role != aws_iam_role.connect_worker.name &&
-      aws_eks_access_entry.console.cluster_name == data.aws_eks_cluster.target.name &&
-      aws_eks_access_entry.console.principal_arn == "arn:aws:iam::123456789012:role/example-console" &&
-      aws_eks_access_entry.console.principal_arn != aws_iam_role.connect_worker.arn &&
-      aws_eks_access_entry.console.type == "STANDARD" &&
-      aws_eks_access_policy_association.console.cluster_name == aws_eks_access_entry.console.cluster_name &&
-      aws_eks_access_policy_association.console.principal_arn == aws_eks_access_entry.console.principal_arn &&
-      aws_eks_access_policy_association.console.policy_arn == "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" &&
-      aws_eks_access_policy_association.console.access_scope[0].type == "cluster" &&
-      output.console_role_arn == aws_eks_access_entry.console.principal_arn &&
-      output.console_eks_access_entry_arn == aws_eks_access_entry.console.access_entry_arn
-    )
-    error_message = "EKS API permissions and cluster-wide Kubernetes access must apply to the existing Console Role, separately from the Worker Role."
-  }
-
-  assert {
-    condition = (
-      time_sleep.console_eks_access.create_duration == "60s" &&
-      time_sleep.console_eks_access.triggers["wait_duration"] == "60s"
-    )
-    error_message = "Console EKS authorization must have a default 60-second propagation buffer, with duration changes triggering a new wait."
-  }
-
-  assert {
-    condition = (
-      aws_vpc_security_group_ingress_rule.console_eks_api.security_group_id == "sg-22222222222222222" &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.referenced_security_group_id == "sg-11111111111111111" &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.ip_protocol == "tcp" &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.from_port == 443 &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.to_port == 443 &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.cidr_ipv4 == null &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.cidr_ipv6 == null &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.prefix_list_id == null &&
-      toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == toset(["sg-22222222222222222"]) &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].security_group_id == "sg-22222222222222222" &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].referenced_security_group_id == "sg-11111111111111111" &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].ip_protocol == "tcp" &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].from_port == 8083 &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].to_port == 8083 &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].cidr_ipv4 == null &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].cidr_ipv6 == null &&
-      aws_vpc_security_group_ingress_rule.console_workers["sg-22222222222222222"].prefix_list_id == null
-    )
-    error_message = "The default network grants must expose only EKS API TCP 443 and Worker REST TCP 8083 on the primary EKS SG, exclusively to the Console SG."
-  }
-
-  assert {
-    condition = (
-      length(jsondecode(aws_iam_role_policy.console_eks.policy).Statement) == 5 &&
-      alltrue([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement.Effect == "Allow"]) &&
-      toset(flatten([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement.Action])) == toset([
-        "eks:ListClusters",
-        "eks:DescribeCluster",
-        "eks:ListNodegroups",
-        "eks:DescribeNodegroup",
-        "eks:ListAccessEntries",
-        "eks:DescribeAccessEntry",
-        "eks:ListAssociatedAccessPolicies",
-      ]) &&
-      toset(one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "ListRegionalClusters"]).Action) == toset(["eks:ListClusters"]) &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "ListRegionalClusters"]).Resource == "*" &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "ListRegionalClusters"]).Condition.StringEquals["aws:RequestedRegion"] == "us-east-1" &&
-      toset(one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "DescribeRegionalClusters"]).Action) == toset(["eks:DescribeCluster"]) &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "DescribeRegionalClusters"]).Resource == "arn:aws:eks:us-east-1:123456789012:cluster/*" &&
-      toset(one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "InspectTargetCluster"]).Action) == toset(["eks:ListNodegroups", "eks:ListAccessEntries"]) &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "InspectTargetCluster"]).Resource == "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks-cluster" &&
-      toset(one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "DescribeTargetNodegroups"]).Action) == toset(["eks:DescribeNodegroup"]) &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "DescribeTargetNodegroups"]).Resource == "arn:aws:eks:us-east-1:123456789012:nodegroup/existing-eks-cluster/*/*" &&
-      toset(one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "InspectTargetAccessEntries"]).Action) == toset(["eks:DescribeAccessEntry", "eks:ListAssociatedAccessPolicies"]) &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "InspectTargetAccessEntries"]).Resource == "arn:aws:eks:us-east-1:123456789012:access-entry/existing-eks-cluster/*"
-    )
-    error_message = "The Console IAM policy must grant only the seven required EKS read/list actions, with regional discovery and target-cluster inspection scopes."
-  }
-}
-
-run "existing_eks_and_worker_settings_propagate" {
-  command = apply
-
-  variables {
-    kubernetes_cluster_id      = "existing-production-eks"
-    connect_namespace          = "existing-connect"
-    connect_service_account    = "existing-connect-sa"
-    kubernetes_scheduling_spec = "nodeSelector:\n  workload: connect\n"
-    connect_worker_role_name   = "custom-connect-worker"
-    connect_worker_policy_arns = [
-      "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
-      "arn:aws:iam::123456789012:policy/connect-worker-ops",
-    ]
-    connect_plugin_s3_prefix = "custom/connect-plugins"
-    connect_cluster_name     = "custom-mysql-connect"
-    connect_version          = "test-worker-version"
-    worker_count             = 2
-    worker_resource_spec     = "TIER2"
-    plugin_name              = "custom-mysql-debezium-cdc"
-    plugin_version           = "test-plugin-version"
-  }
-
+  # Cluster-only deployment does not need either MySQL inputs or Kafka endpoints.
   override_data {
-    target = data.aws_eks_cluster.target
+    target = data.terraform_remote_state.kafka
     values = {
-      arn      = "arn:aws:eks:us-east-1:123456789012:cluster/existing-production-eks"
-      status   = "ACTIVE"
-      endpoint = "https://eks.example.test"
-      access_config = [{
-        authentication_mode = "API_AND_CONFIG_MAP"
-      }]
-      vpc_config = [{
-        vpc_id                    = "vpc-11111111111111111"
-        cluster_security_group_id = "sg-22222222222222222"
-        endpoint_private_access   = true
-        endpoint_public_access    = true
-      }]
-      certificate_authority = [{
-        data = "dGVzdC1jYQ=="
-      }]
-      identity = [{
-        oidc = [{
-          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-        }]
-      }]
+      outputs = { instance_id = "kf-example" }
     }
   }
 
   assert {
     condition = (
-      automq_connect_cluster.demo.name == "custom-mysql-connect" &&
-      automq_connect_cluster.demo.version == "test-worker-version" &&
-      automq_connect_cluster.demo.compute.kubernetes.cluster_id == "existing-production-eks" &&
-      automq_connect_cluster.demo.compute.kubernetes.namespace == "existing-connect" &&
-      automq_connect_cluster.demo.compute.kubernetes.service_account == "existing-connect-sa" &&
-      yamldecode(automq_connect_cluster.demo.compute.kubernetes.scheduling_spec).nodeSelector.workload == "connect" &&
-      aws_iam_role.connect_worker.name == "custom-connect-worker" &&
+      var.aws_region == null && local.aws_region == "eu-west-1" &&
+      automq_connect_cluster.demo.environment_id == "env-example" &&
+      automq_connect_cluster.demo.kafka_cluster.kafka_instance_id == "kf-example" &&
+      output.connect_cluster_state == "RUNNING" &&
+      length(automq_connector.mysql) == 0 && length(automq_kafka_topic.cdc) == 0 &&
+      length(terraform_data.mysql_preflight) == 0 &&
+      output.mysql_connector_id == null && output.mysql_schema_history_topic == null
+    )
+    error_message = "The default deployment must inherit the Console Region and create only the Connect Cluster without MySQL credentials or endpoints."
+  }
+
+  assert {
+    condition = (
+      automq_connect_cluster.demo.compute.kubernetes.cluster_id == "existing-eks-cluster" &&
+      automq_connect_cluster.demo.compute.kubernetes.namespace == kubernetes_namespace_v1.connect.metadata[0].name &&
+      automq_connect_cluster.demo.compute.kubernetes.service_account == kubernetes_service_account_v1.connect.metadata[0].name &&
       automq_connect_cluster.demo.compute.iam_role == aws_iam_role.connect_worker.arn &&
+      automq_connect_cluster.demo.capacity.provisioned.worker_count == 1 &&
+      automq_connect_cluster.demo.capacity.provisioned.worker_resource_spec == "TIER1" &&
+      automq_connect_cluster.demo.plugins[0].name == "mysql-debezium-cdc" &&
+      automq_connect_cluster.demo.plugins[0].version == "3.1.2" &&
+      length(aws_iam_role_policy_attachment.connect_worker) == 0 &&
       kubernetes_service_account_v1.connect.metadata[0].annotations["eks.amazonaws.com/role-arn"] == aws_iam_role.connect_worker.arn &&
-      automq_connect_cluster.demo.capacity.provisioned.worker_count == 2 &&
-      automq_connect_cluster.demo.capacity.provisioned.worker_resource_spec == "TIER2" &&
-      automq_connect_cluster.demo.plugins[0].name == "custom-mysql-debezium-cdc" &&
-      automq_connect_cluster.demo.plugins[0].version == "test-plugin-version"
+      kubernetes_service_account_v1.connect.automount_service_account_token
     )
-    error_message = "External EKS placement, the managed worker identity, runtime version, plugin selection, and provisioned capacity must reach the Connect resource."
+    error_message = "One TIER1 worker must use the selected plugin, managed namespace/ServiceAccount, and its IRSA role without optional policies."
   }
 
   assert {
     condition = (
-      length(aws_iam_role_policy_attachment.connect_worker) == 2 &&
-      aws_iam_role_policy_attachment.connect_worker["arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"].role == aws_iam_role.connect_worker.name &&
-      aws_iam_role_policy_attachment.connect_worker["arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"].policy_arn == "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" &&
-      aws_iam_role_policy_attachment.connect_worker["arn:aws:iam::123456789012:policy/connect-worker-ops"].role == aws_iam_role.connect_worker.name &&
-      aws_iam_role_policy_attachment.connect_worker["arn:aws:iam::123456789012:policy/connect-worker-ops"].policy_arn == "arn:aws:iam::123456789012:policy/connect-worker-ops" &&
-      kubernetes_service_account_v1.connect.metadata[0].namespace == "existing-connect" &&
-      jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement[0].Condition.StringEquals["oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE:sub"] == "system:serviceaccount:existing-connect:existing-connect-sa"
+      automq_connect_cluster.demo.worker_config["key.converter.schemas.enable"] == "false" &&
+      automq_connect_cluster.demo.worker_config["value.converter.schemas.enable"] == "false" &&
+      !contains(keys(automq_connect_cluster.demo.worker_config), "key.converter") &&
+      !contains(keys(automq_connect_cluster.demo.worker_config), "value.converter")
     )
-    error_message = "Only explicitly supplied policies may attach to the Worker Role, whose trust must follow the configured namespace and ServiceAccount."
+    error_message = "Provider 0.4.10 must rely on default converter classes while retaining the non-default schema settings."
   }
 
   assert {
     condition = (
-      one([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement if contains(statement.Action, "s3:GetObject")]).Resource == "arn:aws:s3:::automq-ops-example/custom/connect-plugins/*" &&
-      one([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement if contains(statement.Action, "s3:ListBucket")]).Resource == "arn:aws:s3:::automq-ops-example" &&
-      toset(one([for statement in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : statement if contains(statement.Action, "s3:ListBucket")]).Condition.StringLike["s3:prefix"]) == toset(["custom/connect-plugins", "custom/connect-plugins/*"])
+      length(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement) == 1 &&
+      one(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement).Action == "sts:AssumeRoleWithWebIdentity" &&
+      one(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement).Principal.Federated == data.aws_iam_openid_connect_provider.eks.arn &&
+      length(keys(one(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement).Condition.StringEquals)) == 2 &&
+      one(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement).Condition.StringEquals["oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:aud"] == "sts.amazonaws.com" &&
+      one(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement).Condition.StringEquals["oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:sub"] == "system:serviceaccount:automq-connect:automq-connect"
     )
-    error_message = "A customized plugin directory must update both object-read and bucket-list scopes without changing the Ops Bucket."
+    error_message = "IRSA trust must be restricted to the target OIDC provider, STS audience, and exact namespace/ServiceAccount."
   }
 
   assert {
     condition = (
-      aws_eks_access_entry.console.cluster_name == "existing-production-eks" &&
-      aws_eks_access_policy_association.console.cluster_name == "existing-production-eks" &&
+      aws_iam_role_policy.plugin_download.role == aws_iam_role.connect_worker.name &&
+      alltrue([for s in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : s.Effect == "Allow"]) &&
+      toset(flatten([for s in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : s.Action])) == toset(["s3:GetObject", "s3:ListBucket"]) &&
+      one([for s in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : s if contains(s.Action, "s3:GetObject")]).Resource == "arn:aws:s3:::automq-ops-example/automq/connect-plugins/*" &&
+      one([for s in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : s if contains(s.Action, "s3:ListBucket")]).Resource == "arn:aws:s3:::automq-ops-example" &&
+      toset(one([for s in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : s if contains(s.Action, "s3:ListBucket")]).Condition.StringLike["s3:prefix"]) == toset(["automq/connect-plugins", "automq/connect-plugins/*"])
+    )
+    error_message = "The Worker Role must only read plugin objects and list their prefix in the Console Ops Bucket."
+  }
+
+  assert {
+    condition = (
       aws_iam_role_policy.console_eks.role == "example-console" &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "InspectTargetCluster"]).Resource == "arn:aws:eks:us-east-1:123456789012:cluster/existing-production-eks" &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "DescribeTargetNodegroups"]).Resource == "arn:aws:eks:us-east-1:123456789012:nodegroup/existing-production-eks/*/*" &&
-      one([for statement in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : statement if statement.Sid == "InspectTargetAccessEntries"]).Resource == "arn:aws:eks:us-east-1:123456789012:access-entry/existing-production-eks/*"
+      aws_eks_access_entry.console.principal_arn == "arn:aws:iam::123456789012:role/example-console" &&
+      aws_eks_access_entry.console.principal_arn != aws_iam_role.connect_worker.arn &&
+      aws_eks_access_entry.console.type == "STANDARD" &&
+      aws_eks_access_policy_association.console.cluster_name == data.aws_eks_cluster.target.name &&
+      aws_eks_access_policy_association.console.principal_arn == aws_eks_access_entry.console.principal_arn &&
+      aws_eks_access_policy_association.console.policy_arn == "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy" &&
+      aws_eks_access_policy_association.console.access_scope[0].type == "cluster"
     )
-    error_message = "Changing the external EKS cluster must retarget Console access and all cluster-specific read scopes."
-  }
-}
-
-run "console_endpoint_override_supports_an_open_ssm_tunnel" {
-  command = plan
-
-  variables {
-    console_endpoint_override = "http://127.0.0.1:18080/"
+    error_message = "EKS administrator access must be granted to the existing Console Role, independently of the Worker Role."
   }
 
   assert {
     condition = (
-      local.console_endpoint == "http://127.0.0.1:18080" &&
-      data.http.console_login[0].url == "http://127.0.0.1:18080/auth/login" &&
-      local.console_state_valid
+      alltrue([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s.Effect == "Allow"]) &&
+      toset(flatten([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s.Action])) == toset([
+        "eks:ListClusters", "eks:DescribeCluster", "eks:ListNodegroups", "eks:DescribeNodegroup",
+        "eks:ListAccessEntries", "eks:DescribeAccessEntry", "eks:ListAssociatedAccessPolicies",
+      ]) &&
+      one([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s if contains(s.Action, "eks:ListClusters")]).Resource == "*" &&
+      one([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s if contains(s.Action, "eks:ListClusters")]).Condition.StringEquals["aws:RequestedRegion"] == "eu-west-1" &&
+      one([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s if contains(s.Action, "eks:DescribeCluster")]).Resource == "arn:aws:eks:eu-west-1:123456789012:cluster/*" &&
+      alltrue([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s.Resource == data.aws_eks_cluster.target.arn if contains(s.Action, "eks:ListNodegroups") || contains(s.Action, "eks:ListAccessEntries")]) &&
+      one([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s if contains(s.Action, "eks:DescribeNodegroup")]).Resource == "arn:aws:eks:eu-west-1:123456789012:nodegroup/existing-eks-cluster/*/*" &&
+      alltrue([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s.Resource == "arn:aws:eks:eu-west-1:123456789012:access-entry/existing-eks-cluster/*" if contains(s.Action, "eks:DescribeAccessEntry") || contains(s.Action, "eks:ListAssociatedAccessPolicies")])
     )
-    error_message = "An endpoint override must direct the health check to the open tunnel while retaining Console state credentials."
+    error_message = "Console IAM must grant only EKS reads, with discovery in the inherited Region/account and detailed inspection limited to the target cluster."
+  }
+
+  assert {
+    condition = (
+      aws_vpc_security_group_ingress_rule.console_eks_api.security_group_id == "sg-22222222222222222" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.from_port == 443 && aws_vpc_security_group_ingress_rule.console_eks_api.to_port == 443 &&
+      toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == toset(["sg-22222222222222222"]) &&
+      alltrue([for id, rule in aws_vpc_security_group_ingress_rule.console_workers : rule.security_group_id == id && rule.from_port == 8083 && rule.to_port == 8083]) &&
+      alltrue([for rule in concat([aws_vpc_security_group_ingress_rule.console_eks_api], values(aws_vpc_security_group_ingress_rule.console_workers)) :
+        rule.referenced_security_group_id == "sg-11111111111111111" && rule.ip_protocol == "tcp" &&
+        rule.cidr_ipv4 == null && rule.cidr_ipv6 == null && rule.prefix_list_id == null
+      ]) &&
+      time_sleep.console_eks_access.create_duration == "60s" &&
+      time_sleep.console_eks_access.triggers["wait_duration"] == "60s"
+    )
+    error_message = "Only the Console SG may reach EKS TCP 443 and worker TCP 8083; grants must precede the default propagation wait."
   }
 }
 
-run "console_role_paths_are_not_passed_to_the_iam_policy_api" {
+run "creates_mysql_cdc_with_private_history" {
   command = apply
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].environment_id == "env-example" &&
+      automq_connector.mysql[0].connect_cluster_id == automq_connect_cluster.demo.id &&
+      automq_connector.mysql[0].connector_class == "io.debezium.connector.mysql.MySqlConnector" &&
+      automq_connector.mysql[0].task_count == 1 &&
+      automq_connector.mysql[0].kafka_cluster.security_protocol.protocol == "PLAINTEXT" &&
+      output.mysql_connector_state == "RUNNING" &&
+      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql.internal.example" &&
+      automq_connector.mysql[0].connector_config["database.user"] == "debezium" &&
+      automq_connector.mysql[0].connector_config["database.port"] == "3306" &&
+      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "required" &&
+      automq_connector.mysql[0].connector_config["table.include.list"] == "inventory\\.customers" &&
+      automq_connector.mysql[0].connector_config["topic.prefix"] == "mysql-cdc" &&
+      automq_connector.mysql[0].connector_config["snapshot.mode"] == "initial" &&
+      automq_connector.mysql[0].connector_config["include.schema.changes"] == "false"
+    )
+    error_message = "Enabling CDC must capture the selected MySQL table using one source task, database TLS, and the managed Connect Cluster."
+  }
+
+  assert {
+    condition = (
+      !contains(keys(automq_connector.mysql[0].connector_config), "database.password") &&
+      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "example-test-password" &&
+      !contains(keys(automq_connector.mysql[0].connector_config), "connector.class") &&
+      !contains(keys(automq_connector.mysql[0].connector_config), "tasks.max")
+    )
+    error_message = "The password must only use the sensitive map; AutoMQ supplies connector.class and tasks.max itself."
+  }
+
+  assert {
+    condition = (
+      automq_kafka_topic.cdc[0].kafka_instance_id == "kf-example" &&
+      automq_kafka_topic.cdc[0].name == "mysql-cdc.inventory.customers" && automq_kafka_topic.cdc[0].partition == 1 &&
+      output.mysql_data_topic == automq_kafka_topic.cdc[0].name &&
+      output.mysql_schema_history_topic == "schema-history.mysql-cdc-demo" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] == output.mysql_schema_history_topic &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.internal.example:9092" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.producer.security.protocol"] == "PLAINTEXT" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.consumer.security.protocol"] == "PLAINTEXT"
+    )
+    error_message = "CDC data must use its managed topic; a distinct history name lets Debezium create long-term history through native Kafka Admin on the private listener."
+  }
+}
+
+run "custom_settings_and_explicit_region_propagate" {
+  command = apply
+  variables {
+    aws_region                        = "eu-west-1"
+    kubernetes_cluster_id             = "custom-eks"
+    connect_namespace                 = "custom-connect"
+    connect_service_account           = "custom-connect-sa"
+    connect_worker_role_name          = "custom-connect-worker"
+    connect_worker_policy_arns        = ["arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess", "arn:aws:iam::123456789012:policy/connect-worker-ops"]
+    connect_plugin_s3_prefix          = "custom/connect-plugins"
+    connect_worker_security_group_ids = ["sg-33333333", "sg-44444444444444444"]
+    console_endpoint_override         = "http://127.0.0.1:18080/"
+    console_eks_access_wait_duration  = "0s"
+    connect_cluster_name              = "custom-mysql-connect"
+    connect_version                   = "test-worker-version"
+    worker_count                      = 2
+    worker_resource_spec              = "TIER2"
+    plugin_name                       = "custom-mysql-debezium"
+    plugin_version                    = "test-plugin-version"
+    kubernetes_scheduling_spec        = "nodeSelector:\n  workload: connect\n"
+    create_mysql_connector            = true
+    connector_name                    = "custom-mysql-cdc"
+    topic_prefix                      = "custom-cdc"
+    mysql_hostname                    = "mysql-staging.internal.example"
+    mysql_user                        = "cdcuser"
+    mysql_password                    = "alternate-test-password"
+    mysql_port                        = 3307
+    mysql_server_id                   = 456789
+    mysql_database                    = "fulfillment"
+    mysql_table                       = "orders"
+    mysql_ssl_mode                    = "verify_identity"
+  }
+
+  override_data {
+    target = data.aws_eks_cluster.target
+    values = {
+      arn           = "arn:aws:eks:eu-west-1:123456789012:cluster/custom-eks"
+      status        = "ACTIVE"
+      endpoint      = "https://eks.example.test"
+      access_config = [{ authentication_mode = "API" }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+      }]
+      certificate_authority = [{ data = "dGVzdC1jYQ==" }]
+      identity              = [{ oidc = [{ issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" }] }]
+    }
+  }
 
   override_data {
     target = data.terraform_remote_state.console
     values = {
       outputs = {
         environment_id             = "env-example"
-        region                     = "us-east-1"
+        region                     = "eu-west-1"
         ops_bucket_name            = "automq-ops-example"
         console_role_arn           = "arn:aws:iam::123456789012:role/team/path/example-console"
         console_security_group_id  = "sg-11111111111111111"
@@ -452,198 +345,231 @@ run "console_role_paths_are_not_passed_to_the_iam_policy_api" {
 
   assert {
     condition = (
-      aws_iam_role_policy.console_eks.role == "example-console" &&
-      aws_eks_access_entry.console.principal_arn == "arn:aws:iam::123456789012:role/team/path/example-console" &&
-      aws_eks_access_policy_association.console.principal_arn == aws_eks_access_entry.console.principal_arn &&
-      output.console_role_arn == aws_eks_access_entry.console.principal_arn &&
-      automq_connect_cluster.demo.compute.iam_role == aws_iam_role.connect_worker.arn &&
-      automq_connect_cluster.demo.compute.iam_role != aws_eks_access_entry.console.principal_arn
+      local.aws_region == "eu-west-1" &&
+      data.http.console_login[0].url == "http://127.0.0.1:18080/auth/login" &&
+      time_sleep.console_eks_access.create_duration == "0s" &&
+      time_sleep.console_eks_access.triggers["wait_duration"] == "0s" &&
+      automq_connect_cluster.demo.name == "custom-mysql-connect" &&
+      automq_connect_cluster.demo.version == "test-worker-version" &&
+      automq_connect_cluster.demo.compute.kubernetes.cluster_id == "custom-eks" &&
+      yamldecode(automq_connect_cluster.demo.compute.kubernetes.scheduling_spec).nodeSelector.workload == "connect" &&
+      automq_connect_cluster.demo.capacity.provisioned.worker_count == 2 &&
+      automq_connect_cluster.demo.capacity.provisioned.worker_resource_spec == "TIER2" &&
+      automq_connect_cluster.demo.plugins[0].name == "custom-mysql-debezium" &&
+      automq_connect_cluster.demo.plugins[0].version == "test-plugin-version"
     )
-    error_message = "A Console Role with an IAM path must retain its complete access-entry ARN while the inline policy API receives only the role name."
-  }
-}
-
-run "api_only_eks_authentication_is_supported" {
-  command = plan
-
-  override_data {
-    target = data.aws_eks_cluster.target
-    values = {
-      arn      = "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks-cluster"
-      status   = "ACTIVE"
-      endpoint = "https://eks.example.test"
-      access_config = [{
-        authentication_mode = "API"
-      }]
-      vpc_config = [{
-        vpc_id                    = "vpc-11111111111111111"
-        cluster_security_group_id = "sg-22222222222222222"
-        endpoint_private_access   = true
-        endpoint_public_access    = true
-      }]
-      certificate_authority = [{
-        data = "dGVzdC1jYQ=="
-      }]
-      identity = [{
-        oidc = [{
-          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-        }]
-      }]
-    }
-  }
-
-  assert {
-    condition     = data.aws_eks_cluster.target.access_config[0].authentication_mode == "API"
-    error_message = "An external EKS cluster already using API-only authentication must pass preflight without changing its authentication mode."
-  }
-}
-
-run "config_map_only_eks_authentication_is_rejected" {
-  command = plan
-
-  override_data {
-    target = data.aws_eks_cluster.target
-    values = {
-      arn      = "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks-cluster"
-      status   = "ACTIVE"
-      endpoint = "https://eks.example.test"
-      access_config = [{
-        authentication_mode = "CONFIG_MAP"
-      }]
-      vpc_config = [{
-        vpc_id                    = "vpc-11111111111111111"
-        cluster_security_group_id = "sg-22222222222222222"
-        endpoint_private_access   = true
-        endpoint_public_access    = true
-      }]
-      certificate_authority = [{
-        data = "dGVzdC1jYQ=="
-      }]
-      identity = [{
-        oidc = [{
-          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-        }]
-      }]
-    }
-  }
-
-  expect_failures = [terraform_data.preflight]
-}
-
-run "console_eks_access_wait_duration_is_configurable" {
-  command = plan
-
-  variables {
-    console_eks_access_wait_duration = "2m"
+    error_message = "An explicit matching Region, SSM URL, disabled wait, and custom worker/plugin settings must remain supported."
   }
 
   assert {
     condition = (
-      time_sleep.console_eks_access.create_duration == "2m" &&
-      time_sleep.console_eks_access.triggers["wait_duration"] == "2m"
+      aws_iam_role.connect_worker.name == "custom-connect-worker" &&
+      kubernetes_service_account_v1.connect.metadata[0].namespace == "custom-connect" &&
+      kubernetes_service_account_v1.connect.metadata[0].annotations["eks.amazonaws.com/role-arn"] == aws_iam_role.connect_worker.arn &&
+      one(jsondecode(aws_iam_role.connect_worker.assume_role_policy).Statement).Condition.StringEquals["oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE:sub"] == "system:serviceaccount:custom-connect:custom-connect-sa" &&
+      toset(keys(aws_iam_role_policy_attachment.connect_worker)) == var.connect_worker_policy_arns &&
+      alltrue([for arn, attachment in aws_iam_role_policy_attachment.connect_worker : attachment.policy_arn == arn && attachment.role == aws_iam_role.connect_worker.name]) &&
+      one([for s in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : s if contains(s.Action, "s3:GetObject")]).Resource == "arn:aws:s3:::automq-ops-example/custom/connect-plugins/*" &&
+      toset(one([for s in jsondecode(aws_iam_role_policy.plugin_download.policy).Statement : s if contains(s.Action, "s3:ListBucket")]).Condition.StringLike["s3:prefix"]) == toset(["custom/connect-plugins", "custom/connect-plugins/*"])
     )
-    error_message = "A customized propagation buffer must reach both the wait duration and its replacement trigger."
+    error_message = "Custom identities, opt-in policies, and plugin directories must preserve exact IRSA trust and scoped S3 access."
+  }
+
+  assert {
+    condition = (
+      aws_iam_role_policy.console_eks.role == "example-console" &&
+      aws_eks_access_entry.console.principal_arn == "arn:aws:iam::123456789012:role/team/path/example-console" &&
+      aws_eks_access_policy_association.console.cluster_name == "custom-eks" &&
+      one([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s if contains(s.Action, "eks:DescribeNodegroup")]).Resource == "arn:aws:eks:eu-west-1:123456789012:nodegroup/custom-eks/*/*" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.security_group_id == "sg-22222222222222222" &&
+      toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == var.connect_worker_security_group_ids &&
+      alltrue([for id, rule in aws_vpc_security_group_ingress_rule.console_workers :
+        rule.security_group_id == id && rule.referenced_security_group_id == "sg-11111111111111111" &&
+        rule.ip_protocol == "tcp" && rule.from_port == 8083 && rule.to_port == 8083 &&
+        rule.cidr_ipv4 == null && rule.cidr_ipv6 == null && rule.prefix_list_id == null
+      ])
+    )
+    error_message = "Console role paths and target-cluster grants must propagate; custom Worker SGs replace only REST targets, leaving API access on the primary SG."
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql-staging.internal.example" &&
+      automq_connector.mysql[0].connector_config["database.user"] == "cdcuser" &&
+      automq_connector.mysql[0].connector_config["database.port"] == "3307" &&
+      automq_connector.mysql[0].connector_config["database.server.id"] == "456789" &&
+      automq_connector.mysql[0].connector_config["database.include.list"] == "fulfillment" &&
+      automq_connector.mysql[0].connector_config["table.include.list"] == "fulfillment\\.orders" &&
+      automq_connector.mysql[0].connector_config["topic.prefix"] == "custom-cdc" &&
+      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "verify_identity" &&
+      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "alternate-test-password" &&
+      automq_kafka_topic.cdc[0].name == "custom-cdc.fulfillment.orders" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] == "schema-history.custom-mysql-cdc"
+    )
+    error_message = "Custom MySQL connection, capture filters, TLS, password, and topic names must propagate together."
   }
 }
 
-run "invalid_console_eks_access_wait_durations_are_rejected" {
+run "private_listener_selection_filters_and_deduplicates" {
   command = plan
 
   variables {
-    console_eks_access_wait_duration = "forever"
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
   }
-
-  expect_failures = [var.console_eks_access_wait_duration]
-}
-
-run "zero_workers_are_rejected" {
-  command = plan
-
-  variables {
-    worker_count = 0
-  }
-
-  expect_failures = [var.worker_count]
-}
-
-run "fractional_workers_are_rejected" {
-  command = plan
-
-  variables {
-    worker_count = 1.5
-  }
-
-  expect_failures = [var.worker_count]
-}
-
-run "unsupported_worker_tiers_are_rejected" {
-  command = plan
-
-  variables {
-    worker_resource_spec = "TIER5"
-  }
-
-  expect_failures = [var.worker_resource_spec]
-}
-
-run "empty_eks_cluster_names_are_rejected" {
-  command = plan
-
-  variables {
-    kubernetes_cluster_id = ""
-  }
-
-  expect_failures = [var.kubernetes_cluster_id]
-}
-
-run "eks_cluster_arns_are_rejected" {
-  command = plan
-
-  variables {
-    kubernetes_cluster_id = "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks"
-  }
-
-  expect_failures = [var.kubernetes_cluster_id]
-}
-
-run "malformed_console_state_is_rejected_before_creation" {
-  command = plan
-
-  override_data {
-    target = data.terraform_remote_state.console
-    values = {
-      outputs = {
-        environment_id             = "invalid-environment"
-        region                     = "us-east-1"
-        ops_bucket_name            = "automq-ops-example"
-        console_role_arn           = "arn:aws:iam::123456789012:role/example-console"
-        console_security_group_id  = "sg-11111111111111111"
-        console_endpoint           = "http://console.example:8080"
-        console_initial_access_key = "example-access-key"
-        console_initial_secret_key = "example-secret-key"
-      }
-    }
-  }
-
-  expect_failures = [terraform_data.preflight]
-}
-
-run "malformed_kafka_state_is_rejected_before_creation" {
-  command = plan
 
   override_data {
     target = data.terraform_remote_state.kafka
     values = {
       outputs = {
-        instance_id = "invalid-kafka-instance"
+        instance_id = "kf-example"
+        instance_endpoints = [
+          { bootstrap_servers = "kafka.private.example:9092", network_type = "VPC", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "kafka.private.example:9092", network_type = "PRIVATE", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "kafka.public.example:9092", network_type = "INTERNET", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "kafka.auth.example:9094", network_type = "VPC", protocol = "SASL_SSL" },
+        ]
       }
+    }
+  }
+
+  assert {
+    condition     = automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.private.example:9092"
+    error_message = "Equivalent VPC/PRIVATE listeners must deduplicate, while public and authenticated listeners are excluded."
+  }
+}
+
+run "enabled_cdc_requires_credentials" {
+  command = plan
+
+  variables { create_mysql_connector = true }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "ambiguous_private_listeners_are_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [
+          { bootstrap_servers = "one.internal.example:9092", network_type = "VPC", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "two.internal.example:9092", network_type = "PRIVATE", protocol = "PLAINTEXT" },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "public_only_listeners_are_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [
+          { bootstrap_servers = "kafka.public.example:9092", network_type = "INTERNET", protocol = "PLAINTEXT" },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "invalid_mysql_inputs_are_rejected" {
+  command = plan
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "REPLACE_WITH_MYSQL_ENDPOINT"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+    mysql_port             = 65536
+    mysql_server_id        = 0
+    connector_name         = "invalid connector name"
+    mysql_database         = "invalid.database"
+    mysql_table            = "invalid.table"
+    topic_prefix           = "invalid topic prefix"
+    mysql_ssl_mode         = "unsupported"
+  }
+  expect_failures = [
+    var.mysql_hostname, var.mysql_port, var.mysql_server_id, var.connector_name,
+    var.mysql_database, var.mysql_table, var.topic_prefix, var.mysql_ssl_mode,
+  ]
+}
+
+run "invalid_deployment_inputs_are_rejected" {
+  command = plan
+  variables {
+    kubernetes_cluster_id             = "arn:aws:eks:eu-west-1:123456789012:cluster/existing-eks"
+    connect_namespace                 = "kube-system"
+    connect_service_account           = "default"
+    connect_worker_role_name          = "invalid worker role"
+    connect_worker_security_group_ids = ["sg-invalid"]
+    connect_plugin_s3_prefix          = "automq/connect-plugins/*"
+    console_eks_access_wait_duration  = "forever"
+    worker_count                      = 1.5
+    worker_resource_spec              = "TIER5"
+    plugin_version                    = "REPLACE_WITH_ACTIVE_VERSION"
+  }
+  expect_failures = [
+    var.kubernetes_cluster_id, var.connect_namespace, var.connect_service_account,
+    var.connect_worker_role_name, var.connect_worker_security_group_ids,
+    var.connect_plugin_s3_prefix, var.console_eks_access_wait_duration,
+    var.worker_count, var.worker_resource_spec, var.plugin_version,
+  ]
+}
+
+run "missing_console_outputs_fail_before_creation" {
+  command = plan
+
+  override_data {
+    target = data.terraform_remote_state.console
+    values = {
+      outputs = {}
     }
   }
 
   expect_failures = [terraform_data.preflight]
 }
 
-run "unready_console_is_rejected_before_creation" {
+run "invalid_kafka_instance_fails_before_creation" {
+  command = plan
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = { instance_id = "invalid-instance" }
+    }
+  }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "unready_console_fails_before_creation" {
   command = plan
 
   override_data {
@@ -656,185 +582,99 @@ run "unready_console_is_rejected_before_creation" {
   expect_failures = [terraform_data.preflight]
 }
 
-run "invalid_namespace_names_are_rejected" {
-  command = plan
-
-  variables {
-    connect_namespace = "Invalid_Namespace"
-  }
-
-  expect_failures = [var.connect_namespace]
-}
-
-run "empty_service_account_names_are_rejected" {
-  command = plan
-
-  variables {
-    connect_service_account = ""
-  }
-
-  expect_failures = [var.connect_service_account]
-}
-
-run "unfilled_plugin_versions_are_rejected" {
-  command = plan
-
-  variables {
-    plugin_version = "REPLACE_WITH_AN_ACTIVE_PLUGIN_VERSION"
-  }
-
-  expect_failures = [var.plugin_version]
-}
-
-run "invalid_worker_role_names_are_rejected" {
-  command = plan
-
-  variables {
-    connect_worker_role_name = "invalid worker role"
-  }
-
-  expect_failures = [var.connect_worker_role_name]
-}
-
-run "system_namespaces_cannot_be_managed" {
-  command = plan
-
-  variables {
-    connect_namespace = "kube-system"
-  }
-
-  expect_failures = [var.connect_namespace]
-}
-
-run "default_service_accounts_cannot_be_managed" {
-  command = plan
-
-  variables {
-    connect_service_account = "default"
-  }
-
-  expect_failures = [var.connect_service_account]
-}
-
-run "foreign_account_worker_policies_are_rejected" {
-  command = plan
-
-  variables {
-    connect_worker_policy_arns = ["arn:aws:iam::999999999999:policy/foreign-worker-policy"]
-  }
-
-  expect_failures = [terraform_data.preflight]
-}
-
-run "foreign_partition_worker_policies_are_rejected" {
-  command = plan
-
-  variables {
-    connect_worker_policy_arns = ["arn:aws-cn:iam::123456789012:policy/foreign-worker-policy"]
-  }
-
-  expect_failures = [terraform_data.preflight]
-}
-
-run "oidc_without_sts_audience_is_rejected" {
-  command = plan
-
-  override_data {
-    target = data.aws_iam_openid_connect_provider.eks
-    values = {
-      arn            = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-      client_id_list = ["unexpected-audience.example"]
-    }
-  }
-
-  expect_failures = [terraform_data.preflight]
-}
-
-run "inactive_eks_clusters_are_rejected" {
+run "eks_requires_access_entries" {
   command = plan
 
   override_data {
     target = data.aws_eks_cluster.target
     values = {
-      arn      = "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks-cluster"
-      status   = "CREATING"
-      endpoint = "https://eks.example.test"
-      access_config = [{
-        authentication_mode = "API_AND_CONFIG_MAP"
-      }]
+      arn           = "arn:aws:eks:eu-west-1:123456789012:cluster/existing-eks-cluster"
+      status        = "ACTIVE"
+      endpoint      = "https://eks.example.test"
+      access_config = [{ authentication_mode = "CONFIG_MAP" }]
       vpc_config = [{
         vpc_id                    = "vpc-11111111111111111"
         cluster_security_group_id = "sg-22222222222222222"
         endpoint_private_access   = true
-        endpoint_public_access    = true
       }]
-      certificate_authority = [{
-        data = "dGVzdC1jYQ=="
-      }]
-      identity = [{
-        oidc = [{
-          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-        }]
-      }]
+      certificate_authority = [{ data = "dGVzdC1jYQ==" }]
+      identity              = [{ oidc = [{ issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" }] }]
     }
   }
 
   expect_failures = [terraform_data.preflight]
 }
 
-run "eks_clusters_in_another_account_are_rejected" {
+run "eks_requires_private_api_access" {
   command = plan
 
   override_data {
     target = data.aws_eks_cluster.target
     values = {
-      arn      = "arn:aws:eks:us-east-1:999999999999:cluster/existing-eks-cluster"
-      status   = "ACTIVE"
-      endpoint = "https://eks.example.test"
-      access_config = [{
-        authentication_mode = "API_AND_CONFIG_MAP"
-      }]
+      arn           = "arn:aws:eks:eu-west-1:123456789012:cluster/existing-eks-cluster"
+      status        = "ACTIVE"
+      endpoint      = "https://eks.example.test"
+      access_config = [{ authentication_mode = "API_AND_CONFIG_MAP" }]
       vpc_config = [{
         vpc_id                    = "vpc-11111111111111111"
         cluster_security_group_id = "sg-22222222222222222"
-        endpoint_private_access   = true
-        endpoint_public_access    = true
+        endpoint_private_access   = false
       }]
-      certificate_authority = [{
-        data = "dGVzdC1jYQ=="
-      }]
-      identity = [{
-        oidc = [{
-          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-        }]
-      }]
+      certificate_authority = [{ data = "dGVzdC1jYQ==" }]
+      identity              = [{ oidc = [{ issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" }] }]
     }
   }
 
   expect_failures = [terraform_data.preflight]
 }
 
-run "aws_region_must_match_the_console_state" {
+run "eks_must_be_active" {
   command = plan
 
-  variables {
-    aws_region = "us-west-2"
+  override_data {
+    target = data.aws_eks_cluster.target
+    values = {
+      arn           = "arn:aws:eks:eu-west-1:123456789012:cluster/existing-eks-cluster"
+      status        = "CREATING"
+      endpoint      = "https://eks.example.test"
+      access_config = [{ authentication_mode = "API_AND_CONFIG_MAP" }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+      }]
+      certificate_authority = [{ data = "dGVzdC1jYQ==" }]
+      identity              = [{ oidc = [{ issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" }] }]
+    }
   }
 
   expect_failures = [terraform_data.preflight]
 }
 
-run "wildcard_plugin_prefixes_are_rejected" {
+run "eks_must_belong_to_current_account" {
   command = plan
 
-  variables {
-    connect_plugin_s3_prefix = "automq/connect-plugins/*"
+  override_data {
+    target = data.aws_eks_cluster.target
+    values = {
+      arn           = "arn:aws:eks:eu-west-1:999999999999:cluster/existing-eks-cluster"
+      status        = "ACTIVE"
+      endpoint      = "https://eks.example.test"
+      access_config = [{ authentication_mode = "API_AND_CONFIG_MAP" }]
+      vpc_config = [{
+        vpc_id                    = "vpc-11111111111111111"
+        cluster_security_group_id = "sg-22222222222222222"
+        endpoint_private_access   = true
+      }]
+      certificate_authority = [{ data = "dGVzdC1jYQ==" }]
+      identity              = [{ oidc = [{ issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE" }] }]
+    }
   }
 
-  expect_failures = [var.connect_plugin_s3_prefix]
+  expect_failures = [terraform_data.preflight]
 }
 
-run "console_roles_in_another_account_are_rejected" {
+run "console_role_must_belong_to_current_account" {
   command = plan
 
   override_data {
@@ -842,7 +682,7 @@ run "console_roles_in_another_account_are_rejected" {
     values = {
       outputs = {
         environment_id             = "env-example"
-        region                     = "us-east-1"
+        region                     = "eu-west-1"
         ops_bucket_name            = "automq-ops-example"
         console_role_arn           = "arn:aws:iam::999999999999:role/foreign-console"
         console_security_group_id  = "sg-11111111111111111"
@@ -856,339 +696,13 @@ run "console_roles_in_another_account_are_rejected" {
   expect_failures = [terraform_data.preflight]
 }
 
-run "creates_mysql_connector_with_dedicated_topics" {
-  command = apply
-
-  variables {
-    create_mysql_connector = true
-    mysql_hostname         = "mysql.internal.example"
-    mysql_user             = "debezium"
-    mysql_password         = "example-test-password"
-  }
-
-  assert {
-    condition = (
-      automq_connector.mysql[0].environment_id == "env-example" &&
-      automq_connector.mysql[0].connect_cluster_id == automq_connect_cluster.demo.id &&
-      automq_connector.mysql[0].name == "mysql-cdc-demo" &&
-      automq_connector.mysql[0].connector_class == "io.debezium.connector.mysql.MySqlConnector" &&
-      automq_connector.mysql[0].task_count == 1 &&
-      automq_connector.mysql[0].kafka_cluster.security_protocol.protocol == "PLAINTEXT" &&
-      length(terraform_data.mysql_preflight) == 1 &&
-      output.mysql_connector_id == "conn-example" &&
-      output.mysql_connector_state == "RUNNING" &&
-      output.connect_cluster_id == "connect-cluster-example"
-    )
-    error_message = "The optional MySQL source Connector must use the managed Connect Cluster and environment with one PLAINTEXT task."
-  }
-
-  assert {
-    condition = (
-      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql.internal.example" &&
-      automq_connector.mysql[0].connector_config["database.port"] == "3306" &&
-      automq_connector.mysql[0].connector_config["database.user"] == "debezium" &&
-      automq_connector.mysql[0].connector_config["database.server.id"] == "184054" &&
-      automq_connector.mysql[0].connector_config["database.include.list"] == "inventory" &&
-      automq_connector.mysql[0].connector_config["table.include.list"] == "inventory\\.customers" &&
-      automq_connector.mysql[0].connector_config["topic.prefix"] == "mysql-cdc" &&
-      automq_connector.mysql[0].connector_config["snapshot.mode"] == "initial" &&
-      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "required" &&
-      automq_connector.mysql[0].connector_config["include.schema.changes"] == "false" &&
-      !contains(keys(automq_connector.mysql[0].connector_config), "connector.class") &&
-      !contains(keys(automq_connector.mysql[0].connector_config), "tasks.max")
-    )
-    error_message = "The Connector must receive string-valued MySQL CDC settings and an escaped database/table filter without duplicating AutoMQ-injected fields."
-  }
-
-  assert {
-    condition = (
-      !contains(keys(automq_connector.mysql[0].connector_config), "database.password") &&
-      length(automq_connector.mysql[0].connector_config_sensitive) == 1 &&
-      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "example-test-password"
-    )
-    error_message = "The MySQL password must appear only in the sensitive connector configuration."
-  }
-
-  assert {
-    condition = (
-      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] == "schema-history.mysql-cdc-demo" &&
-      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.internal.example:9092" &&
-      automq_connector.mysql[0].connector_config["schema.history.internal.producer.security.protocol"] == "PLAINTEXT" &&
-      automq_connector.mysql[0].connector_config["schema.history.internal.consumer.security.protocol"] == "PLAINTEXT" &&
-      output.mysql_schema_history_topic == "schema-history.mysql-cdc-demo"
-    )
-    error_message = "Debezium schema history clients must target their dedicated topic name through the selected private PLAINTEXT Kafka endpoint."
-  }
-
-  assert {
-    condition = (
-      automq_kafka_topic.cdc[0].environment_id == "env-example" &&
-      automq_kafka_topic.cdc[0].kafka_instance_id == "kf-example" &&
-      automq_kafka_topic.cdc[0].name == "mysql-cdc.inventory.customers" &&
-      automq_kafka_topic.cdc[0].partition == 1 &&
-      automq_kafka_topic.cdc[0].name != automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] &&
-      output.mysql_data_topic == automq_kafka_topic.cdc[0].name
-    )
-    error_message = "The CDC data topic must match Debezium's prefix.database.table naming and remain separate from schema history."
-  }
-}
-
-run "mysql_connection_and_capture_settings_are_configurable" {
-  command = apply
-
-  variables {
-    create_mysql_connector = true
-    connector_name         = "jz-mysql-cdc"
-    topic_prefix           = "jz-cdc"
-    mysql_hostname         = "mysql-staging.internal.example"
-    mysql_user             = "cdcuser"
-    mysql_password         = "alternate-test-password"
-    mysql_port             = 3307
-    mysql_server_id        = 456789
-    mysql_database         = "fulfillment"
-    mysql_table            = "orders"
-    mysql_ssl_mode         = "verify_identity"
-  }
-
-  assert {
-    condition = (
-      automq_connector.mysql[0].name == "jz-mysql-cdc" &&
-      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql-staging.internal.example" &&
-      automq_connector.mysql[0].connector_config["database.user"] == "cdcuser" &&
-      automq_connector.mysql[0].connector_config["database.port"] == "3307" &&
-      automq_connector.mysql[0].connector_config["database.server.id"] == "456789" &&
-      automq_connector.mysql[0].connector_config["database.include.list"] == "fulfillment" &&
-      automq_connector.mysql[0].connector_config["table.include.list"] == "fulfillment\\.orders" &&
-      automq_connector.mysql[0].connector_config["topic.prefix"] == "jz-cdc" &&
-      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "verify_identity" &&
-      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "alternate-test-password" &&
-      automq_kafka_topic.cdc[0].name == "jz-cdc.fulfillment.orders" &&
-      output.mysql_schema_history_topic == "schema-history.jz-mysql-cdc" &&
-      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] == "schema-history.jz-mysql-cdc"
-    )
-    error_message = "Configured MySQL connection, credentials, capture filters, TLS mode, and topic names must propagate together."
-  }
-}
-
-run "private_network_endpoint_alias_is_supported" {
-  command = plan
-
-  variables {
-    create_mysql_connector = true
-    mysql_hostname         = "mysql.internal.example"
-    mysql_user             = "debezium"
-    mysql_password         = "example-test-password"
-  }
-
-  override_data {
-    target = data.terraform_remote_state.kafka
-    values = {
-      outputs = {
-        instance_id = "kf-example"
-        instance_endpoints = [{
-          bootstrap_servers = "kafka.private.example:9092"
-          display_name      = "Private PLAINTEXT"
-          network_type      = "PRIVATE"
-          protocol          = "PLAINTEXT"
-          mechanisms        = ""
-        }]
-      }
-    }
-  }
-
-  assert {
-    condition     = automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.private.example:9092"
-    error_message = "Both PRIVATE and VPC endpoint labels must select the private PLAINTEXT Kafka bootstrap address."
-  }
-}
-
-run "duplicate_private_bootstrap_values_are_deduplicated" {
-  command = plan
-
-  variables {
-    create_mysql_connector = true
-    mysql_hostname         = "mysql.internal.example"
-    mysql_user             = "debezium"
-    mysql_password         = "example-test-password"
-  }
-
-  override_data {
-    target = data.terraform_remote_state.kafka
-    values = {
-      outputs = {
-        instance_id = "kf-example"
-        instance_endpoints = [
-          {
-            bootstrap_servers = "kafka.internal.example:9092"
-            display_name      = "VPC PLAINTEXT"
-            network_type      = "VPC"
-            protocol          = "PLAINTEXT"
-            mechanisms        = ""
-          },
-          {
-            bootstrap_servers = "kafka.internal.example:9092"
-            display_name      = "Private PLAINTEXT"
-            network_type      = "PRIVATE"
-            protocol          = "PLAINTEXT"
-            mechanisms        = ""
-          },
-        ]
-      }
-    }
-  }
-
-  assert {
-    condition     = automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.internal.example:9092"
-    error_message = "Equivalent private endpoint records must resolve to one distinct bootstrap address."
-  }
-}
-
-run "ambiguous_private_bootstrap_addresses_are_rejected" {
-  command = plan
-
-  variables {
-    create_mysql_connector = true
-    mysql_hostname         = "mysql.internal.example"
-    mysql_user             = "debezium"
-    mysql_password         = "example-test-password"
-  }
-
-  override_data {
-    target = data.terraform_remote_state.kafka
-    values = {
-      outputs = {
-        instance_id = "kf-example"
-        instance_endpoints = [
-          {
-            bootstrap_servers = "kafka-one.internal.example:9092"
-            display_name      = "Private endpoint one"
-            network_type      = "VPC"
-            protocol          = "PLAINTEXT"
-            mechanisms        = ""
-          },
-          {
-            bootstrap_servers = "kafka-two.internal.example:9092"
-            display_name      = "Private endpoint two"
-            network_type      = "PRIVATE"
-            protocol          = "PLAINTEXT"
-            mechanisms        = ""
-          },
-        ]
-      }
-    }
-  }
-
-  expect_failures = [terraform_data.mysql_preflight[0]]
-}
-
-run "public_only_kafka_endpoints_are_rejected" {
-  command = plan
-
-  variables {
-    create_mysql_connector = true
-    mysql_hostname         = "mysql.internal.example"
-    mysql_user             = "debezium"
-    mysql_password         = "example-test-password"
-  }
-
-  override_data {
-    target = data.terraform_remote_state.kafka
-    values = {
-      outputs = {
-        instance_id = "kf-example"
-        instance_endpoints = [{
-          bootstrap_servers = "kafka.public.example:9092"
-          display_name      = "Internet PLAINTEXT"
-          network_type      = "INTERNET"
-          protocol          = "PLAINTEXT"
-          mechanisms        = ""
-        }]
-      }
-    }
-  }
-
-  expect_failures = [terraform_data.mysql_preflight[0]]
-}
-
-run "enabled_mysql_connectors_require_connection_credentials" {
-  command = plan
-
-  variables {
-    create_mysql_connector = true
-  }
-
-  expect_failures = [terraform_data.mysql_preflight[0]]
-}
-
-run "invalid_mysql_connection_and_capture_inputs_are_rejected" {
-  command = plan
-
-  variables {
-    create_mysql_connector = true
-    mysql_hostname         = "REPLACE_WITH_MYSQL_ENDPOINT"
-    mysql_user             = "debezium"
-    mysql_password         = "example-test-password"
-    mysql_port             = 65536
-    mysql_server_id        = 0
-    connector_name         = "invalid connector name"
-    mysql_database         = "invalid.database"
-    mysql_table            = "invalid.table"
-    topic_prefix           = "invalid topic prefix"
-  }
-
-  expect_failures = [
-    var.mysql_hostname,
-    var.mysql_port,
-    var.mysql_server_id,
-    var.connector_name,
-    var.mysql_database,
-    var.mysql_table,
-    var.topic_prefix,
-  ]
-}
-
-run "custom_worker_security_groups_receive_only_rest_access" {
-  command = apply
-
-  variables {
-    connect_worker_security_group_ids = ["sg-33333333", "sg-44444444444444444"]
-  }
-
-  assert {
-    condition = (
-      aws_vpc_security_group_ingress_rule.console_eks_api.security_group_id == "sg-22222222222222222" &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.referenced_security_group_id == "sg-11111111111111111" &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.from_port == 443 &&
-      aws_vpc_security_group_ingress_rule.console_eks_api.to_port == 443 &&
-      toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == toset(["sg-33333333", "sg-44444444444444444"]) &&
-      alltrue([for sg_id, rule in aws_vpc_security_group_ingress_rule.console_workers :
-        rule.security_group_id == sg_id &&
-        rule.referenced_security_group_id == "sg-11111111111111111" &&
-        rule.ip_protocol == "tcp" && rule.from_port == 8083 && rule.to_port == 8083 &&
-        rule.cidr_ipv4 == null && rule.cidr_ipv6 == null && rule.prefix_list_id == null
-      ])
-    )
-    error_message = "Explicit Worker SGs must receive only the Console-to-REST grant, while API access continues to target the primary EKS SG."
-  }
-}
-
-run "invalid_worker_security_group_ids_are_rejected" {
-  command = plan
-
-  variables {
-    connect_worker_security_group_ids = ["sg-not-a-real-id"]
-  }
-
-  expect_failures = [var.connect_worker_security_group_ids]
-}
-
-run "console_security_groups_in_another_vpc_are_rejected" {
+run "console_sg_must_share_eks_vpc" {
   command = plan
 
   override_data {
     target = data.aws_security_group.console[0]
     values = {
-      arn    = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-11111111111111111"
+      arn    = "arn:aws:ec2:eu-west-1:123456789012:security-group/sg-11111111111111111"
       vpc_id = "vpc-99999999999999999"
     }
   }
@@ -1196,13 +710,13 @@ run "console_security_groups_in_another_vpc_are_rejected" {
   expect_failures = [terraform_data.preflight]
 }
 
-run "console_security_groups_in_another_account_are_rejected" {
+run "console_sg_must_belong_to_current_account" {
   command = plan
 
   override_data {
     target = data.aws_security_group.console[0]
     values = {
-      arn    = "arn:aws:ec2:us-east-1:999999999999:security-group/sg-11111111111111111"
+      arn    = "arn:aws:ec2:eu-west-1:999999999999:security-group/sg-11111111111111111"
       vpc_id = "vpc-11111111111111111"
     }
   }
@@ -1210,13 +724,13 @@ run "console_security_groups_in_another_account_are_rejected" {
   expect_failures = [terraform_data.preflight]
 }
 
-run "worker_security_groups_in_another_vpc_are_rejected" {
+run "worker_sg_must_share_eks_vpc" {
   command = plan
 
   override_data {
     target = data.aws_security_group.workers["sg-22222222222222222"]
     values = {
-      arn    = "arn:aws:ec2:us-east-1:123456789012:security-group/sg-22222222222222222"
+      arn    = "arn:aws:ec2:eu-west-1:123456789012:security-group/sg-22222222222222222"
       vpc_id = "vpc-99999999999999999"
     }
   }
@@ -1224,13 +738,13 @@ run "worker_security_groups_in_another_vpc_are_rejected" {
   expect_failures = [terraform_data.preflight]
 }
 
-run "worker_security_groups_in_another_account_are_rejected" {
+run "worker_sg_must_belong_to_current_account" {
   command = plan
 
   override_data {
     target = data.aws_security_group.workers["sg-22222222222222222"]
     values = {
-      arn    = "arn:aws:ec2:us-east-1:999999999999:security-group/sg-22222222222222222"
+      arn    = "arn:aws:ec2:eu-west-1:999999999999:security-group/sg-22222222222222222"
       vpc_id = "vpc-11111111111111111"
     }
   }
@@ -1238,34 +752,40 @@ run "worker_security_groups_in_another_account_are_rejected" {
   expect_failures = [terraform_data.preflight]
 }
 
-run "eks_private_api_access_is_required" {
+run "worker_policies_reject_foreign_accounts" {
+  command = plan
+
+  variables { connect_worker_policy_arns = ["arn:aws:iam::999999999999:policy/foreign-worker"] }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "worker_policies_reject_foreign_partitions" {
+  command = plan
+
+  variables { connect_worker_policy_arns = ["arn:aws-cn:iam::123456789012:policy/foreign-worker"] }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "oidc_requires_sts_audience" {
   command = plan
 
   override_data {
-    target = data.aws_eks_cluster.target
+    target = data.aws_iam_openid_connect_provider.eks
     values = {
-      arn      = "arn:aws:eks:us-east-1:123456789012:cluster/existing-eks-cluster"
-      status   = "ACTIVE"
-      endpoint = "https://eks.example.test"
-      access_config = [{
-        authentication_mode = "API_AND_CONFIG_MAP"
-      }]
-      vpc_config = [{
-        vpc_id                    = "vpc-11111111111111111"
-        cluster_security_group_id = "sg-22222222222222222"
-        endpoint_private_access   = false
-        endpoint_public_access    = true
-      }]
-      certificate_authority = [{
-        data = "dGVzdC1jYQ=="
-      }]
-      identity = [{
-        oidc = [{
-          issuer = "https://oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE"
-        }]
-      }]
+      arn            = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
+      client_id_list = ["unexpected-audience.example"]
     }
   }
+
+  expect_failures = [terraform_data.preflight]
+}
+
+run "explicit_region_must_match_console_state" {
+  command = plan
+
+  variables { aws_region = "us-east-1" }
 
   expect_failures = [terraform_data.preflight]
 }

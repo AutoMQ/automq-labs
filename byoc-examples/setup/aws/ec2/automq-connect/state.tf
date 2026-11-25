@@ -28,6 +28,9 @@ locals {
   ops_bucket_name           = try(data.terraform_remote_state.console.outputs.ops_bucket_name, "")
   ops_bucket_arn            = "arn:${data.aws_partition.current.partition}:s3:::${local.ops_bucket_name}"
 
+  # A missing Console Region is rejected by preflight; keep provider setup valid.
+  aws_region = coalesce(var.aws_region, local.console_region, "us-east-1")
+
   console_endpoint_valid       = can(regex("^https?://[^[:space:]]+$", local.console_endpoint))
   console_access_key_valid     = length(trimspace(local.console_access_key)) > 0
   console_secret_key_valid     = length(trimspace(local.console_secret_key)) > 0

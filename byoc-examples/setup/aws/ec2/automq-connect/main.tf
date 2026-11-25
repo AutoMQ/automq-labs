@@ -70,7 +70,7 @@ resource "terraform_data" "preflight" {
     }
 
     precondition {
-      condition     = var.aws_region == local.console_region
+      condition     = local.aws_region == local.console_region
       error_message = "aws_region must match the Region exported by the Console state so that EKS and Connect use the environment's Region."
     }
 
@@ -178,7 +178,7 @@ locals {
     if contains(["VPC", "PRIVATE"], upper(endpoint.network_type)) &&
     upper(endpoint.protocol) == "PLAINTEXT" && trimspace(endpoint.bootstrap_servers) != ""
   ]), [])
-  mysql_bootstrap_servers = length(local.mysql_bootstrap_candidates) == 1 ? local.mysql_bootstrap_candidates[0] : "missing-vpc-plaintext-endpoint:9092"
+  mysql_bootstrap_servers = try(one(local.mysql_bootstrap_candidates), null)
 
   data_topic_name           = "${var.topic_prefix}.${var.mysql_database}.${var.mysql_table}"
   schema_history_topic_name = "schema-history.${var.connector_name}"
@@ -232,9 +232,9 @@ resource "automq_connector" "mysql" {
   }
 
   connector_config = {
-    "database.hostname"      = var.mysql_hostname == null ? "" : var.mysql_hostname
+    "database.hostname"      = var.mysql_hostname
     "database.port"          = tostring(var.mysql_port)
-    "database.user"          = var.mysql_user == null ? "" : var.mysql_user
+    "database.user"          = var.mysql_user
     "database.server.id"     = tostring(var.mysql_server_id)
     "database.include.list"  = var.mysql_database
     "table.include.list"     = "${var.mysql_database}\\.${var.mysql_table}"
@@ -254,7 +254,7 @@ resource "automq_connector" "mysql" {
   }
 
   connector_config_sensitive = {
-    "database.password" = var.mysql_password == null ? "" : var.mysql_password
+    "database.password" = var.mysql_password
   }
 
   timeouts = {

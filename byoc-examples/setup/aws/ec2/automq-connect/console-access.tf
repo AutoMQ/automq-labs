@@ -1,7 +1,7 @@
 locals {
   # IAM policy APIs take the role name, without its optional IAM path.
   console_role_name = try(regex("/([^/]+)$", local.console_role_arn)[0], "missing-console-state")
-  eks_arn_prefix    = "arn:${data.aws_partition.current.partition}:eks:${var.aws_region}:${data.aws_caller_identity.current.account_id}"
+  eks_arn_prefix    = "arn:${data.aws_partition.current.partition}:eks:${local.aws_region}:${data.aws_caller_identity.current.account_id}"
 }
 
 # The Role and its EC2 instance profile remain owned by automq-console.
@@ -22,7 +22,7 @@ resource "aws_iam_role_policy" "console_eks" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "aws:RequestedRegion" = var.aws_region
+            "aws:RequestedRegion" = local.aws_region
           }
         }
       },
@@ -91,13 +91,7 @@ resource "time_sleep" "console_eks_access" {
   create_duration = var.console_eks_access_wait_duration
 
   triggers = {
-    wait_duration           = var.console_eks_access_wait_duration
-    console_iam_policy_id   = aws_iam_role_policy.console_eks.id
-    console_eks_access_id   = aws_eks_access_policy_association.console.id
-    console_eks_api_rule_id = aws_vpc_security_group_ingress_rule.console_eks_api.security_group_rule_id
-    console_worker_rule_ids = jsonencode({
-      for group_id, rule in aws_vpc_security_group_ingress_rule.console_workers : group_id => rule.security_group_rule_id
-    })
+    wait_duration = var.console_eks_access_wait_duration
   }
 
   lifecycle {

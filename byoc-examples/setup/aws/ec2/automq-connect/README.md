@@ -2,158 +2,40 @@
 last_updated: 2026-11-25
 ---
 
-# AutoMQ Connect Cluster on an existing EKS cluster
+# AutoMQ Connect on an existing EKS cluster
 
-Create a dedicated Kubernetes namespace, ServiceAccount, worker IAM role, and
-AutoMQ Connect Cluster, and authorize the existing Console role to manage that
-EKS cluster. Terraform also opens Console-to-EKS API and Console-to-worker
-REST ingress automatically. The Cluster uses the Kafka Instance from
-`../automq-cluster` and installs your registered
-`mysql-debezium-cdc` plugin. The Console and Kafka brokers run on EC2; Connect
-workers run on EKS.
+Create one `TIER1` Connect worker on an existing EKS cluster, using the Kafka
+Instance from `../automq-cluster`. Terraform creates a dedicated namespace,
+ServiceAccount, and worker IAM role, and configures Console access to EKS and
+worker REST. The Console and Kafka brokers run on EC2; Connect workers run on EKS.
 
-By default, `create_mysql_connector = false` creates the Cluster infrastructure
-without starting CDC. A MySQL server, database credentials, and MySQL network
-access are not required in that mode. To capture one table, enable
-[optional MySQL CDC](#optional-mysql-cdc) in this same root and apply; Terraform
-also creates the Connector and its CDC data Topic. Debezium creates its own
-schema history Topic when it starts. Terraform-managed Connect resources share
-one state.
+The default deployment starts the Connect Cluster without a Connector or MySQL
+dependency. You can enable [MySQL CDC](#optional-mysql-cdc) in the same root and
+state. Running workers and CDC storage/traffic consume billable resources.
 
-Terraform does not create MySQL. Apart from the scoped Console ingress rules
-below, existing network connectivity remains externally managed. The existing
-EKS cluster, shared IAM OIDC provider, plugin, Console, and Kafka Instance retain
-their original ownership. Running workers and CDC storage/traffic consume
-billable resources.
+## Quick start
 
-## Prerequisites
+Prepare these dependencies first:
 
-- Terraform `1.7.0` or later, below `2.0.0`, and AWS CLI available on the machine
-  running Terraform.
-- Apply `../automq-console` and `../automq-cluster` first. Complete Console
-  initialization and wait for the Kafka Instance to be running.
-- Use a Console release that supports the Connect Cluster API used by AutoMQ
-  Terraform Provider `0.4.10`. The adjacent Console example's default image,
-  `8.3.16-aws`, is not a compatibility guarantee for this API.
-- Use an existing EKS cluster in the same AWS account, Region, and VPC as the
-  Console, with private EKS API access enabled. These are
-  checked prerequisites; this root does not change the EKS configuration.
-  `aws_region` defaults to `us-east-1` and must match the Console state.
-- The Terraform machine must reach the Kubernetes API. Workers must resolve
-  Kafka private DNS names and reach the brokers, and Connect workers must
-  communicate with one another. Routes, NACLs, NetworkPolicy, and worker-to-Kafka
-  security-group access remain external prerequisites. Console ingress to the
-  API and worker REST ports is configured automatically as described below.
-- EKS authentication mode must be `API` or `API_AND_CONFIG_MAP`, so that access
-  entries can be used. This root checks the mode but does not change it.
-- Ensure schedulable EKS node capacity for the worker tier. The default is one
-  provisioned `TIER1` worker, without HPA or a Metrics Server requirement.
-- Confirm that `mysql-debezium-cdc` is registered and `ACTIVE` in **Kafka
-  Connect > Plugins**. Set `plugin_version` to its exact available version.
-  This root does not register the plugin. If you intend to use managed
-  `debezium-mysql` instead, select its name and version from your running
-  Console's catalog. See
+- Terraform `>= 1.7.0, < 2.0.0` and AWS CLI on the Terraform machine.
+- Apply `../automq-console` and `../automq-cluster`, complete Console
+  initialization, and wait for the Kafka Instance to run. Your Console must
+  support the Connect APIs used by AutoMQ Terraform Provider `0.4.10`; the
+  adjacent example's default `8.3.16-aws` image is not a compatibility guarantee.
+- An existing EKS cluster in the Console's AWS account, Region, and VPC, with
+  private API access, authentication mode `API` or `API_AND_CONFIG_MAP`, an
+  [associated IAM OIDC provider](#eks-preparation), and capacity for one `TIER1`
+  worker. The Terraform identity must already have Kubernetes permission to
+  create a namespace and its ServiceAccount. An AWS login alone does not grant it.
+- The Terraform machine can reach both the Console and Kubernetes APIs. Workers
+  can reach each other, the Kafka private endpoints, and their image/plugin
+  downloads. Terraform configures Console ingress to EKS and worker REST;
+  [other network paths](#network-access) remain external prerequisites.
+- An `ACTIVE` plugin in **Kafka Connect > Plugins**. The default name is
+  `mysql-debezium-cdc`; use its exact available version. This root does not
+  register plugins. If you use managed `debezium-mysql`, set `plugin_name` and
+  `plugin_version` from your running Console's catalog. See
   [Manage Plugins](https://docs.automq.com/automq-cloud/kafka-connect/manage-plugins).
-- Workers need outbound access to download their images and plugin package.
-  Terraform needs access to the Console API, its neighboring state files, and
-  the Terraform Registry.
-
-Three identities have separate responsibilities:
-
-| Identity | Required access |
-| --- | --- |
-| Your Terraform AWS identity | Read EKS/OIDC/security-group metadata; manage the worker role and policies, Console EKS authorization, and scoped ingress rules; create/delete the namespace and ServiceAccount through Kubernetes |
-| Existing Console EC2 runtime IAM role | Receive an EKS read-only IAM policy and cluster-scoped Kubernetes administrator access to the target EKS cluster |
-| New worker IRSA role | Trust only the created ServiceAccount through this EKS OIDC provider; read plugin packages under the configured prefix in the Console's Ops bucket |
-
-An AWS login alone does not grant Kubernetes permissions. Your Terraform
-identity must already have EKS access/RBAC for cluster-scoped namespace
-creation and ServiceAccount management. Granting access to the Console role
-does not grant access to the identity running Terraform.
-
-The Terraform identity also needs `iam:PutRolePolicy`, `iam:GetRolePolicy`, and
-`iam:DeleteRolePolicy` on the existing Console role, plus permission to manage
-EKS access entries and policy associations, including their read and tag
-operations. Worker role creation and policy management require the usual IAM
-permissions for those resources. It also needs
-`ec2:DescribeSecurityGroups`, `ec2:DescribeSecurityGroupRules`,
-`ec2:AuthorizeSecurityGroupIngress`, `ec2:ModifySecurityGroupRules`,
-`ec2:RevokeSecurityGroupIngress`, `ec2:CreateTags`, and `ec2:DeleteTags` for the
-new rules. These EC2 operations are performed by the
-Terraform identity, not added to the Console runtime role.
-
-### Console authorization managed by this root
-
-Terraform reads the Console role ARN from the adjacent state and creates:
-
-- An inline IAM policy for EKS discovery and read operations. Cluster discovery
-  is limited to the configured Region and account; detailed node-group and
-  access-entry reads are limited to the target cluster. The policy grants no
-  EKS write operations to the Console.
-- A `STANDARD` EKS access entry for that role, with EKS's default username.
-- A cluster-scoped `AmazonEKSClusterAdminPolicy` association. This grants
-  Kubernetes cluster administrator access; it is not a namespace-scoped
-  permission set. It matches CMP's current access check.
-
-This evaluation path targets the commercial `aws` partition. CMP's current
-authorization check expects the `arn:aws` cluster-admin policy ARN.
-
-The existing Console role, EC2 instance, and instance profile retain their
-original ownership. This root owns the added inline policy, access entry, and
-association. If one of those authorization resources already exists, resolve
-its Terraform ownership before applying. Import it explicitly only when this
-root will become its sole owner; do not manage the same authorization from
-multiple states. Destroying this root revokes the grants it manages.
-
-### Console network access managed by this root
-
-No new security-group input is required for standard EKS managed nodes with
-ordinary VPC CNI networking. Terraform reads `console_security_group_id` from
-the Console state and the primary cluster security group from EKS, then adds:
-
-- TCP `443` ingress to the EKS primary cluster security group from the Console
-  security group, for the private Kubernetes API.
-- TCP `8083` ingress to the worker security group from the Console security
-  group, for Connect REST calls.
-
-Workers default to using the EKS primary cluster security group. If your node
-or Pod networking uses different groups, set
-`connect_worker_security_group_ids` to those actual groups. An empty set uses
-the default; multiple worker groups create one REST ingress rule per group.
-The root adds two rules by default, or `1 + N` for `N` selected worker groups.
-
-These are ingress rules on existing security groups, with the Console group
-as their source. Terraform does not change Console egress; the Console example
-already permits all outbound traffic. It does not add routes, peering, DNS,
-NACL or NetworkPolicy rules, worker-to-Kafka access, or MySQL port `3306`
-access. Those paths must still support the selected deployment.
-
-After creating or changing IAM/EKS authorization or these ingress rules,
-Terraform waits for `console_eks_access_wait_duration` before creating the
-Connect Cluster. The default `60s` is a propagation buffer, not a readiness
-guarantee. Use a longer value such as `2m` if needed, or `0s` to disable it.
-An unchanged apply does not repeat the wait.
-
-### Existing IAM OIDC provider
-
-The EKS cluster's OIDC issuer must already be registered as an IAM OIDC provider
-in its AWS account. Terraform queries this shared provider to construct the
-worker role's trust policy; it does not create or take ownership of it.
-
-If the provider is missing, ask your EKS administrator to associate it first.
-For example, using the intended AWS identity and Region:
-
-```bash
-AWS_PROFILE='<your-eks-admin-profile>' eksctl utils associate-iam-oidc-provider \
-  --cluster '<existing-eks-cluster-name>' \
-  --region '<aws-region>' \
-  --approve
-```
-
-This is a separate, one-time EKS account preparation step, not part of this
-root's lifecycle.
-
-## Configure and deploy
 
 From this directory:
 
@@ -161,222 +43,68 @@ From this directory:
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Replace the EKS cluster name and plugin version, and select the AWS Region:
+Replace the two required values:
 
 ```hcl
 kubernetes_cluster_id = "my-existing-eks-cluster"
-aws_region            = "us-east-1"
-plugin_name           = "mysql-debezium-cdc"
 plugin_version        = "REPLACE_WITH_ACTIVE_PLUGIN_VERSION"
 ```
 
-For AWS, `kubernetes_cluster_id` is the **EKS cluster name**, such as the value
-passed to `aws eks update-kubeconfig --name`, not its ARN. Terraform reads the
-cluster endpoint, CA, and OIDC issuer from AWS.
-
-If you use a named AWS profile, set it consistently for both the AWS Provider
-and Kubernetes authentication:
-
-```hcl
-aws_profile = "my-aws-profile"
-```
-
-Alternatively, leave `aws_profile` unset and use your normal AWS credential
-chain, including `AWS_PROFILE`. The Kubernetes Provider calls
-`aws eks get-token` with the same profile selection; a preconfigured kubeconfig
-is not required.
-
-Choose unused names for this example's dedicated Kubernetes objects:
-
-```hcl
-connect_namespace       = "automq-connect"
-connect_service_account = "automq-connect"
-```
-
-This root creates and owns both objects. If an object with the same name
-already exists, choose another name or explicitly import it only if you intend
-to transfer its lifecycle to this root. Use a namespace dedicated to this
-example: deleting it also removes resources placed inside it.
-
-The neighboring local state paths default to:
-
-```hcl
-console_state_path = "../automq-console/terraform.tfstate"
-kafka_state_path   = "../automq-cluster/terraform.tfstate"
-```
-
-The Console state supplies the environment, Region, Ops bucket name, Console
-role ARN, Console security-group ID, and AutoMQ API credentials; the Kafka
-state supplies the Instance ID. The Console state must export `region`,
-`ops_bucket_name`, `console_role_arn`, and `console_security_group_id`.
-Terraform checks that `aws_region` matches that Region and
-that its AWS identity belongs to the Console's account and partition. The role
-ARN identifies the existing principal receiving the EKS authorization above;
-this root does not create or replace that role or its EC2 instance profile.
-Change the paths if the files are elsewhere. Do not copy API keys or `CONFIG`
-into this root. Restrict access to state and plans, and do not commit them or
-your tfvars file.
-
-Review and apply:
+For AWS, `kubernetes_cluster_id` means the **EKS cluster name**, not its ARN.
+The Region and API credentials come from the adjacent Console state; the Kafka
+Instance ID comes from the adjacent Kafka state. No `CONFIG` or API key copy is
+needed. Use your normal AWS credential chain, including `AWS_PROFILE`, or set
+`aws_profile`. Both AWS and Kubernetes authentication use that profile;
+Terraform calls `aws eks get-token` without requiring a kubeconfig.
 
 ```bash
 terraform init
-terraform plan
-terraform apply
+terraform plan -out=tfplan
+terraform apply tfplan
 ```
 
-The main inputs are:
-
-| Input | Default | Purpose |
-| --- | --- | --- |
-| `kubernetes_cluster_id` | Required | Existing EKS cluster name |
-| `aws_region` | `us-east-1` | Region of that EKS cluster and Kafka Instance |
-| `aws_profile` | `null` | Optional named AWS profile used by both providers |
-| `plugin_name` | `mysql-debezium-cdc` | Existing registered plugin |
-| `plugin_version` | Required | Exact ACTIVE version in your Console |
-| `connect_namespace` | `automq-connect` | New dedicated Kubernetes namespace |
-| `connect_service_account` | `automq-connect` | New ServiceAccount annotated with the created IRSA role |
-| `connect_worker_role_name` | `null` | Optional explicit name; otherwise Terraform generates a unique role name |
-| `connect_plugin_s3_prefix` | `automq/connect-plugins` | Plugin-package prefix in the Console's Ops bucket |
-| `connect_worker_policy_arns` | `[]` | Additional existing managed policies to attach to the new worker role |
-| `connect_cluster_name` | `aws-mysql-connect-demo` | New Connect Cluster name |
-| `worker_count` / `worker_resource_spec` | `1` / `TIER1` | Fixed worker capacity |
-| `connect_version` | `null` | Use the Console's default Connect worker version |
-| `kubernetes_scheduling_spec` | `null` | Optional YAML matching existing node labels and taints |
-| `connect_worker_security_group_ids` | `[]` | Optional worker node/Pod SGs; empty uses the EKS primary cluster SG |
-| `console_endpoint_override` | `null` | Optional reachable Console API URL |
-| `console_eks_access_wait_duration` | `60s` | Buffer after Console IAM/EKS authorization or ingress-rule changes; for example `2m` or `0s` |
-
-The new worker role trusts only this namespace and ServiceAccount. Its inline
-policy grants `s3:GetObject` for plugin packages under the configured prefix
-in the Console's Ops bucket, plus `s3:ListBucket` restricted to that prefix.
-Set `connect_plugin_s3_prefix` to match a customized CMP package prefix; do not
-include wildcards or leading/trailing slashes. Packages in other S3 locations
-or encrypted with SSE-KMS need additional permissions on the corresponding
-resources through `connect_worker_policy_arns`. Other AWS service access also
-uses that optional policy list. Terraform manages the attachments, not the
-existing policy documents themselves. For dedicated or tainted
-nodes, supply a scheduling spec matching existing labels and tolerations;
-this root does not create node groups.
-
-### Optional: Console access through an SSM tunnel
-
-If you maintain an AWS Systems Manager port-forwarding session from local port
-`18080` to the Console EC2 instance's port `8080`, set:
-
-```hcl
-console_endpoint_override = "http://127.0.0.1:18080"
-```
-
-Keep the session open while Terraform accesses the API. AutoMQ authentication
-still comes from the Console state. The override changes only the AutoMQ
-Provider's API URL; it does not tunnel Kubernetes or worker traffic or change
-the Console's Home endpoint.
-
-## Verify the Connect Cluster
-
-Inspect the outputs:
+### Verify the Cluster
 
 ```bash
-terraform output -raw eks_cluster_name
-terraform output -raw connect_namespace
-terraform output -raw connect_service_account
-terraform output -raw connect_iam_role_arn
-terraform output -raw console_role_arn
-terraform output -raw console_eks_access_entry_arn
-terraform output -raw console_security_group_id
-terraform output -raw eks_api_security_group_id
-terraform output -json connect_worker_security_group_ids
 terraform output -raw connect_cluster_id
 terraform output -raw connect_cluster_state
 ```
 
-Confirm the Cluster is running in **Kafka Connect > Connect Clusters**, inspect
-its workers, and check that the selected plugin is installed. With
-`create_mysql_connector = false`, no CDC messages are expected. To start a
-capture task, configure the optional MySQL settings below.
-
-If Terraform fails while reading EKS or creating Kubernetes objects, check its
-AWS identity, Kubernetes access, API endpoint reachability, authentication
-mode, and existing OIDC provider. Access-entry failures can also indicate
-insufficient EKS management permissions or an existing grant owned elsewhere.
-For later failures, review the emitted security-group IDs and confirm whether
-your workers use the default primary group or need the worker-group override.
-Also check Console authorization, node scheduling, image/plugin downloads, and
-private Kafka connectivity. A reachable Console login page alone does not establish these
-prerequisites.
-
-If the first apply reports `DescribeCluster` `AccessDenied`, confirm that the
-Console's policy and EKS authorization are correct. If a subsequent check from
-the running Console under the same principal succeeds, allow propagation time,
-then generate a fresh plan and apply again:
-
-```bash
-terraform plan
-terraform apply
-```
-
-An authorization propagation delay does not require rebuilding the Console
-EC2 instance or the EKS cluster.
-
-### Worker defaults and Provider 0.4.10
-
-The Console omits worker settings that match the selected version's defaults
-when returning the configuration. With Provider `0.4.10`, explicitly setting
-the default `key.converter` and `value.converter` classes can therefore cause
-`Provider produced inconsistent result after apply`, even after the Cluster
-is running. This example relies on the default converter classes and sets
-only the non-default schema options.
-
-If an earlier apply encountered this error, first confirm that the Cluster is
-healthy and its ID is present in Terraform state. Remove the two default
-converter keys from `worker_config`, then clear the taint on that existing
-resource and generate a fresh plan:
-
-```bash
-terraform untaint automq_connect_cluster.demo
-terraform plan
-```
-
-Confirm that the plan does not replace the running Cluster before proceeding.
+In **Kafka Connect > Connect Clusters**, confirm the Cluster and its workers
+are running and the selected plugin is installed. The default deployment does
+not produce CDC messages. To capture a table, continue below.
 
 ## Optional MySQL CDC
 
-Set `create_mysql_connector = true` to add a Debezium MySQL Connector and its
-CDC data Topic in the same Terraform apply. The installed plugin must provide
-`io.debezium.connector.mysql.MySqlConnector`, and your Console must support the
-Connector API used by Provider `0.4.10`. This root captures one
-`mysql_database.mysql_table`; these two name inputs accept letters, numbers,
-and underscores, not regexes or table lists.
+Enabling CDC in this root creates one Debezium MySQL Connector and one
+single-partition data Topic. It captures exactly one `mysql_database.mysql_table`
+with an initial snapshot followed by ongoing changes. The installed plugin must
+provide `io.debezium.connector.mysql.MySqlConnector`.
 
-Prepare the source before enabling capture:
+Prepare an existing MySQL source before enabling it:
 
-- Use an existing supported MySQL database and table. Workers must resolve the
-  hostname and reach its port, normally `3306`. Configure routes, DNS, security
-  groups, and network policies first, including cross-VPC connectivity for RDS
-  if needed. Terraform does not provision the database or network paths.
-- Enable binlogging with `log_bin=ON`, `binlog_format=ROW`, and
-  `binlog_row_image=FULL`. Avoid `PARTIAL_JSON` in `binlog_row_value_options`
-  and retain binlogs long enough for snapshots and recovery.
-- Give the CDC user `SELECT`, `SHOW DATABASES`, `RELOAD`, `REPLICATION SLAVE`,
-  and `REPLICATION CLIENT` permissions as supported by the service.
-  RDS/Aurora snapshot locking also needs `LOCK TABLES`. RDS for MySQL requires
-  automated backups for binlogging; its parameter group and binlog retention
-  must be prepared by the database owner. See the
+- Workers must resolve its hostname and reach its port, normally `3306`.
+  Configure security groups, routes, DNS, and any cross-VPC connectivity first.
+  This root does not create MySQL or its network paths.
+- Enable `log_bin=ON`, `binlog_format=ROW`, and `binlog_row_image=FULL`;
+  avoid `PARTIAL_JSON` in `binlog_row_value_options`. Retain binlogs long enough
+  for snapshots and recovery.
+- Give the CDC user `SELECT`, `SHOW DATABASES`, `RELOAD`, `REPLICATION SLAVE`, and
+  `REPLICATION CLIENT` as supported by the service. RDS/Aurora snapshot locking
+  also needs `LOCK TABLES`. For RDS for MySQL, prepare automated backups,
+  parameter groups, and binlog retention. Follow the
   [Debezium MySQL setup guide](https://debezium.io/documentation/reference/3.1/connectors/mysql.html#setting-up-mysql).
-- Choose a unique `mysql_server_id` for this replication topology. The default
-  `184054` must be changed if it is already used by another server or client.
-- Keep the target Kafka Instance's private plaintext listener enabled. This
-  root automatically selects one distinct VPC/private `PLAINTEXT` bootstrap
-  value from the existing Kafka state, rejecting public-only or ambiguous
-  selections. CDC output and schema history use this same Kafka Instance.
-  Debezium's native Kafka clients need Create/Describe/Read/Write access for
-  their history Topic. This example uses anonymous `PLAINTEXT` without Kafka
-  ACL credentials; Console API credentials are separate.
+- Choose a `mysql_server_id` unique among this topology's replication clients
+  and servers. The default is `184054`. The default `mysql_ssl_mode = "required"`
+  requires TLS; it encrypts traffic without verifying server identity.
+- Keep the Kafka Instance's private plaintext listener enabled. This root reads
+  one unambiguous VPC/private `PLAINTEXT` bootstrap value from the Kafka state.
+  It uses anonymous Kafka access without ACL credentials. Debezium's history
+  clients need native Kafka Create/Describe/Read/Write access.
 
-For a dedicated test database named `inventory` that your DBA has already
-created, you can prepare the demonstration table using a DDL/application-write
-account before applying. Do not run this SQL against a production source:
+For a dedicated test database `inventory` that your DBA has already created,
+prepare a demonstration table using a DDL/application-write account. Skip this
+SQL if capturing an existing table; do not run it against a production source.
 
 ```sql
 CREATE TABLE inventory.customers (
@@ -386,11 +114,7 @@ CREATE TABLE inventory.customers (
 INSERT INTO inventory.customers (id, name) VALUES (1, 'snapshot-row');
 ```
 
-If using an existing table instead, set its database and table names and skip
-that SQL. Terraform does not execute database setup or grant MySQL privileges.
-The CDC account needs read/replication access, not application-write access.
-
-Add these settings to your existing `terraform.tfvars`:
+Add the connection settings to your local `terraform.tfvars`:
 
 ```hcl
 create_mysql_connector = true
@@ -399,65 +123,20 @@ mysql_user             = "your-cdc-user"
 mysql_password         = "your-cdc-password"
 ```
 
-`mysql_hostname`, `mysql_user`, and `mysql_password` default to `null`; all three
-must be provided in your local `terraform.tfvars` when capture is enabled;
-replace the example placeholders with your database connection values.
+The three connection values are required only when CDC is enabled. The default
+table is `inventory.customers`; set `mysql_database` and `mysql_table` to change
+it. Names accept letters, numbers, and underscores, not regexes or table lists.
 Your local tfvars, state, and saved plans contain the password; do not commit them.
-
-| MySQL input | Default | Purpose |
-| --- | --- | --- |
-| `create_mysql_connector` | `false` | Create/manage the optional Connector and its CDC data Topic |
-| `mysql_hostname` / `mysql_user` / `mysql_password` | `null` | Required when capture is enabled |
-| `mysql_port` | `3306` | MySQL port reachable from workers |
-| `mysql_database` / `mysql_table` | `inventory` / `customers` | One existing table to capture |
-| `mysql_server_id` | `184054` | Unique replication-client ID |
-| `mysql_ssl_mode` | `required` | Encrypt MySQL traffic; this setting alone does not verify server identity |
-| `connector_name` | `mysql-cdc-demo` | Unique Connector name |
-| `topic_prefix` | `mysql-cdc` | Data Topic prefix |
-
-The default data Topic is `mysql-cdc.inventory.customers`, with one partition.
-Terraform creates and deletes it. Choose an unused `topic_prefix`; if that data
-Topic already exists, change the name or transfer its ownership explicitly
-before import. Do not manage the same data Topic from multiple states.
-
-Debezium creates the dedicated history Topic `schema-history.mysql-cdc-demo`
-through its native Kafka Admin client at startup. Debezium `3.1.2` requests
-one partition, `cleanup.policy=delete`,
-`retention.ms=9223372036854775807` (`Long.MAX_VALUE`), and
-`retention.bytes=-1`, preserving the DDL history for recovery. See the
-[pinned Debezium history implementation](https://github.com/debezium/debezium/blob/v3.1.2.Final/debezium-storage/debezium-storage-kafka/src/main/java/io/debezium/storage/kafka/history/KafkaSchemaHistory.java#L479).
-
-The Console Topic API accepts `retention.ms` only from one hour to 60 days;
-creating history through that API with `-1` returns HTTP 400. This example
-therefore leaves history creation to Debezium's native Kafka API rather than
-substituting a short retention period. If the history Topic already exists,
-verify its partition count and retention settings; Debezium does not repair
-an existing Topic's settings automatically. Use an exclusive history name and
-do not share it across Connectors.
-
-Review and apply from this same directory:
 
 ```bash
 terraform plan -out=tfplan
 terraform apply tfplan
 ```
 
-This can be your first apply or an update to the existing Connect deployment;
-there is no additional Connect state to manage. The MySQL preconditions are
-checked when capture is enabled. Its outputs are then available:
-
-```bash
-terraform output -raw mysql_connector_id
-terraform output -raw mysql_connector_state
-terraform output -raw mysql_data_topic
-terraform output -raw mysql_schema_history_topic
-```
-
-These outputs are `null` while `create_mysql_connector` is `false`.
-`mysql_schema_history_topic` reports the configured history name, not a
-Terraform-managed resource or proof that startup has created it. Confirm the
-Connector and task are running in the Console, then consume the data Topic
-from a client with private Kafka access:
+This may be the first apply or an update to an existing Connect Cluster.
+Inspect `mysql_connector_id`, `mysql_connector_state`, and `mysql_data_topic`
+outputs, then confirm the Connector and its task are running in the Console.
+From a client with private Kafka access, consume the default data Topic:
 
 ```bash
 kafka-console-consumer.sh \
@@ -468,8 +147,8 @@ kafka-console-consumer.sh \
   --timeout-ms 30000
 ```
 
-The initial snapshot emits `op = "r"` for the seed row. After it completes, use
-an application-write account to test the demonstration table:
+Expect a Debezium JSON envelope with `op = "r"` for the seed row. After the
+snapshot completes, test changes using an application-write account:
 
 ```sql
 SET autocommit = 1;
@@ -478,55 +157,166 @@ UPDATE inventory.customers SET name = 'cdc-update' WHERE id = 2;
 DELETE FROM inventory.customers WHERE id = 2;
 ```
 
-Expect Debezium JSON envelopes with `op` values `c`, `u`, and `d` and matching
-`before`/`after` fields. With this example's JSON converter settings, there is
-no `payload` wrapper. A delete can also emit a null-valued tombstone; retries
-or prior runs can add records, so do not assume an exact count. If capture
-fails, check task logs, MySQL TLS support, permissions, binlog configuration,
-snapshot progress, and worker-to-database/Kafka connectivity. The default
-`required` SSL mode needs database TLS support.
+Expect `c`, `u`, and `d` events with `before`/`after` fields and no `payload`
+wrapper. A delete can also produce a null tombstone; retries or prior runs can
+add records, so do not expect an exact count.
 
-Changing `create_mysql_connector` from `true` to `false` schedules deletion of
-the Connector and its CDC data Topic, including its records. The Debezium-created
-history Topic remains. Use that change only when you intend to remove the
-Terraform-managed capture resources.
+### Topic ownership
+
+Terraform owns the data Topic, named `<topic_prefix>.<mysql_database>.<mysql_table>`
+(`mysql-cdc.inventory.customers` by default). Choose an unused prefix. If the
+Topic exists, change the name or explicitly transfer sole ownership before
+importing it; do not manage the same Topic from multiple states.
+
+Debezium creates its own dedicated history Topic, `schema-history.<connector_name>`
+(`schema-history.mysql-cdc-demo` by default). In Debezium `3.1.2`, it requests one
+partition, `cleanup.policy=delete`, `retention.ms=9223372036854775807`
+(`Long.MAX_VALUE`), and `retention.bytes=-1`; see the
+[pinned implementation](https://github.com/debezium/debezium/blob/v3.1.2.Final/debezium-storage/debezium-storage-kafka/src/main/java/io/debezium/storage/kafka/history/KafkaSchemaHistory.java#L479).
+An existing history Topic is not automatically repaired: verify its settings,
+keep it exclusive to this Connector, and preserve it for recovery.
+`mysql_schema_history_topic` reports the configured name, not a Terraform
+resource or proof of creation. All four MySQL outputs are `null` when CDC is disabled.
 
 ## Cleanup
 
-Keep EKS and its IAM OIDC provider available until this root has been destroyed.
-Destroy this root before the Kafka Instance or Console. Terraform's dependencies
-remove the optional Connector before its CDC data Topic and Connect Cluster:
+Changing `create_mysql_connector` from `true` to `false` deletes the Connector
+and its data Topic, including CDC records. It is a removal operation, not a
+pause. The source database and Debezium-created history Topic remain.
+
+To remove the whole Connect example:
 
 ```bash
 terraform destroy
 ```
 
-If enabled, Terraform deletes the MySQL Connector and its CDC data Topic,
-including the stored CDC records. The source MySQL database and table remain.
-The schema history Topic is outside Terraform's lifecycle and is retained;
-delete it manually only when you deliberately retire the capture and discard
-its recovery state. Do not delete or expire history while preserving the
-Connector or offsets for a later resume.
+Terraform removes the optional Connector and data Topic, Connect Cluster,
+dedicated namespace/ServiceAccount, worker role and policy attachments, added
+Console EKS authorization, and its Console ingress rules. Namespace deletion
+also removes anything else placed inside it. The existing EKS cluster, shared
+OIDC provider, security groups, attached managed-policy documents, plugin,
+Console role/instance profile, Kafka Instance, and MySQL remain under their
+original owners. Revoking Console-to-EKS access can affect other workloads
+that rely on those same grants.
 
-Terraform also deletes the Connect Cluster, dedicated namespace,
-ServiceAccount, worker IAM role, its inline plugin-download policy, and its
-managed-policy attachments. It also deletes the Console's added inline EKS
-policy, access entry, and cluster-admin association, revoking this root's Console-to-EKS
-authorization. It revokes only the ingress rules created by this root: two
-by default, or `1 + N` with `N` selected worker groups. The external EKS cluster,
-security groups, existing Console role, and EC2 instance profile remain.
-AutoMQ removes the worker
-deployment. Confirm cleanup completes before dismantling the surrounding
-environment. Existing EKS infrastructure, its shared IAM OIDC provider, the
-policy documents attached by ARN, plugin, Kafka Instance, and Console remain
-under their original owners.
+Keep EKS and its OIDC provider available until destroy completes. Destroy roots
+in order: `automq-connect` → `automq-cluster` → `automq-console`.
+Delete history manually only when retiring the capture and discarding its
+recovery state; do not delete or expire it while retaining Connector offsets
+for a later resume.
 
-For the complete example, destroy roots in this order:
-`automq-connect` → `automq-cluster` → `automq-console`.
+## Advanced configuration
 
-## Validation scope
+Defaults are intended for a dedicated evaluation deployment. Override them only
+when your environment requires it; choose unused namespace and ServiceAccount
+names. Import existing objects only when this root will become their sole owner.
 
-Validation includes Terraform validation and mocked contract tests. The MySQL
-CDC path has not been exercised against a live database. Local checks do not
-prove Console API compatibility, plugin availability, EKS permissions,
-networking, or successful worker and Connector startup.
+| Inputs | Default / use |
+| --- | --- |
+| `aws_region` / `aws_profile` | Region from Console state / normal AWS credential chain; an explicit Region must match the state |
+| `console_state_path` / `kafka_state_path` | `../automq-console/terraform.tfstate` / `../automq-cluster/terraform.tfstate` |
+| `connect_namespace` / `connect_service_account` | `automq-connect` / `automq-connect`; created and owned here |
+| `connect_cluster_name` | `aws-mysql-connect-demo` |
+| `plugin_name` / `connect_version` | `mysql-debezium-cdc` / Console's default worker version |
+| `worker_count` / `worker_resource_spec` | `1` / `TIER1`; existing EKS capacity required |
+| `kubernetes_scheduling_spec` | `null`; optional YAML with node selectors and tolerations |
+| `connect_worker_role_name` | `null`; generate a unique IAM role name |
+| `connect_plugin_s3_prefix` | `automq/connect-plugins`; no wildcards or edge slashes |
+| `connect_worker_policy_arns` | `[]`; additional existing managed policies for other S3 locations, SSE-KMS, or other AWS services |
+| `connect_worker_security_group_ids` | `[]`; use the EKS primary SG, or specify the actual worker node/Pod SGs |
+| `console_eks_access_wait_duration` | `60s`; propagation buffer after grant/rule changes; accepts `2m` or `0s`, unchanged applies do not wait |
+| `console_endpoint_override` | `null`; a reachable Console API URL, for example `http://127.0.0.1:18080` with a maintained SSM tunnel |
+| `connector_name` / `topic_prefix` | `mysql-cdc-demo` / `mysql-cdc` |
+| `mysql_port` / `mysql_server_id` / `mysql_ssl_mode` | `3306` / `184054` (must be unique) / `required` |
+| `mysql_database` / `mysql_table` | `inventory` / `customers` |
+| `tags` | `{ purpose = "evaluation" }` |
+
+The Console state supplies `environment_id`, `region`, `ops_bucket_name`,
+`console_role_arn`, `console_security_group_id`, `console_endpoint`, and initial
+API key outputs. State, Region, account, and network checks run before deployment.
+An SSM endpoint override changes only the AutoMQ Provider URL; keep the session
+open. It does not tunnel Kubernetes/worker traffic or change the Home endpoint.
+
+### Authorization
+
+The three identities have separate responsibilities:
+
+| Identity | Access |
+| --- | --- |
+| Terraform AWS identity | EKS/OIDC/SG reads; worker IAM lifecycle; Console inline-policy and EKS access-entry/association management; ingress-rule lifecycle; its own Kubernetes namespace/ServiceAccount access |
+| Existing Console EC2 role | Added read-only EKS discovery policy and cluster-scoped `AmazonEKSClusterAdminPolicy` through a `STANDARD` access entry |
+| New worker IRSA role | Trusts only the created ServiceAccount; reads plugin packages under the configured Ops-bucket prefix with prefix-scoped `ListBucket` |
+
+Console discovery covers clusters in the current account and Region; detailed
+node-group and access-entry reads target the selected cluster. No AWS EKS write
+permissions are added to the Console. Its Kubernetes access is cluster-admin,
+matching CMP's current check, rather than namespace-scoped. This example targets
+the commercial `aws` partition.
+
+The Terraform identity needs `iam:PutRolePolicy`, `iam:GetRolePolicy`, and
+`iam:DeleteRolePolicy` on the existing Console role, EKS access-entry and policy
+association management/read/tag rights, and worker IAM role/policy management.
+For ingress it needs `ec2:DescribeSecurityGroups`, `ec2:DescribeSecurityGroupRules`,
+`ec2:AuthorizeSecurityGroupIngress`, `ec2:ModifySecurityGroupRules`,
+`ec2:RevokeSecurityGroupIngress`, `ec2:CreateTags`, and `ec2:DeleteTags`.
+These EC2 rights belong to the Terraform identity, not the Console runtime role.
+The Console grant does not authorize the local Terraform identity in Kubernetes.
+
+This root owns the added Console inline policy, access entry, and association;
+it retains the original Console role/profile ownership. Resolve any existing
+grant's ownership before applying, importing only for sole ownership here.
+
+### Network access
+
+Terraform adds TCP `443` ingress on the EKS primary SG and TCP `8083` ingress on
+the worker SGs, both sourced from the Console SG. Standard EKS managed nodes
+with ordinary VPC CNI use the primary SG by default: no SG input is needed.
+Custom node/Pod networking requires `connect_worker_security_group_ids`.
+Destroy revokes only this root's rules: two by default, or `1 + N` for `N` worker SGs.
+
+Console egress stays unchanged; the adjacent example allows all outbound traffic.
+Routes, peering, DNS, NACLs, NetworkPolicy, worker-to-Kafka access, and MySQL
+`3306` access remain external. The wait after IAM/SG changes buffers propagation;
+it does not prove runtime readiness.
+
+### EKS preparation
+
+This root reads the existing EKS endpoint, CA, and shared IAM OIDC provider;
+it does not create EKS, node groups, or the OIDC provider, or change EKS API/auth settings.
+If OIDC is missing, an EKS administrator can associate it separately:
+
+```bash
+AWS_PROFILE='<your-eks-admin-profile>' eksctl utils associate-iam-oidc-provider \
+  --cluster '<existing-eks-cluster-name>' --region '<aws-region>' --approve
+```
+
+### Troubleshooting and compatibility
+
+- For EKS/Kubernetes failures, check the Terraform identity's own access,
+  private API reachability, auth mode, OIDC, and scheduling capacity. For worker
+  startup, check image/plugin downloads and private Kafka connectivity. IAM/SG
+  outputs identify the configured resources for diagnosis.
+- On first-apply `DescribeCluster` `AccessDenied`, confirm the Console policy and
+  principal. If the same running principal subsequently succeeds, allow
+  propagation, then generate a fresh plan and apply. No EC2 or EKS rebuild is needed.
+- The Console Topic API limits `retention.ms` to one hour–60 days; `-1` returns
+  HTTP 400. History therefore uses Debezium's native Kafka creation, not that
+  API or a shortened retention period. Check history settings if it already exists.
+- For CDC failures, check task logs, MySQL network/TLS, privileges, binlogs,
+  snapshot progress, and private Kafka access.
+
+Provider `0.4.10` can report `Provider produced inconsistent result after apply`
+if explicitly configured default `key.converter`/`value.converter` classes are
+filtered from Console reads. This example omits those defaults and sets only
+the non-default schema options. To recover an earlier affected deployment,
+first confirm the Cluster is healthy and its ID exists in state, remove those
+two default keys, then run:
+
+```bash
+terraform untaint automq_connect_cluster.demo
+terraform plan
+```
+
+Confirm the fresh plan does not replace the running Cluster before applying.
+Validation covers Terraform checks and mocked contract tests; it does not prove
+your Console API/plugin compatibility, EKS/network access, or live CDC success.

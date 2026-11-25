@@ -1,124 +1,29 @@
-# Required: existing EKS cluster NAME, not its ARN, in the Console's AWS account
-# and Region, in the same VPC as the Console. Private EKS API access must be
-# enabled, and authentication mode must be API or API_AND_CONFIG_MAP. The root
-# checks these EKS settings without changing them.
+# Existing EKS cluster NAME, not ARN, in the Console's account/Region/VPC.
+# Requires private API access, API/API_AND_CONFIG_MAP auth, IAM OIDC, and your
+# Terraform identity's Kubernetes access. See README.md for preparation.
 kubernetes_cluster_id = "REPLACE_WITH_YOUR_EKS_CLUSTER_NAME"
-aws_region            = "us-east-1"
-# aws_region must match the Region exported by the adjacent Console state.
 
-# Optional: this profile is used by both AWS and Kubernetes authentication.
-# Alternatively leave it unset and use the normal AWS credential chain,
-# including AWS_PROFILE. A preconfigured kubeconfig is not required.
-# aws_profile = "my-aws-profile"
-
-# Required: exact ACTIVE version of the plugin registered in your Console.
-# This root references the plugin and does not register it. If using managed
-# debezium-mysql instead, select its actual name and version from the catalog.
-plugin_name    = "mysql-debezium-cdc"
+# Exact ACTIVE version of the existing mysql-debezium-cdc plugin in Console.
+# If using another registered plugin, also override plugin_name.
 plugin_version = "REPLACE_WITH_ACTIVE_PLUGIN_VERSION"
+# plugin_name = "debezium-mysql"
 
-# New dedicated Kubernetes objects owned by this root; choose unused names.
-# The namespace and ServiceAccount will be removed during terraform destroy.
-connect_namespace       = "automq-connect"
-connect_service_account = "automq-connect"
+# Defaults read the adjacent Console/Kafka states and derive the Console Region.
+# Normal AWS credentials, including AWS_PROFILE, work for AWS and Kubernetes.
+# aws_profile = "my-aws-profile"
+# aws_region  = "us-east-1" # Optional; must match Console state.
 
-# A new worker IAM role is always created with trust restricted to the above
-# namespace/ServiceAccount and the existing EKS IAM OIDC provider.
-# Its inline policy grants read-only plugin download access under the configured
-# prefix in the Console state's Ops bucket, including prefix-scoped ListBucket.
-# connect_worker_role_name   = "your-unique-connect-worker-role"
-# connect_plugin_s3_prefix   = "automq/connect-plugins" # No wildcards or edge slashes.
-# connect_worker_policy_arns = [] # Additional existing managed policy ARNs.
-# Packages elsewhere in S3, SSE-KMS encryption, or other AWS dependencies need
-# corresponding additional permissions through connect_worker_policy_arns.
+# Optional: capture one existing MySQL table in this same root/state.
+# First prepare binlogging, CDC privileges, TLS, and worker-to-MySQL networking.
+# Changing true to false DELETES the Connector and CDC data Topic/records;
+# Debezium's schema history Topic stays outside Terraform and is retained.
+# create_mysql_connector = true
+# mysql_hostname         = "REPLACE_WITH_MYSQL_HOSTNAME"
+# mysql_user             = "REPLACE_WITH_CDC_MYSQL_USER"
+# mysql_password         = "your-cdc-password"
+# mysql_database         = "inventory"
+# mysql_table            = "customers"
+# mysql_server_id        = 184054 # Must be unique in the replication topology.
 
-# The shared IAM OIDC provider for this EKS cluster must already exist.
-# The Terraform identity needs its own Kubernetes namespace/ServiceAccount
-# permissions, IAM role/policy management, Put/Get/DeleteRolePolicy on the
-# existing Console role, and EKS access-entry/policy-association management.
-# It also needs EC2 DescribeSecurityGroups/DescribeSecurityGroupRules,
-# AuthorizeSecurityGroupIngress/RevokeSecurityGroupIngress, and CreateTags.
-#
-# This root adds an inline EKS read policy to the existing Console role and
-# grants it target-cluster access through a STANDARD EKS access entry plus
-# cluster-scoped AmazonEKSClusterAdminPolicy. It does not replace that role or
-# authorize the local Terraform identity. These added grants are deleted on
-# destroy; resolve existing entry/association/policy ownership before applying.
-# See README.md; do not manage the same grants from multiple Terraform states.
-
-# Console-to-EKS API (443) and Console-to-worker REST (8083) ingress rules are
-# automatic. Worker SG defaults to the EKS primary cluster SG for standard
-# managed nodes/VPC CNI; no SG IDs need to be entered for that default.
-# For custom node or Pod SGs only, override the actual worker group set:
-# connect_worker_security_group_ids = []
-# Routes, NACLs, NetworkPolicy, worker-to-Kafka, and MySQL access remain external.
-# Console egress is not changed; the Console example already allows outbound.
-
-# Buffer propagation after Console authorization or ingress-rule changes.
-# Unchanged applies do not repeat the wait. This buffer is not a readiness
-# guarantee; use "2m" for a longer wait or "0s" to disable it.
-# console_eks_access_wait_duration = "60s"
-
-# Both adjacent deployments are read automatically; no CONFIG or API key copy.
-# Console state must export region, ops_bucket_name, console_role_arn, and
-# console_security_group_id as well as API outputs. The root adds EKS grants
-# to the existing Console role and ingress sourced from its security group.
-# console_state_path = "../automq-console/terraform.tfstate"
-# kafka_state_path   = "../automq-cluster/terraform.tfstate"
-
-# For a maintained SSM tunnel from local port 18080 to Console port 8080:
-# console_endpoint_override = "http://127.0.0.1:18080"
-
-# Fixed worker capacity on existing nodes; no EKS node groups are provisioned.
-# connect_cluster_name = "aws-mysql-connect-demo"
-# worker_count         = 1
-# worker_resource_spec = "TIER1"
-# connect_version      = "REPLACE_WITH_A_CONNECT_WORKER_VERSION_FROM_YOUR_CONSOLE"
-
-# Optional placement for existing node labels and taints.
-# kubernetes_scheduling_spec = <<-YAML
-# nodeSelector:
-#   workload: automq-connect
-# tolerations:
-#   - key: dedicated
-#     operator: Equal
-#     value: automq
-#     effect: NoSchedule
-# YAML
-
-# Optional MySQL CDC, created in this same root/state after the Cluster.
-# Keep false for Cluster infrastructure only; no MySQL credentials are then needed.
-# Changing true to false deletes the Connector and CDC data Topic/records.
-# The Debezium-created schema history Topic is retained outside Terraform.
-create_mysql_connector = false
-
-# Required when create_mysql_connector=true: existing MySQL endpoint/user.
-# These connection inputs default to null. Prepare worker network access externally.
-# mysql_hostname = "REPLACE_WITH_MYSQL_HOSTNAME"
-# mysql_user     = "REPLACE_WITH_CDC_MYSQL_USER"
-# mysql_password = "your-cdc-password"
-# Set the actual password in your local terraform.tfvars. Do not commit that
-# file, Terraform state, or saved plans containing the password.
-
-# Capture one existing table. Database/table names allow letters, numbers,
-# and underscores only; these inputs are not regexes or table lists.
-# mysql_port      = 3306
-# mysql_database  = "inventory"
-# mysql_table     = "customers"
-# mysql_server_id = 184054 # Must be unique among MySQL replication clients/servers.
-# mysql_ssl_mode  = "required" # Database TLS required; not identity verification.
-
-# Choose unused names. Data Topic: <topic_prefix>.<mysql_database>.<mysql_table>.
-# Terraform owns/deletes the CDC data Topic; do not also manage it in another state.
-# Debezium creates schema-history.<connector_name> at startup using native Kafka
-# Admin access, with one partition and long-term history retention. It is not a
-# Terraform resource and is not automatically deleted during cleanup.
-# Do not share or expire history, or delete it while retaining recovery offsets.
-# If that history Topic already exists, verify its settings before use.
-# connector_name = "mysql-cdc-demo"
-# topic_prefix   = "mysql-cdc"
-
-# Kafka bootstrap is read automatically from the existing Kafka state and must
-# resolve to one unambiguous VPC/private PLAINTEXT endpoint when CDC is enabled.
-
-# tags = { purpose = "evaluation" }
+# Keep local tfvars, state, and saved plans containing the password out of Git.
+# Advanced worker, IAM, SG, scheduling, state-path, and tunnel inputs: README.md.

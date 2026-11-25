@@ -26,7 +26,7 @@ terraform {
 }
 
 provider "aws" {
-  region  = var.aws_region
+  region  = local.aws_region
   profile = var.aws_profile
 }
 
@@ -39,7 +39,7 @@ provider "kubernetes" {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
     args = concat(
-      ["eks", "get-token", "--cluster-name", var.kubernetes_cluster_id, "--region", var.aws_region],
+      ["eks", "get-token", "--cluster-name", var.kubernetes_cluster_id, "--region", local.aws_region],
       var.aws_profile == null ? [] : ["--profile", var.aws_profile],
     )
   }
