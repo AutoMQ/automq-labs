@@ -86,6 +86,7 @@ resource "time_sleep" "console_eks_access" {
     aws_eks_access_policy_association.console,
     aws_vpc_security_group_ingress_rule.console_eks_api,
     aws_vpc_security_group_ingress_rule.console_workers,
+    aws_vpc_security_group_ingress_rule.console_worker_metrics,
   ]
 
   create_duration = var.console_eks_access_wait_duration
@@ -100,6 +101,7 @@ resource "time_sleep" "console_eks_access" {
       aws_eks_access_policy_association.console,
       aws_vpc_security_group_ingress_rule.console_eks_api,
       aws_vpc_security_group_ingress_rule.console_workers,
+      aws_vpc_security_group_ingress_rule.console_worker_metrics,
     ]
   }
 }

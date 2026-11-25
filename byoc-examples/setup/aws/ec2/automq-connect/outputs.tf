@@ -59,7 +59,7 @@ output "eks_api_security_group_id" {
 }
 
 output "connect_worker_security_group_ids" {
-  description = "Worker security groups receiving Console REST access on TCP 8083"
+  description = "Worker security groups receiving Console REST access on TCP 8083 and built-in Prometheus metrics access on TCP 9090"
   value       = local.connect_worker_security_group_ids
 }
 

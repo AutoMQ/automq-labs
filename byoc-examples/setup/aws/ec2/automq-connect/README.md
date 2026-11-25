@@ -6,8 +6,9 @@ last_updated: 2026-11-25
 
 Create one `TIER1` Connect worker on an existing EKS cluster, using the Kafka
 Instance from `../automq-cluster`. Terraform creates a dedicated namespace,
-ServiceAccount, and worker IAM role, and configures Console access to EKS and
-worker REST. The Console and Kafka brokers run on EC2; Connect workers run on EKS.
+ServiceAccount, and worker IAM role, and configures Console access to EKS,
+worker REST, and built-in Prometheus metrics. The Console and Kafka brokers
+run on EC2; Connect workers run on EKS.
 
 The default deployment starts the Connect Cluster without a Connector or MySQL
 dependency. You can enable [MySQL CDC](#optional-mysql-cdc) in the same root and
@@ -29,7 +30,7 @@ Prepare these dependencies first:
   create a namespace and its ServiceAccount. An AWS login alone does not grant it.
 - The Terraform machine can reach both the Console and Kubernetes APIs. Workers
   can reach each other, the Kafka private endpoints, and their image/plugin
-  downloads. Terraform configures Console ingress to EKS and worker REST;
+  downloads. Terraform configures Console ingress to EKS and worker REST/metrics;
   [other network paths](#network-access) remain external prerequisites.
 - An `ACTIVE` plugin in **Kafka Connect > Plugins**. The default name is
   `mysql-debezium-cdc`; use its exact available version. This root does not
@@ -223,7 +224,7 @@ names. Import existing objects only when this root will become their sole owner.
 | `connect_worker_role_name` | `null`; generate a unique IAM role name |
 | `connect_plugin_s3_prefix` | `automq/connect-plugins`; no wildcards or edge slashes |
 | `connect_worker_policy_arns` | `[]`; additional existing managed policies for other S3 locations, SSE-KMS, or other AWS services |
-| `connect_worker_security_group_ids` | `[]`; use the EKS primary SG, or specify the actual worker node/Pod SGs |
+| `connect_worker_security_group_ids` | `[]`; use the EKS primary SG, or specify actual worker node/Pod SGs for both REST and metrics ingress |
 | `console_eks_access_wait_duration` | `60s`; propagation buffer after grant/rule changes; accepts `2m` or `0s`, unchanged applies do not wait |
 | `console_endpoint_override` | `null`; a reachable Console API URL, for example `http://127.0.0.1:18080` with a maintained SSM tunnel |
 | `connector_name` / `topic_prefix` | `mysql-cdc-demo` / `mysql-cdc` |
@@ -268,11 +269,12 @@ grant's ownership before applying, importing only for sole ownership here.
 
 ### Network access
 
-Terraform adds TCP `443` ingress on the EKS primary SG and TCP `8083` ingress on
-the worker SGs, both sourced from the Console SG. Standard EKS managed nodes
-with ordinary VPC CNI use the primary SG by default: no SG input is needed.
-Custom node/Pod networking requires `connect_worker_security_group_ids`.
-Destroy revokes only this root's rules: two by default, or `1 + N` for `N` worker SGs.
+Terraform adds TCP `443` ingress on the EKS primary SG, plus TCP `8083` for REST
+and TCP `9090` for built-in Prometheus metrics on the worker SGs. All rules use
+the Console SG as their source. Standard EKS managed nodes with ordinary VPC CNI
+use the primary SG by default: no SG input is needed. For custom node/Pod SGs,
+`connect_worker_security_group_ids` overrides both REST and metrics ingress.
+Destroy revokes only this root's rules: three by default, or `1 + 2N` for `N` worker SGs.
 
 Console egress stays unchanged; the adjacent example allows all outbound traffic.
 Routes, peering, DNS, NACLs, NetworkPolicy, worker-to-Kafka access, and MySQL
@@ -296,6 +298,8 @@ AWS_PROFILE='<your-eks-admin-profile>' eksctl utils associate-iam-oidc-provider 
   private API reachability, auth mode, OIDC, and scheduling capacity. For worker
   startup, check image/plugin downloads and private Kafka connectivity. IAM/SG
   outputs identify the configured resources for diagnosis.
+- For missing CPU/Memory, check Console-to-Pod TCP `9090` access; the remote-write
+  switch does not control built-in collection, which does not use metrics-server.
 - On first-apply `DescribeCluster` `AccessDenied`, confirm the Console policy and
   principal. If the same running principal subsequently succeeds, allow
   propagation, then generate a fresh plan and apply. No EC2 or EKS rebuild is needed.

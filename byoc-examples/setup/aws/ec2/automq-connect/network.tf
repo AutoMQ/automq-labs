@@ -49,3 +49,19 @@ resource "aws_vpc_security_group_ingress_rule" "console_workers" {
 
   tags = var.tags
 }
+
+# Console scrapes worker metrics separately from the Connect REST API.
+resource "aws_vpc_security_group_ingress_rule" "console_worker_metrics" {
+  for_each = local.connect_worker_security_group_ids
+
+  depends_on = [terraform_data.preflight]
+
+  security_group_id            = each.value
+  referenced_security_group_id = local.console_security_group_valid ? local.console_security_group_id : "sg-00000000000000000"
+  ip_protocol                  = "tcp"
+  from_port                    = 9090
+  to_port                      = 9090
+  description                  = "AutoMQ Console to Connect worker metrics"
+
+  tags = var.tags
+}

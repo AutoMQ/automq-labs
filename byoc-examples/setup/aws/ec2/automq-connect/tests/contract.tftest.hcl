@@ -212,14 +212,16 @@ run "cluster_only_inherits_console_region" {
       aws_vpc_security_group_ingress_rule.console_eks_api.from_port == 443 && aws_vpc_security_group_ingress_rule.console_eks_api.to_port == 443 &&
       toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == toset(["sg-22222222222222222"]) &&
       alltrue([for id, rule in aws_vpc_security_group_ingress_rule.console_workers : rule.security_group_id == id && rule.from_port == 8083 && rule.to_port == 8083]) &&
-      alltrue([for rule in concat([aws_vpc_security_group_ingress_rule.console_eks_api], values(aws_vpc_security_group_ingress_rule.console_workers)) :
+      toset(keys(aws_vpc_security_group_ingress_rule.console_worker_metrics)) == toset(["sg-22222222222222222"]) &&
+      alltrue([for id, rule in aws_vpc_security_group_ingress_rule.console_worker_metrics : rule.security_group_id == id && rule.from_port == 9090 && rule.to_port == 9090]) &&
+      alltrue([for rule in concat([aws_vpc_security_group_ingress_rule.console_eks_api], values(aws_vpc_security_group_ingress_rule.console_workers), values(aws_vpc_security_group_ingress_rule.console_worker_metrics)) :
         rule.referenced_security_group_id == "sg-11111111111111111" && rule.ip_protocol == "tcp" &&
         rule.cidr_ipv4 == null && rule.cidr_ipv6 == null && rule.prefix_list_id == null
       ]) &&
       time_sleep.console_eks_access.create_duration == "60s" &&
       time_sleep.console_eks_access.triggers["wait_duration"] == "60s"
     )
-    error_message = "Only the Console SG may reach EKS TCP 443 and worker TCP 8083; grants must precede the default propagation wait."
+    error_message = "Only the Console SG may reach separate EKS TCP 443, worker REST TCP 8083, and metrics TCP 9090 rules; no port range or CIDR grant is allowed."
   }
 }
 
@@ -382,14 +384,21 @@ run "custom_settings_and_explicit_region_propagate" {
       aws_eks_access_policy_association.console.cluster_name == "custom-eks" &&
       one([for s in jsondecode(aws_iam_role_policy.console_eks.policy).Statement : s if contains(s.Action, "eks:DescribeNodegroup")]).Resource == "arn:aws:eks:eu-west-1:123456789012:nodegroup/custom-eks/*/*" &&
       aws_vpc_security_group_ingress_rule.console_eks_api.security_group_id == "sg-22222222222222222" &&
+      aws_vpc_security_group_ingress_rule.console_eks_api.from_port == 443 && aws_vpc_security_group_ingress_rule.console_eks_api.to_port == 443 &&
       toset(keys(aws_vpc_security_group_ingress_rule.console_workers)) == var.connect_worker_security_group_ids &&
       alltrue([for id, rule in aws_vpc_security_group_ingress_rule.console_workers :
         rule.security_group_id == id && rule.referenced_security_group_id == "sg-11111111111111111" &&
         rule.ip_protocol == "tcp" && rule.from_port == 8083 && rule.to_port == 8083 &&
         rule.cidr_ipv4 == null && rule.cidr_ipv6 == null && rule.prefix_list_id == null
+      ]) &&
+      toset(keys(aws_vpc_security_group_ingress_rule.console_worker_metrics)) == var.connect_worker_security_group_ids &&
+      alltrue([for id, rule in aws_vpc_security_group_ingress_rule.console_worker_metrics :
+        rule.security_group_id == id && rule.referenced_security_group_id == "sg-11111111111111111" &&
+        rule.ip_protocol == "tcp" && rule.from_port == 9090 && rule.to_port == 9090 &&
+        rule.cidr_ipv4 == null && rule.cidr_ipv6 == null && rule.prefix_list_id == null
       ])
     )
-    error_message = "Console role paths and target-cluster grants must propagate; custom Worker SGs replace only REST targets, leaving API access on the primary SG."
+    error_message = "Custom Worker SGs must each receive separate Console-only TCP 8083 and 9090 rules without CIDRs or port ranges; EKS API TCP 443 stays on the primary SG."
   }
 
   assert {
