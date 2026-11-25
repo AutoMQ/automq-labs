@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 ---
 
 # AutoMQ Connect Cluster on an existing EKS cluster
@@ -11,10 +11,18 @@ Instance from `../automq-cluster` and installs your registered
 `mysql-debezium-cdc` plugin. The Console and Kafka brokers run on EC2; Connect
 workers run on EKS.
 
-This stage does not create a Connector or start CDC. A MySQL server, database
-credentials, and MySQL network access are not required yet. Terraform does not
-create or delete the EKS cluster, its shared IAM OIDC provider, the plugin,
-Console, or Kafka Instance. Running workers consume billable resources.
+By default, `create_mysql_connector = false` creates the Cluster infrastructure
+without starting CDC. A MySQL server, database credentials, and MySQL network
+access are not required in that mode. To capture one table, enable
+[optional MySQL CDC](#optional-mysql-cdc) in this same root and apply; Terraform
+also creates the Connector and its CDC data Topic. Debezium creates its own
+schema history Topic when it starts. Terraform-managed Connect resources share
+one state.
+
+Terraform does not create MySQL or change network connectivity. The existing
+EKS cluster, shared IAM OIDC provider, plugin, Console, and Kafka Instance retain
+their original ownership. Running workers and CDC storage/traffic consume
+billable resources.
 
 ## Prerequisites
 
@@ -250,8 +258,9 @@ terraform output -raw connect_cluster_state
 ```
 
 Confirm the Cluster is running in **Kafka Connect > Connect Clusters**, inspect
-its workers, and check that the selected plugin is installed. No database
-changes or CDC messages are expected because no Connector has been created.
+its workers, and check that the selected plugin is installed. With
+`create_mysql_connector = false`, no CDC messages are expected. To start a
+capture task, configure the optional MySQL settings below.
 
 If Terraform fails while reading EKS or creating Kubernetes objects, check its
 AWS identity, Kubernetes access, API endpoint reachability, authentication
@@ -296,19 +305,178 @@ terraform plan
 
 Confirm that the plan does not replace the running Cluster before proceeding.
 
+## Optional MySQL CDC
+
+Set `create_mysql_connector = true` to add a Debezium MySQL Connector and its
+CDC data Topic in the same Terraform apply. The installed plugin must provide
+`io.debezium.connector.mysql.MySqlConnector`, and your Console must support the
+Connector API used by Provider `0.4.10`. This root captures one
+`mysql_database.mysql_table`; these two name inputs accept letters, numbers,
+and underscores, not regexes or table lists.
+
+Prepare the source before enabling capture:
+
+- Use an existing supported MySQL database and table. Workers must resolve the
+  hostname and reach its port, normally `3306`. Configure routes, DNS, security
+  groups, and network policies first, including cross-VPC connectivity for RDS
+  if needed. Terraform does not provision the database or network paths.
+- Enable binlogging with `log_bin=ON`, `binlog_format=ROW`, and
+  `binlog_row_image=FULL`. Avoid `PARTIAL_JSON` in `binlog_row_value_options`
+  and retain binlogs long enough for snapshots and recovery.
+- Give the CDC user `SELECT`, `SHOW DATABASES`, `RELOAD`, `REPLICATION SLAVE`,
+  and `REPLICATION CLIENT` permissions as supported by the service.
+  RDS/Aurora snapshot locking also needs `LOCK TABLES`. RDS for MySQL requires
+  automated backups for binlogging; its parameter group and binlog retention
+  must be prepared by the database owner. See the
+  [Debezium MySQL setup guide](https://debezium.io/documentation/reference/3.1/connectors/mysql.html#setting-up-mysql).
+- Choose a unique `mysql_server_id` for this replication topology. The default
+  `184054` must be changed if it is already used by another server or client.
+- Keep the target Kafka Instance's private plaintext listener enabled. This
+  root automatically selects one distinct VPC/private `PLAINTEXT` bootstrap
+  value from the existing Kafka state, rejecting public-only or ambiguous
+  selections. CDC output and schema history use this same Kafka Instance.
+  Debezium's native Kafka clients need Create/Describe/Read/Write access for
+  their history Topic. This example uses anonymous `PLAINTEXT` without Kafka
+  ACL credentials; Console API credentials are separate.
+
+For a dedicated test database named `inventory` that your DBA has already
+created, you can prepare the demonstration table using a DDL/application-write
+account before applying. Do not run this SQL against a production source:
+
+```sql
+CREATE TABLE inventory.customers (
+  id INT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL
+);
+INSERT INTO inventory.customers (id, name) VALUES (1, 'snapshot-row');
+```
+
+If using an existing table instead, set its database and table names and skip
+that SQL. Terraform does not execute database setup or grant MySQL privileges.
+The CDC account needs read/replication access, not application-write access.
+
+Add these settings to your existing `terraform.tfvars`:
+
+```hcl
+create_mysql_connector = true
+mysql_hostname         = "mysql.internal.example"
+mysql_user             = "your-cdc-user"
+mysql_password         = "your-cdc-password"
+```
+
+`mysql_hostname`, `mysql_user`, and `mysql_password` default to `null`; all three
+must be provided in your local `terraform.tfvars` when capture is enabled;
+replace the example placeholders with your database connection values.
+Your local tfvars, state, and saved plans contain the password; do not commit them.
+
+| MySQL input | Default | Purpose |
+| --- | --- | --- |
+| `create_mysql_connector` | `false` | Create/manage the optional Connector and its CDC data Topic |
+| `mysql_hostname` / `mysql_user` / `mysql_password` | `null` | Required when capture is enabled |
+| `mysql_port` | `3306` | MySQL port reachable from workers |
+| `mysql_database` / `mysql_table` | `inventory` / `customers` | One existing table to capture |
+| `mysql_server_id` | `184054` | Unique replication-client ID |
+| `mysql_ssl_mode` | `required` | Encrypt MySQL traffic; this setting alone does not verify server identity |
+| `connector_name` | `mysql-cdc-demo` | Unique Connector name |
+| `topic_prefix` | `mysql-cdc` | Data Topic prefix |
+
+The default data Topic is `mysql-cdc.inventory.customers`, with one partition.
+Terraform creates and deletes it. Choose an unused `topic_prefix`; if that data
+Topic already exists, change the name or transfer its ownership explicitly
+before import. Do not manage the same data Topic from multiple states.
+
+Debezium creates the dedicated history Topic `schema-history.mysql-cdc-demo`
+through its native Kafka Admin client at startup. Debezium `3.1.2` requests
+one partition, `cleanup.policy=delete`,
+`retention.ms=9223372036854775807` (`Long.MAX_VALUE`), and
+`retention.bytes=-1`, preserving the DDL history for recovery. See the
+[pinned Debezium history implementation](https://github.com/debezium/debezium/blob/v3.1.2.Final/debezium-storage/debezium-storage-kafka/src/main/java/io/debezium/storage/kafka/history/KafkaSchemaHistory.java#L479).
+
+The Console Topic API accepts `retention.ms` only from one hour to 60 days;
+creating history through that API with `-1` returns HTTP 400. This example
+therefore leaves history creation to Debezium's native Kafka API rather than
+substituting a short retention period. If the history Topic already exists,
+verify its partition count and retention settings; Debezium does not repair
+an existing Topic's settings automatically. Use an exclusive history name and
+do not share it across Connectors.
+
+Review and apply from this same directory:
+
+```bash
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+
+This can be your first apply or an update to the existing Connect deployment;
+there is no additional Connect state to manage. The MySQL preconditions are
+checked when capture is enabled. Its outputs are then available:
+
+```bash
+terraform output -raw mysql_connector_id
+terraform output -raw mysql_connector_state
+terraform output -raw mysql_data_topic
+terraform output -raw mysql_schema_history_topic
+```
+
+These outputs are `null` while `create_mysql_connector` is `false`.
+`mysql_schema_history_topic` reports the configured history name, not a
+Terraform-managed resource or proof that startup has created it. Confirm the
+Connector and task are running in the Console, then consume the data Topic
+from a client with private Kafka access:
+
+```bash
+kafka-console-consumer.sh \
+  --bootstrap-server '<private-plaintext-bootstrap-hosts>' \
+  --topic mysql-cdc.inventory.customers \
+  --from-beginning \
+  --property print.key=true \
+  --timeout-ms 30000
+```
+
+The initial snapshot emits `op = "r"` for the seed row. After it completes, use
+an application-write account to test the demonstration table:
+
+```sql
+SET autocommit = 1;
+INSERT INTO inventory.customers (id, name) VALUES (2, 'cdc-insert');
+UPDATE inventory.customers SET name = 'cdc-update' WHERE id = 2;
+DELETE FROM inventory.customers WHERE id = 2;
+```
+
+Expect Debezium JSON envelopes with `op` values `c`, `u`, and `d` and matching
+`before`/`after` fields. With this example's JSON converter settings, there is
+no `payload` wrapper. A delete can also emit a null-valued tombstone; retries
+or prior runs can add records, so do not assume an exact count. If capture
+fails, check task logs, MySQL TLS support, permissions, binlog configuration,
+snapshot progress, and worker-to-database/Kafka connectivity. The default
+`required` SSL mode needs database TLS support.
+
+Changing `create_mysql_connector` from `true` to `false` schedules deletion of
+the Connector and its CDC data Topic, including its records. The Debezium-created
+history Topic remains. Use that change only when you intend to remove the
+Terraform-managed capture resources.
+
 ## Cleanup
 
 Keep EKS and its IAM OIDC provider available until this root has been destroyed.
-Destroy it before destroying the Kafka Instance or Console:
+Destroy this root before the Kafka Instance or Console. Terraform's dependencies
+remove the optional Connector before its CDC data Topic and Connect Cluster:
 
 ```bash
 terraform destroy
 ```
 
-Terraform deletes the Connect Cluster, dedicated namespace, ServiceAccount,
-worker IAM role, its inline plugin-download policy, and its managed-policy
-attachments. It also deletes the Console's added inline EKS policy, access
-entry, and cluster-admin association, revoking this root's Console-to-EKS
+If enabled, Terraform deletes the MySQL Connector and its CDC data Topic,
+including the stored CDC records. The source MySQL database and table remain.
+The schema history Topic is outside Terraform's lifecycle and is retained;
+delete it manually only when you deliberately retire the capture and discard
+its recovery state. Do not delete or expire history while preserving the
+Connector or offsets for a later resume.
+
+Terraform also deletes the Connect Cluster, dedicated namespace,
+ServiceAccount, worker IAM role, its inline plugin-download policy, and its
+managed-policy attachments. It also deletes the Console's added inline EKS
+policy, access entry, and cluster-admin association, revoking this root's Console-to-EKS
 authorization. The existing Console role and EC2 instance profile remain.
 AutoMQ removes the worker
 deployment. Confirm cleanup completes before dismantling the surrounding
@@ -321,7 +489,7 @@ For the complete example, destroy roots in this order:
 
 ## Validation scope
 
-Validation is limited to Terraform validation and mocked contract tests. This
-example has not been verified by creating a live Connect deployment. Local
-checks do not prove Console API compatibility, plugin availability, EKS
-permissions, networking, or successful worker startup.
+Validation includes Terraform validation and mocked contract tests. The MySQL
+CDC path has not been exercised against a live database. Local checks do not
+prove Console API compatibility, plugin availability, EKS permissions,
+networking, or successful worker and Connector startup.

@@ -47,3 +47,23 @@ output "console_eks_access_entry_arn" {
   description = "EKS Access Entry granting the existing Console Role cluster access"
   value       = aws_eks_access_entry.console.access_entry_arn
 }
+
+output "mysql_connector_id" {
+  description = "MySQL Debezium Connector ID, or null when MySQL CDC is disabled"
+  value       = try(automq_connector.mysql[0].id, null)
+}
+
+output "mysql_connector_state" {
+  description = "MySQL Connector lifecycle state, or null when MySQL CDC is disabled"
+  value       = try(automq_connector.mysql[0].state, null)
+}
+
+output "mysql_data_topic" {
+  description = "Single-table CDC topic, or null when MySQL CDC is disabled"
+  value       = try(automq_kafka_topic.cdc[0].name, null)
+}
+
+output "mysql_schema_history_topic" {
+  description = "Schema history topic name used and created by Debezium, or null when MySQL CDC is disabled"
+  value       = var.create_mysql_connector ? local.schema_history_topic_name : null
+}

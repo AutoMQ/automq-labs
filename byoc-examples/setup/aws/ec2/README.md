@@ -1,5 +1,5 @@
 ---
-last_updated: 2026-11-24
+last_updated: 2026-11-25
 ---
 
 # AutoMQ on Amazon EC2
@@ -89,9 +89,12 @@ After creating the Kafka Instance, use the optional
 [Connect example](automq-connect/README.md) to create a dedicated namespace,
 ServiceAccount, Worker IAM Role, and Connect Cluster on an existing EKS cluster
 with the `mysql-debezium-cdc` plugin. It also grants the existing Console Role
-EKS access. Connector tasks are
-configured separately after the Connect Cluster is ready.
-The Connect example has its own state and reads the two states above.
+EKS access. Set `create_mysql_connector = true` in that same Connect root to
+optionally capture one MySQL table; Terraform creates the Connector and its
+CDC data Topic in the same apply and state. Debezium creates its own schema
+history Topic through Kafka at startup; that Topic is outside Terraform's
+lifecycle. MySQL and network connectivity must already be prepared. The
+Connect example reads the two states above.
 
 The Console stage can be deployed by itself. Running `terraform apply` in the
 Cluster root is the step that creates the AutoMQ data-plane nodes.
@@ -481,8 +484,14 @@ Use a separate state for each AutoMQ Environment ID. Replacing `automq_config`
 with metadata from another environment while retaining the Console data volume
 can mix persistent Console metadata with the wrong control-plane identity.
 
-If you deployed the optional [Connect example](automq-connect/README.md), destroy
-that state before the Kafka Instance. Then destroy the Cluster state so no
+If you deployed the optional [Connect example](automq-connect/README.md),
+destroy that state before the Kafka Instance. Its dependencies also remove any
+enabled MySQL Connector and its CDC data Topic, including its records. The
+source MySQL database and Debezium-created schema history Topic remain; retire
+history manually only when its recovery state is no longer needed. The order
+is `automq-connect` → `automq-cluster`
+→ `automq-console`, skipping Connect if it was not deployed.
+Destroy the Kafka Instance before the Console so no
 data-plane nodes depend on IAM, DNS, subnets, or buckets owned by the Console
 state:
 

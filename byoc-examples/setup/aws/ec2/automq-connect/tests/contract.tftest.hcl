@@ -5,6 +5,21 @@ mock_provider "automq" {
       state = "RUNNING"
     }
   }
+
+  mock_resource "automq_connector" {
+    defaults = {
+      id             = "conn-example"
+      state          = "RUNNING"
+      connector_type = "SOURCE"
+      plugin_id      = "plugin-example"
+    }
+  }
+
+  mock_resource "automq_kafka_topic" {
+    defaults = {
+      topic_id = "topic-example"
+    }
+  }
 }
 
 mock_provider "http" {
@@ -93,6 +108,13 @@ override_data {
     outputs = {
       instance_id     = "kf-example"
       instance_status = "Running"
+      instance_endpoints = [{
+        bootstrap_servers = "kafka.internal.example:9092"
+        display_name      = "Internal PLAINTEXT"
+        network_type      = "VPC"
+        protocol          = "PLAINTEXT"
+        mechanisms        = ""
+      }]
     }
   }
 }
@@ -104,6 +126,19 @@ variables {
 
 run "creates_connect_cluster_from_adjacent_states" {
   command = apply
+
+  assert {
+    condition = (
+      length(automq_connector.mysql) == 0 &&
+      length(automq_kafka_topic.cdc) == 0 &&
+      length(terraform_data.mysql_preflight) == 0 &&
+      output.mysql_connector_id == null &&
+      output.mysql_connector_state == null &&
+      output.mysql_data_topic == null &&
+      output.mysql_schema_history_topic == null
+    )
+    error_message = "The default Connect Cluster deployment must not require MySQL credentials or create a Connector and its CDC topic."
+  }
 
   assert {
     condition = (
@@ -749,4 +784,295 @@ run "console_roles_in_another_account_are_rejected" {
   }
 
   expect_failures = [terraform_data.preflight]
+}
+
+run "creates_mysql_connector_with_dedicated_topics" {
+  command = apply
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].environment_id == "env-example" &&
+      automq_connector.mysql[0].connect_cluster_id == automq_connect_cluster.demo.id &&
+      automq_connector.mysql[0].name == "mysql-cdc-demo" &&
+      automq_connector.mysql[0].connector_class == "io.debezium.connector.mysql.MySqlConnector" &&
+      automq_connector.mysql[0].task_count == 1 &&
+      automq_connector.mysql[0].kafka_cluster.security_protocol.protocol == "PLAINTEXT" &&
+      length(terraform_data.mysql_preflight) == 1 &&
+      output.mysql_connector_id == "conn-example" &&
+      output.mysql_connector_state == "RUNNING" &&
+      output.connect_cluster_id == "connect-cluster-example"
+    )
+    error_message = "The optional MySQL source Connector must use the managed Connect Cluster and environment with one PLAINTEXT task."
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql.internal.example" &&
+      automq_connector.mysql[0].connector_config["database.port"] == "3306" &&
+      automq_connector.mysql[0].connector_config["database.user"] == "debezium" &&
+      automq_connector.mysql[0].connector_config["database.server.id"] == "184054" &&
+      automq_connector.mysql[0].connector_config["database.include.list"] == "inventory" &&
+      automq_connector.mysql[0].connector_config["table.include.list"] == "inventory\\.customers" &&
+      automq_connector.mysql[0].connector_config["topic.prefix"] == "mysql-cdc" &&
+      automq_connector.mysql[0].connector_config["snapshot.mode"] == "initial" &&
+      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "required" &&
+      automq_connector.mysql[0].connector_config["include.schema.changes"] == "false" &&
+      !contains(keys(automq_connector.mysql[0].connector_config), "connector.class") &&
+      !contains(keys(automq_connector.mysql[0].connector_config), "tasks.max")
+    )
+    error_message = "The Connector must receive string-valued MySQL CDC settings and an escaped database/table filter without duplicating AutoMQ-injected fields."
+  }
+
+  assert {
+    condition = (
+      !contains(keys(automq_connector.mysql[0].connector_config), "database.password") &&
+      length(automq_connector.mysql[0].connector_config_sensitive) == 1 &&
+      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "example-test-password"
+    )
+    error_message = "The MySQL password must appear only in the sensitive connector configuration."
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] == "schema-history.mysql-cdc-demo" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.internal.example:9092" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.producer.security.protocol"] == "PLAINTEXT" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.consumer.security.protocol"] == "PLAINTEXT" &&
+      output.mysql_schema_history_topic == "schema-history.mysql-cdc-demo"
+    )
+    error_message = "Debezium schema history clients must target their dedicated topic name through the selected private PLAINTEXT Kafka endpoint."
+  }
+
+  assert {
+    condition = (
+      automq_kafka_topic.cdc[0].environment_id == "env-example" &&
+      automq_kafka_topic.cdc[0].kafka_instance_id == "kf-example" &&
+      automq_kafka_topic.cdc[0].name == "mysql-cdc.inventory.customers" &&
+      automq_kafka_topic.cdc[0].partition == 1 &&
+      automq_kafka_topic.cdc[0].name != automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] &&
+      output.mysql_data_topic == automq_kafka_topic.cdc[0].name
+    )
+    error_message = "The CDC data topic must match Debezium's prefix.database.table naming and remain separate from schema history."
+  }
+}
+
+run "mysql_connection_and_capture_settings_are_configurable" {
+  command = apply
+
+  variables {
+    create_mysql_connector = true
+    connector_name         = "jz-mysql-cdc"
+    topic_prefix           = "jz-cdc"
+    mysql_hostname         = "mysql-staging.internal.example"
+    mysql_user             = "cdcuser"
+    mysql_password         = "alternate-test-password"
+    mysql_port             = 3307
+    mysql_server_id        = 456789
+    mysql_database         = "fulfillment"
+    mysql_table            = "orders"
+    mysql_ssl_mode         = "verify_identity"
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].name == "jz-mysql-cdc" &&
+      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql-staging.internal.example" &&
+      automq_connector.mysql[0].connector_config["database.user"] == "cdcuser" &&
+      automq_connector.mysql[0].connector_config["database.port"] == "3307" &&
+      automq_connector.mysql[0].connector_config["database.server.id"] == "456789" &&
+      automq_connector.mysql[0].connector_config["database.include.list"] == "fulfillment" &&
+      automq_connector.mysql[0].connector_config["table.include.list"] == "fulfillment\\.orders" &&
+      automq_connector.mysql[0].connector_config["topic.prefix"] == "jz-cdc" &&
+      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "verify_identity" &&
+      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "alternate-test-password" &&
+      automq_kafka_topic.cdc[0].name == "jz-cdc.fulfillment.orders" &&
+      output.mysql_schema_history_topic == "schema-history.jz-mysql-cdc" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] == "schema-history.jz-mysql-cdc"
+    )
+    error_message = "Configured MySQL connection, credentials, capture filters, TLS mode, and topic names must propagate together."
+  }
+}
+
+run "private_network_endpoint_alias_is_supported" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [{
+          bootstrap_servers = "kafka.private.example:9092"
+          display_name      = "Private PLAINTEXT"
+          network_type      = "PRIVATE"
+          protocol          = "PLAINTEXT"
+          mechanisms        = ""
+        }]
+      }
+    }
+  }
+
+  assert {
+    condition     = automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.private.example:9092"
+    error_message = "Both PRIVATE and VPC endpoint labels must select the private PLAINTEXT Kafka bootstrap address."
+  }
+}
+
+run "duplicate_private_bootstrap_values_are_deduplicated" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [
+          {
+            bootstrap_servers = "kafka.internal.example:9092"
+            display_name      = "VPC PLAINTEXT"
+            network_type      = "VPC"
+            protocol          = "PLAINTEXT"
+            mechanisms        = ""
+          },
+          {
+            bootstrap_servers = "kafka.internal.example:9092"
+            display_name      = "Private PLAINTEXT"
+            network_type      = "PRIVATE"
+            protocol          = "PLAINTEXT"
+            mechanisms        = ""
+          },
+        ]
+      }
+    }
+  }
+
+  assert {
+    condition     = automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.internal.example:9092"
+    error_message = "Equivalent private endpoint records must resolve to one distinct bootstrap address."
+  }
+}
+
+run "ambiguous_private_bootstrap_addresses_are_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [
+          {
+            bootstrap_servers = "kafka-one.internal.example:9092"
+            display_name      = "Private endpoint one"
+            network_type      = "VPC"
+            protocol          = "PLAINTEXT"
+            mechanisms        = ""
+          },
+          {
+            bootstrap_servers = "kafka-two.internal.example:9092"
+            display_name      = "Private endpoint two"
+            network_type      = "PRIVATE"
+            protocol          = "PLAINTEXT"
+            mechanisms        = ""
+          },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "public_only_kafka_endpoints_are_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [{
+          bootstrap_servers = "kafka.public.example:9092"
+          display_name      = "Internet PLAINTEXT"
+          network_type      = "INTERNET"
+          protocol          = "PLAINTEXT"
+          mechanisms        = ""
+        }]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "enabled_mysql_connectors_require_connection_credentials" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "invalid_mysql_connection_and_capture_inputs_are_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "REPLACE_WITH_MYSQL_ENDPOINT"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+    mysql_port             = 65536
+    mysql_server_id        = 0
+    connector_name         = "invalid connector name"
+    mysql_database         = "invalid.database"
+    mysql_table            = "invalid.table"
+    topic_prefix           = "invalid topic prefix"
+  }
+
+  expect_failures = [
+    var.mysql_hostname,
+    var.mysql_port,
+    var.mysql_server_id,
+    var.connector_name,
+    var.mysql_database,
+    var.mysql_table,
+    var.topic_prefix,
+  ]
 }
