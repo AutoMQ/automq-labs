@@ -56,6 +56,11 @@ output "automq_environment_id" {
   value       = local.automq_environment_id
 }
 
+output "ops_bucket_name" {
+  description = "Environment Ops Bucket created by the Console and used for worker logs and metrics."
+  value       = nonsensitive(jsondecode(base64decode(var.automq_config)).opsBucket.bucketName)
+}
+
 output "console_vm_name" {
   description = "AutoMQ Console VM name."
   value       = module.console.vm_name

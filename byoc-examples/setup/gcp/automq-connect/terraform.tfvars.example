@@ -1,0 +1,34 @@
+# Existing GKE Standard cluster. This root does not create a cluster or node pool.
+kubernetes_cluster_id = "projects/your-project-id/locations/us-central1/clusters/your-gke-cluster"
+
+# The default system pool must have enough free capacity for one TIER1 worker.
+# Avoid the dedicated Broker pool unless capacity and taints are handled explicitly.
+# connect_node_pool_name = "default-pool"
+
+# Companion local states are used by default.
+# console_state_path = "../terraform/terraform.tfstate"
+# kafka_state_path   = "../automq-cluster/terraform/terraform.tfstate"
+
+# For older Console states, publish the new outputs with a refresh-only apply
+# in the Console directory before planning Connect. See README.md.
+
+# Optional settings.
+# console_endpoint_override = "https://your-console.example.com"
+# connect_cluster_name      = "gcp-mysql-connect-demo"
+# connect_namespace         = "automq-connect"
+# connect_service_account   = "automq-connect"
+# worker_service_account_id = "your-connect-worker-gsa"
+# worker_count              = 1
+# worker_resource_spec      = "TIER1"
+# connect_version           = "version-from-your-console"
+
+# Add matching tolerations if the selected existing pool has taints.
+# connect_tolerations = [{
+#   key      = "dedicated"
+#   operator = "Equal"
+#   value    = "automq-connect"
+#   effect   = "NoSchedule"
+# }]
+
+# Debezium MySQL is fixed to the ACTIVE system plugin debezium-mysql:3.1.2.
+# There are no plugin variables, MySQL credentials, or Connector inputs here.
