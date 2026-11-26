@@ -10,13 +10,29 @@ Identity binding, Ops Bucket permissions, and Console-to-worker firewall rule.
 It uses one `TIER1` worker and the fixed `debezium-mysql:3.1.2` system plugin.
 
 Only `kubernetes_cluster_id` is required when using the companion Console and
-Kafka deployments. MySQL CDC is optional and disabled by default.
+AutoMQ Cluster deployments. MySQL CDC is optional and disabled by default.
 
 ## Before you start
 
-- Complete the [Console](../terraform/) and [Kafka Instance](../automq-cluster/)
-  deployments and retain their local Terraform states.
-- Use GKE Standard in the Console's project, Region, and VPC, with Workload
+For the companion examples, use this deployment order:
+
+**GKE and network → AutoMQ BYOC Console → AutoMQ Cluster → Connect Cluster**
+
+The first three must already be ready before applying this example:
+
+| Prerequisite | Required state | Setup example |
+| --- | --- | --- |
+| Kubernetes environment (GKE Standard) | A running cluster and an existing node pool with capacity for Connect workers. | [GKE and network](../../kubernetes/gcp/terraform/) |
+| AutoMQ BYOC Console (CMP Console) | Initialized and reachable, with permission to deploy workloads to the target GKE cluster. | [Console](../terraform/) |
+| AutoMQ Cluster | Created in the same AutoMQ environment as the Console and reachable from the Connect workers. | [AutoMQ Cluster](../automq-cluster/) |
+
+Keep the local Terraform states for both the Console and AutoMQ Cluster;
+this example reads their connection details and resource IDs automatically.
+GKE is supplied separately through `kubernetes_cluster_id`.
+
+Also check the following:
+
+- GKE must be in the Console's GCP project, Region, and VPC, with Workload
   Identity enabled. The default `default-pool` must use `GKE_METADATA`, have
   spare capacity for a worker, and have no scheduling taints.
 - Confirm that `debezium-mysql:3.1.2` is `ACTIVE` in the Console plugin catalog.
@@ -25,7 +41,11 @@ Kafka deployments. MySQL CDC is optional and disabled by default.
   Sign in to the CLI with `gcloud auth login` if needed. The Console and GKE
   API must be reachable from your machine.
 
-For IAM permissions, custom node pools, or an existing Console state, see
+An existing MySQL source is required only when enabling the optional MySQL
+Connector. Prepare its network access, binlogging, TLS, and CDC account as
+described in [source requirements](./ADVANCED.md#mysql-source-requirements).
+
+For IAM permissions, custom node pools, or an older Console state, see
 [advanced configuration and troubleshooting](./ADVANCED.md).
 
 ## Create the Connect Cluster
@@ -75,7 +95,7 @@ terraform -chdir=../../kubernetes/gcp/terraform output -raw gke_cluster_id
 ```
 
 Console credentials, environment ID, and Ops Bucket name are read from
-`../terraform/terraform.tfstate`. The Kafka Instance ID comes from
+`../terraform/terraform.tfstate`. The AutoMQ Cluster ID comes from
 `../automq-cluster/terraform/terraform.tfstate`. No credentials need copying.
 
 ### 3. Review and apply
@@ -148,7 +168,7 @@ Topic, including CDC records. It does not pause the Connector. The Connect
 Cluster, source database, and Debezium schema history Topic remain.
 
 To remove this example, review a destroy plan and apply it before removing the
-Kafka Instance or Console:
+AutoMQ Cluster or Console:
 
 ```bash
 terraform plan -destroy -out=destroy.tfplan
@@ -156,6 +176,6 @@ terraform apply destroy.tfplan
 ```
 
 This removes the owned Connect resources, identities, namespace, firewall rule,
-and optional Connector/data Topic. GKE, Console, Kafka Instance, Ops Bucket,
+and optional Connector/data Topic. GKE, Console, AutoMQ Cluster, Ops Bucket,
 MySQL, and the schema history Topic remain. Use the namespace exclusively for
 this example. See [resource ownership](./ADVANCED.md#resource-ownership).

@@ -27,14 +27,14 @@ Enabling CDC also requires worker-to-MySQL DNS and TCP connectivity.
 
 ## Connect settings
 
-All settings below are optional. GKE, its node pools, Console, Kafka Instance,
+All settings below are optional. GKE, its node pools, Console, AutoMQ Cluster,
 Ops Bucket, and the system plugin remain externally managed.
 
 | Input | Purpose | Default |
 | --- | --- | --- |
 | `connect_node_pool_name` | Existing pool with spare worker capacity | `default-pool` |
 | `console_state_path` | Local Console state | `../terraform/terraform.tfstate` |
-| `kafka_state_path` | Local Kafka Instance state | `../automq-cluster/terraform/terraform.tfstate` |
+| `kafka_state_path` | Local AutoMQ Cluster state | `../automq-cluster/terraform/terraform.tfstate` |
 | `console_endpoint_override` | Console address reachable from Terraform | `null`; uses Console state |
 | `connect_cluster_name` | Connect Cluster and derived GCP resource name | `gcp-mysql-connect-demo` |
 | `connect_namespace` | Dedicated namespace owned by this example | `automq-connect` |
