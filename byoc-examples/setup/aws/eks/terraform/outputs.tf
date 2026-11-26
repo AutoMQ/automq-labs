@@ -1,21 +1,17 @@
 output "console_endpoint" {
   description = "Console endpoint for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_endpoint
+  value       = "https://${var.automq_console_domain_name}"
 }
 
 output "initial_username" {
   description = "Initial username for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_initial_username
+  value       = "admin"
 }
 
 output "initial_password" {
   description = "Initial password for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_initial_password
-}
-
-output "dns_zone_id" {
-  description = "Route53 DNS Zone ID for the AutoMQ BYOC environment"
-  value       = module.automq-byoc.automq_byoc_vpc_route53_zone_id
+  value       = "admin"
+  sensitive   = true
 }
 
 output "cluster_name" {

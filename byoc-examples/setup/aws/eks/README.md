@@ -9,7 +9,7 @@ This project automates the setup process detailed in the [official AutoMQ docume
 This Terraform project provisions and configures the following core AWS and Kubernetes resources:
 
 1.  **Amazon EKS Cluster**: A new EKS cluster is created, including the necessary VPC, subnets, and foundational security groups.
-2.  **AutoMQ BYOC Environment**: The official `AutoMQ/automq-byoc-environment/aws` module is used to deploy the AutoMQ Console, which is the central management plane for your message queues.
+2.  **AutoMQ BYOC Console**: The official AutoMQ Helm OCI chart is installed into the EKS cluster, following the [AWS installation guide](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#install-automq-console).
 3.  **EKS Node Group**: A dedicated EKS node group is configured for running AutoMQ workloads, with appropriate instance types and taints (`dedicated=automq:NoSchedule`) to ensure workloads are isolated.
 4.  **Essential EKS Add-ons**: The setup automatically configures critical add-ons required for a fully functional cluster:
     *   **AWS Load Balancer Controller**: Manages AWS Load Balancers for services of type `LoadBalancer`.
@@ -20,7 +20,6 @@ This Terraform project provisions and configures the following core AWS and Kube
     *   An EKS Node Group Role with policies for ECR, CNI, and worker node operations.
     *   IAM Roles for Service Accounts (IRSA) for the EBS CSI Driver, Load Balancer Controller, and Cluster Autoscaler.
 6.  **Integration and Authorization**:
-    *   Security group rules are configured to allow secure communication between the AutoMQ Console and the EKS cluster.
     *   An EKS Access Entry is created to grant the AutoMQ Console's IAM role administrative privileges over the cluster, enabling it to deploy and manage AutoMQ.
 
 ## Prerequisites
@@ -71,6 +70,13 @@ You can override the following variables by creating a `terraform.tfvars` file o
     }
     ```
 
+- **`automq_console_config`**: Base64-encoded runtime configuration from the AutoMQ environment installation wizard.
+- **`automq_console_role_arn`**: IAM role ARN associated with the Console ServiceAccount.
+- **`automq_console_domain_name`**: DNS name for the Console ALB.
+- **`automq_console_acm_certificate_arn`**: ACM certificate ARN matching the Console domain.
+- **`automq_console_storage_class`**: EKS StorageClass for Console persistence. Defaults to `gp3`.
+- **`automq_console_chart_version`**: AutoMQ Console chart version. Defaults to `8.3.7`.
+
 
 2.  **Plan the Deployment**
     Run `terraform plan` to preview the resources that will be created.
@@ -96,13 +102,12 @@ Upon successful deployment, Terraform will display the following outputs. You ca
 | `initial_password`              | The initial password for logging into the Console.                         |
 | `cluster_name`                  | The name of the created EKS cluster.                          |
 | `node_group_instance_profile_arn` | The IAM Instance Profile ARN used by the EKS node group.  |
-| `dns_zone_id`                   | The Route 53 DNS Zone ID created for the BYOC environment.       |
 
 ## Next Steps
 
-After provisioning the infrastructure, the final step is to configure your profile. Please follow the instructions in **Step 12** of the official AutoMQ deployment guide:
+Before applying Terraform, register the environment in AutoMQ Cloud and prepare the IAM role, ACM certificate, domain, and runtime configuration from the installation wizard. After provisioning, point the domain at the ALB and complete the Console initialization:
 
-- **[Deploy AutoMQ on AWS EKS: Enter the Environment Console and Create Deployment Configurations](https://www.automq.com/docs/automq-cloud/deploy-automq-on-kubernetes/deploy-to-aws-eks#step-12-access-the-environment-console-and-create-deployment-configuration)**
+- **[Install AutoMQ Console on AWS](https://docs.automq.com/automq-cloud/getting-started/install-byoc-environment/aws/install-automq-on-aws#install-automq-console)**
 
 
 ## Cleanup
