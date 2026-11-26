@@ -1,52 +1,13 @@
-# Existing GKE Standard cluster. This root does not create a cluster or node pool.
-kubernetes_cluster_id = "projects/your-project-id/locations/us-central1/clusters/your-gke-cluster"
+# Required: an existing GKE Standard cluster. See README.md to obtain its ID.
+kubernetes_cluster_id = "projects/your-project/locations/us-central1/clusters/your-gke"
 
-# The default system pool must have enough free capacity for one TIER1 worker.
-# Avoid the dedicated Broker pool unless capacity and taints are handled explicitly.
-# connect_node_pool_name = "default-pool"
-
-# Companion local states are used by default.
-# console_state_path = "../terraform/terraform.tfstate"
-# kafka_state_path   = "../automq-cluster/terraform/terraform.tfstate"
-
-# For older Console states, publish the new outputs with a refresh-only apply
-# in the Console directory before planning Connect. See README.md.
-
-# Optional settings.
-# console_endpoint_override = "https://your-console.example.com"
-# connect_cluster_name      = "gcp-mysql-connect-demo"
-# connect_namespace         = "automq-connect"
-# connect_service_account   = "automq-connect"
-# worker_service_account_id = "your-connect-worker-gsa"
-# worker_count              = 1
-# worker_resource_spec      = "TIER1"
-# connect_version           = "version-from-your-console"
-
-# Add matching tolerations if the selected existing pool has taints.
-# connect_tolerations = [{
-#   key      = "dedicated"
-#   operator = "Equal"
-#   value    = "automq-connect"
-#   effect   = "NoSchedule"
-# }]
-
-# Debezium MySQL is fixed to the ACTIVE system plugin debezium-mysql:3.1.2.
-# There are no plugin variables.
-
-# Optional: capture one existing MySQL table in this same root/state.
-# First prepare binlogging, CDC privileges, TLS, and worker-to-MySQL networking.
-# Changing true to false DELETES the Connector and CDC data Topic/records;
-# Debezium's schema history Topic stays outside Terraform and is retained.
+# Optional: capture inventory.customers from an existing MySQL source.
+# Prepare TLS, binlogging, CDC privileges, and network access first.
 # create_mysql_connector = true
-# connector_name         = "mysql-cdc-demo"
 # mysql_hostname         = "mysql.internal.example"
-# mysql_user             = "your-cdc-user"
-# mysql_port             = 3306
-# mysql_database         = "inventory"
-# mysql_table            = "customers"
-# mysql_server_id        = 184054 # Must be unique in the replication topology.
-# mysql_ssl_mode         = "required"
-# topic_prefix           = "mysql-cdc"
+# mysql_user             = "debezium"
+# mysql_password         = "REPLACE_WITH_CDC_PASSWORD"
 
-# Supply the sensitive password through TF_VAR_mysql_password; see README.md.
-# Do not commit passwords or credential-bearing tfvars, state, or saved plans.
+# Setting create_mysql_connector back to false deletes its Connector/data Topic.
+# Keep actual credentials in this Git-ignored local file. See ADVANCED.md for
+# custom node pools, state paths, database/table names, and other settings.

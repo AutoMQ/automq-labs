@@ -49,11 +49,6 @@ mock_provider "google" {
 }
 
 mock_provider "kubernetes" {}
-mock_provider "http" {
-  mock_data "http" {
-    defaults = { status_code = 200 }
-  }
-}
 mock_provider "time" {}
 
 override_data {
@@ -224,7 +219,7 @@ run "custom_pool_and_identity_keep_plugin_fixed" {
       automq_connect_cluster.demo.capacity.provisioned.worker_count == 2 &&
       automq_connect_cluster.demo.capacity.provisioned.worker_resource_spec == "TIER2" &&
       automq_connect_cluster.demo.tags["purpose"] == "customer-demo" &&
-      data.http.console_login[0].url == "http://127.0.0.1:18080/auth/login" &&
+      local.console_endpoint == "http://127.0.0.1:18080" &&
       automq_connect_cluster.demo.plugins[0].name == "debezium-mysql" &&
       automq_connect_cluster.demo.plugins[0].version == "3.1.2"
     )
@@ -461,17 +456,6 @@ run "missing_kafka_instance_is_rejected" {
   override_data {
     target = data.terraform_remote_state.kafka
     values = { outputs = {} }
-  }
-
-  expect_failures = [terraform_data.preflight]
-}
-
-run "unready_console_is_rejected" {
-  command = plan
-
-  override_data {
-    target = data.http.console_login[0]
-    values = { status_code = 503 }
   }
 
   expect_failures = [terraform_data.preflight]

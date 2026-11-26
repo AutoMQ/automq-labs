@@ -1,10 +1,3 @@
-data "http" "console_login" {
-  count = local.console_endpoint_valid ? 1 : 0
-
-  url                = "${trimsuffix(local.console_endpoint, "/")}/auth/login"
-  request_timeout_ms = 15000
-}
-
 resource "terraform_data" "preflight" {
   lifecycle {
     precondition {
@@ -20,11 +13,6 @@ resource "terraform_data" "preflight" {
     precondition {
       condition     = trimspace(local.ops_bucket_name) != ""
       error_message = "The Console state must export ops_bucket_name. Run terraform apply -refresh-only in the Console Terraform directory to publish this output before creating Connect."
-    }
-
-    precondition {
-      condition     = !local.console_endpoint_valid || try(data.http.console_login[0].status_code == 200, false)
-      error_message = "The Console /auth/login endpoint must return HTTP 200 from the Terraform machine. Check readiness, its ingress allowlist, or console_endpoint_override."
     }
 
     precondition {

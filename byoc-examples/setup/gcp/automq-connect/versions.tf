@@ -14,10 +14,6 @@ terraform {
       source  = "automq/automq"
       version = "= 0.4.10"
     }
-    http = {
-      source  = "hashicorp/http"
-      version = "~> 3.5"
-    }
     time = {
       source  = "hashicorp/time"
       version = "~> 0.14"
