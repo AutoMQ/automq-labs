@@ -1,11 +1,11 @@
 ---
-last_updated: 2026-11-25
+last_updated: 2026-11-26
 ---
 
 # AutoMQ Connect on an existing EKS cluster
 
-Create one `TIER1` Connect worker on an existing EKS cluster, using the Kafka
-Instance from `../automq-cluster`. Terraform creates a dedicated namespace,
+Create one `TIER1` Connect worker on an existing EKS cluster, using the AutoMQ
+Cluster from `../automq-cluster`. Terraform creates a dedicated namespace,
 ServiceAccount, and worker IAM role, and configures Console access to EKS,
 worker REST, and built-in Prometheus metrics. The Console and Kafka brokers
 run on EC2; Connect workers run on EKS.
@@ -14,15 +14,32 @@ The default deployment starts the Connect Cluster without a Connector or MySQL
 dependency. You can enable [MySQL CDC](#optional-mysql-cdc) in the same root and
 state. Running workers and CDC storage/traffic consume billable resources.
 
-## Quick start
+## Before you start
 
-Prepare these dependencies first:
+For the companion EC2 examples, use this deployment order:
+
+**Console and VPC → AutoMQ Cluster + EKS in the same VPC → Connect Cluster**
+
+The following environments must be ready before applying this example. After
+the Console and VPC are ready, the AutoMQ Cluster and EKS can be prepared
+independently:
+
+| Prerequisite | Required state | Setup and preparation |
+| --- | --- | --- |
+| AutoMQ BYOC Console (CMP Console) | Initialized and reachable, running on EC2 in the target AWS account and Region. The companion setup also creates the VPC. | [Console and VPC](../README.md#quick-start) |
+| AutoMQ Cluster | Running on EC2 in the same AutoMQ environment as the Console and reachable from Connect workers. | [AutoMQ Cluster setup](../README.md#quick-start) |
+| Kubernetes environment (Amazon EKS) | An existing cluster and worker nodes in the Console's AWS account, Region, and VPC, with capacity for Connect workers. | [EKS preparation](#eks-preparation) |
+
+Keep the local Terraform states for both the Console and AutoMQ Cluster;
+this example reads their connection details and resource IDs automatically.
+Supply the existing EKS cluster name through `kubernetes_cluster_id`.
+
+Also check the following:
 
 - Terraform `>= 1.7.0, < 2.0.0` and AWS CLI on the Terraform machine.
-- Apply `../automq-console` and `../automq-cluster`, complete Console
-  initialization, and wait for the Kafka Instance to run. Your Console must
-  support the Connect APIs used by AutoMQ Terraform Provider `0.4.10`; the
-  adjacent example's default `8.3.16-aws` image is not a compatibility guarantee.
+- Your Console must support the Connect APIs used by AutoMQ Terraform Provider
+  `0.4.10`; the adjacent example's default `8.3.16-aws` image is not a
+  compatibility guarantee.
 - An existing EKS cluster in the Console's AWS account, Region, and VPC, with
   private API access, authentication mode `API` or `API_AND_CONFIG_MAP`, an
   [associated IAM OIDC provider](#eks-preparation), and capacity for one `TIER1`
@@ -38,6 +55,12 @@ Prepare these dependencies first:
   `plugin_version` from your running Console's catalog. See
   [Manage Plugins](https://docs.automq.com/automq-cloud/kafka-connect/manage-plugins).
 
+An existing MySQL source is required only when enabling the optional MySQL
+Connector. Prepare its network access, binlogging, TLS, and CDC account as
+described in [MySQL CDC](#optional-mysql-cdc).
+
+## Quick start
+
 From this directory:
 
 ```bash
@@ -52,8 +75,8 @@ plugin_version        = "REPLACE_WITH_ACTIVE_PLUGIN_VERSION"
 ```
 
 For AWS, `kubernetes_cluster_id` means the **EKS cluster name**, not its ARN.
-The Region and API credentials come from the adjacent Console state; the Kafka
-Instance ID comes from the adjacent Kafka state. No `CONFIG` or API key copy is
+The Region and API credentials come from the adjacent Console state; the AutoMQ
+Cluster ID comes from the adjacent Cluster state. No `CONFIG` or API key copy is
 needed. Use your normal AWS credential chain, including `AWS_PROFILE`, or set
 `aws_profile`. Both AWS and Kubernetes authentication use that profile;
 Terraform calls `aws eks get-token` without requiring a kubeconfig.
@@ -98,7 +121,7 @@ Prepare an existing MySQL source before enabling it:
 - Choose a `mysql_server_id` unique among this topology's replication clients
   and servers. The default is `184054`. The default `mysql_ssl_mode = "required"`
   requires TLS; it encrypts traffic without verifying server identity.
-- Keep the Kafka Instance's private plaintext listener enabled. This root reads
+- Keep the AutoMQ Cluster's private plaintext listener enabled. This root reads
   one unambiguous VPC/private `PLAINTEXT` bootstrap value from the Kafka state.
   It uses anonymous Kafka access without ACL credentials. Debezium's history
   clients need native Kafka Create/Describe/Read/Write access.
@@ -196,7 +219,7 @@ dedicated namespace/ServiceAccount, worker role and policy attachments, added
 Console EKS authorization, and its Console ingress rules. Namespace deletion
 also removes anything else placed inside it. The existing EKS cluster, shared
 OIDC provider, security groups, attached managed-policy documents, plugin,
-Console role/instance profile, Kafka Instance, and MySQL remain under their
+Console role/instance profile, AutoMQ Cluster, and MySQL remain under their
 original owners. Revoking Console-to-EKS access can affect other workloads
 that rely on those same grants.
 
