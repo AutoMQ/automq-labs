@@ -52,3 +52,23 @@ output "console_to_workers_firewall" {
   description = "Firewall rule allowing the Console to reach worker REST and metrics ports."
   value       = google_compute_firewall.console_to_workers.name
 }
+
+output "mysql_connector_id" {
+  description = "MySQL Connector ID, or null when MySQL CDC is disabled."
+  value       = try(automq_connector.mysql[0].id, null)
+}
+
+output "mysql_connector_state" {
+  description = "MySQL Connector lifecycle state, or null when MySQL CDC is disabled."
+  value       = try(automq_connector.mysql[0].state, null)
+}
+
+output "mysql_data_topic" {
+  description = "Single-table CDC Topic, or null when MySQL CDC is disabled."
+  value       = try(automq_kafka_topic.cdc[0].name, null)
+}
+
+output "mysql_schema_history_topic" {
+  description = "Schema history Topic managed by Debezium, or null when MySQL CDC is disabled."
+  value       = var.create_mysql_connector ? local.schema_history_topic_name : null
+}

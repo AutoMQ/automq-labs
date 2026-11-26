@@ -118,3 +118,100 @@ resource "automq_connect_cluster" "demo" {
     delete = "20m"
   }
 }
+
+locals {
+  mysql_inputs_valid = (
+    try(length(trimspace(var.mysql_hostname)) > 0, false) &&
+    try(length(trimspace(var.mysql_user)) > 0, false) &&
+    try(length(var.mysql_password) > 0, false)
+  )
+
+  # Debezium's schema history clients need their own Kafka connection settings.
+  mysql_bootstrap_candidates = try(distinct([
+    for endpoint in data.terraform_remote_state.kafka.outputs.instance_endpoints : trimspace(endpoint.bootstrap_servers)
+    if contains(["VPC", "PRIVATE"], upper(endpoint.network_type)) &&
+    upper(endpoint.protocol) == "PLAINTEXT" && trimspace(endpoint.bootstrap_servers) != ""
+  ]), [])
+  mysql_bootstrap_servers = try(one(local.mysql_bootstrap_candidates), null)
+
+  data_topic_name           = "${var.topic_prefix}.${var.mysql_database}.${var.mysql_table}"
+  schema_history_topic_name = "schema-history.${var.connector_name}"
+}
+
+resource "terraform_data" "mysql_preflight" {
+  count = var.create_mysql_connector ? 1 : 0
+
+  depends_on = [terraform_data.preflight]
+
+  lifecycle {
+    precondition {
+      condition     = local.mysql_inputs_valid
+      error_message = "When create_mysql_connector is true, provide mysql_hostname, mysql_user, and mysql_password."
+    }
+
+    precondition {
+      condition     = length(local.mysql_bootstrap_candidates) == 1
+      error_message = "MySQL CDC requires exactly one distinct VPC or PRIVATE PLAINTEXT bootstrap_servers value in the Kafka state. This example does not configure SASL/SSL Kafka clients."
+    }
+  }
+}
+
+resource "automq_kafka_topic" "cdc" {
+  count = var.create_mysql_connector ? 1 : 0
+
+  depends_on = [terraform_data.mysql_preflight, automq_connect_cluster.demo]
+
+  environment_id    = local.environment_id
+  kafka_instance_id = local.kafka_instance_id
+  name              = local.data_topic_name
+  partition         = 1
+}
+
+resource "automq_connector" "mysql" {
+  count = var.create_mysql_connector ? 1 : 0
+
+  depends_on = [automq_kafka_topic.cdc]
+
+  environment_id     = local.environment_id
+  connect_cluster_id = automq_connect_cluster.demo.id
+  name               = var.connector_name
+  description        = "MySQL Debezium CDC for ${var.mysql_database}.${var.mysql_table}"
+  connector_class    = "io.debezium.connector.mysql.MySqlConnector"
+  task_count         = 1
+
+  kafka_cluster = {
+    security_protocol = {
+      protocol = "PLAINTEXT"
+    }
+  }
+
+  connector_config = {
+    "database.hostname"      = var.mysql_hostname
+    "database.port"          = tostring(var.mysql_port)
+    "database.user"          = var.mysql_user
+    "database.server.id"     = tostring(var.mysql_server_id)
+    "database.include.list"  = var.mysql_database
+    "table.include.list"     = "${var.mysql_database}\\.${var.mysql_table}"
+    "database.ssl.mode"      = var.mysql_ssl_mode
+    "topic.prefix"           = var.topic_prefix
+    "snapshot.mode"          = "initial"
+    "include.schema.changes" = "false"
+
+    # CMP's Topic API cannot express the indefinite schema-history retention.
+    # Debezium creates this internal topic through Kafka Admin instead.
+    "schema.history.internal.kafka.bootstrap.servers"    = local.mysql_bootstrap_servers
+    "schema.history.internal.kafka.topic"                = local.schema_history_topic_name
+    "schema.history.internal.producer.security.protocol" = "PLAINTEXT"
+    "schema.history.internal.consumer.security.protocol" = "PLAINTEXT"
+  }
+
+  connector_config_sensitive = {
+    "database.password" = var.mysql_password
+  }
+
+  timeouts = {
+    create = "30m"
+    update = "30m"
+    delete = "10m"
+  }
+}

@@ -31,4 +31,22 @@ kubernetes_cluster_id = "projects/your-project-id/locations/us-central1/clusters
 # }]
 
 # Debezium MySQL is fixed to the ACTIVE system plugin debezium-mysql:3.1.2.
-# There are no plugin variables, MySQL credentials, or Connector inputs here.
+# There are no plugin variables.
+
+# Optional: capture one existing MySQL table in this same root/state.
+# First prepare binlogging, CDC privileges, TLS, and worker-to-MySQL networking.
+# Changing true to false DELETES the Connector and CDC data Topic/records;
+# Debezium's schema history Topic stays outside Terraform and is retained.
+# create_mysql_connector = true
+# connector_name         = "mysql-cdc-demo"
+# mysql_hostname         = "mysql.internal.example"
+# mysql_user             = "your-cdc-user"
+# mysql_port             = 3306
+# mysql_database         = "inventory"
+# mysql_table            = "customers"
+# mysql_server_id        = 184054 # Must be unique in the replication topology.
+# mysql_ssl_mode         = "required"
+# topic_prefix           = "mysql-cdc"
+
+# Supply the sensitive password through TF_VAR_mysql_password; see README.md.
+# Do not commit passwords or credential-bearing tfvars, state, or saved plans.

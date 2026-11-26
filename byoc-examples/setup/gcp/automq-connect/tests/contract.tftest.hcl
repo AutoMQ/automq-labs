@@ -4,6 +4,12 @@ mock_provider "automq" {
   mock_resource "automq_connect_cluster" {
     defaults = { id = "connect-cluster-example", state = "RUNNING" }
   }
+  mock_resource "automq_connector" {
+    defaults = { id = "conn-example", state = "RUNNING", connector_type = "SOURCE", plugin_id = "plugin-example" }
+  }
+  mock_resource "automq_kafka_topic" {
+    defaults = { topic_id = "topic-example" }
+  }
 }
 
 mock_provider "google" {
@@ -76,10 +82,26 @@ override_data {
 
 variables {
   kubernetes_cluster_id = "projects/example-project/locations/europe-west1/clusters/existing-gke"
+  # Keep cluster-only tests independent of a local demo's optional CDC settings.
+  create_mysql_connector = false
 }
 
 run "creates_fixed_mysql_demo_on_external_gke" {
   command = apply
+
+  assert {
+    condition = (
+      !var.create_mysql_connector &&
+      length(terraform_data.mysql_preflight) == 0 &&
+      length(automq_connector.mysql) == 0 &&
+      length(automq_kafka_topic.cdc) == 0 &&
+      output.mysql_connector_id == null &&
+      output.mysql_connector_state == null &&
+      output.mysql_data_topic == null &&
+      output.mysql_schema_history_topic == null
+    )
+    error_message = "Cluster-only deployment must not require Kafka endpoints or MySQL inputs, and must not create a connector or topic."
+  }
 
   assert {
     condition = (
@@ -482,4 +504,290 @@ run "invalid_demo_parameters_are_rejected" {
     var.worker_service_account_id, var.connect_node_pool_name,
     var.worker_count, var.worker_resource_spec, var.connect_version,
   ]
+}
+
+run "enabled_mysql_cdc_uses_private_kafka_and_sensitive_password" {
+  command = apply
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [{
+          bootstrap_servers = "kafka.internal.example:9092"
+          network_type      = "VPC"
+          protocol          = "PLAINTEXT"
+        }]
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      length(automq_connector.mysql) == 1 &&
+      length(automq_kafka_topic.cdc) == 1 &&
+      automq_connector.mysql[0].environment_id == "env-example" &&
+      automq_connector.mysql[0].connect_cluster_id == automq_connect_cluster.demo.id &&
+      automq_connector.mysql[0].connector_class == "io.debezium.connector.mysql.MySqlConnector" &&
+      automq_connector.mysql[0].task_count == 1 &&
+      automq_connector.mysql[0].kafka_cluster.security_protocol.protocol == "PLAINTEXT" &&
+      automq_kafka_topic.cdc[0].kafka_instance_id == "kf-example" &&
+      automq_kafka_topic.cdc[0].name == "mysql-cdc.inventory.customers" &&
+      automq_kafka_topic.cdc[0].partition == 1 &&
+      output.mysql_connector_id == automq_connector.mysql[0].id &&
+      output.mysql_connector_state == "RUNNING" &&
+      output.mysql_data_topic == automq_kafka_topic.cdc[0].name
+    )
+    error_message = "Enabling CDC must create one MySQL source task and one CDC data topic on the existing Kafka instance and Connect Cluster."
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql.internal.example" &&
+      automq_connector.mysql[0].connector_config["database.port"] == "3306" &&
+      automq_connector.mysql[0].connector_config["database.user"] == "debezium" &&
+      automq_connector.mysql[0].connector_config["database.server.id"] == "184054" &&
+      automq_connector.mysql[0].connector_config["database.include.list"] == "inventory" &&
+      automq_connector.mysql[0].connector_config["table.include.list"] == "inventory\\.customers" &&
+      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "required" &&
+      automq_connector.mysql[0].connector_config["topic.prefix"] == "mysql-cdc" &&
+      automq_connector.mysql[0].connector_config["snapshot.mode"] == "initial" &&
+      automq_connector.mysql[0].connector_config["include.schema.changes"] == "false"
+    )
+    error_message = "MySQL connection, capture filters, escaped table regex, TLS, topic namespace, and initial snapshot settings must match the demo inputs."
+  }
+
+  assert {
+    condition = (
+      !contains(keys(automq_connector.mysql[0].connector_config), "database.password") &&
+      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "example-test-password" &&
+      !contains(keys(automq_connector.mysql[0].connector_config), "connector.class") &&
+      !contains(keys(automq_connector.mysql[0].connector_config), "tasks.max")
+    )
+    error_message = "The database password must only use the sensitive map; connector class and task count belong to the provider's dedicated attributes."
+  }
+
+  assert {
+    condition = (
+      output.mysql_schema_history_topic == "schema-history.mysql-cdc-demo" &&
+      output.mysql_schema_history_topic != output.mysql_data_topic &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.topic"] == output.mysql_schema_history_topic &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.internal.example:9092" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.producer.security.protocol"] == "PLAINTEXT" &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.consumer.security.protocol"] == "PLAINTEXT"
+    )
+    error_message = "Debezium history must use its distinct, non-managed history topic and the unique private plaintext listener."
+  }
+}
+
+run "mysql_cdc_custom_inputs_propagate_together" {
+  command = apply
+
+  variables {
+    create_mysql_connector = true
+    connector_name         = "custom-mysql-cdc"
+    mysql_hostname         = "mysql-staging.internal.example"
+    mysql_port             = 3307
+    mysql_user             = "cdcuser"
+    mysql_password         = "alternate-test-password"
+    mysql_database         = "fulfillment"
+    mysql_table            = "orders"
+    mysql_server_id        = 456789
+    mysql_ssl_mode         = "verify_identity"
+    topic_prefix           = "custom-cdc"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [{
+          bootstrap_servers = "kafka.internal.example:9092"
+          network_type      = "PRIVATE"
+          protocol          = "PLAINTEXT"
+        }]
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      automq_connector.mysql[0].name == "custom-mysql-cdc" &&
+      automq_connector.mysql[0].connector_config["database.hostname"] == "mysql-staging.internal.example" &&
+      automq_connector.mysql[0].connector_config["database.port"] == "3307" &&
+      automq_connector.mysql[0].connector_config["database.user"] == "cdcuser" &&
+      nonsensitive(automq_connector.mysql[0].connector_config_sensitive["database.password"]) == "alternate-test-password" &&
+      automq_connector.mysql[0].connector_config["database.server.id"] == "456789" &&
+      automq_connector.mysql[0].connector_config["database.include.list"] == "fulfillment" &&
+      automq_connector.mysql[0].connector_config["table.include.list"] == "fulfillment\\.orders" &&
+      automq_connector.mysql[0].connector_config["database.ssl.mode"] == "verify_identity" &&
+      automq_connector.mysql[0].connector_config["topic.prefix"] == "custom-cdc" &&
+      automq_kafka_topic.cdc[0].name == "custom-cdc.fulfillment.orders" &&
+      output.mysql_schema_history_topic == "schema-history.custom-mysql-cdc"
+    )
+    error_message = "Customized MySQL connection, credentials, capture names, TLS, server ID, and schema-history name must stay aligned."
+  }
+}
+
+run "mysql_private_listeners_filter_and_deduplicate" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [
+          { bootstrap_servers = "kafka.internal.example:9092", network_type = "VPC", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "kafka.internal.example:9092", network_type = "PRIVATE", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "kafka.public.example:9092", network_type = "INTERNET", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "kafka.auth.example:9094", network_type = "VPC", protocol = "SASL_SSL" },
+        ]
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      length(local.mysql_bootstrap_candidates) == 1 &&
+      automq_connector.mysql[0].connector_config["schema.history.internal.kafka.bootstrap.servers"] == "kafka.internal.example:9092"
+    )
+    error_message = "Equivalent VPC/PRIVATE listeners must deduplicate while public and authenticated endpoints are excluded."
+  }
+}
+
+run "enabled_mysql_cdc_requires_database_inputs" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = null
+    mysql_user             = null
+    mysql_password         = null
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [{
+          bootstrap_servers = "kafka.internal.example:9092"
+          network_type      = "VPC"
+          protocol          = "PLAINTEXT"
+        }]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "enabled_mysql_cdc_requires_kafka_endpoints" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "ambiguous_mysql_private_listeners_are_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [
+          { bootstrap_servers = "one.internal.example:9092", network_type = "VPC", protocol = "PLAINTEXT" },
+          { bootstrap_servers = "two.internal.example:9092", network_type = "PRIVATE", protocol = "PLAINTEXT" },
+        ]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "public_mysql_history_listener_is_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [{
+          bootstrap_servers = "kafka.public.example:9092"
+          network_type      = "INTERNET"
+          protocol          = "PLAINTEXT"
+        }]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
+}
+
+run "authenticated_mysql_history_listener_is_rejected" {
+  command = plan
+
+  variables {
+    create_mysql_connector = true
+    mysql_hostname         = "mysql.internal.example"
+    mysql_user             = "debezium"
+    mysql_password         = "example-test-password"
+  }
+
+  override_data {
+    target = data.terraform_remote_state.kafka
+    values = {
+      outputs = {
+        instance_id = "kf-example"
+        instance_endpoints = [{
+          bootstrap_servers = "kafka.auth.example:9094"
+          network_type      = "VPC"
+          protocol          = "SASL_SSL"
+        }]
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.mysql_preflight[0]]
 }

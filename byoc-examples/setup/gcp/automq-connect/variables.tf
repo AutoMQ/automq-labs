@@ -167,3 +167,128 @@ variable "tags" {
   default     = { purpose = "demo" }
   nullable    = false
 }
+
+variable "create_mysql_connector" {
+  description = "Create the Debezium MySQL Connector and its single-table CDC Topic. Debezium manages its own schema history Topic."
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
+variable "connector_name" {
+  description = "Unique name for the optional MySQL Connector."
+  type        = string
+  default     = "mysql-cdc-demo"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-]{3,64}$", var.connector_name))
+    error_message = "connector_name must contain 3-64 letters, numbers, underscores, or hyphens."
+  }
+}
+
+variable "mysql_hostname" {
+  description = "Existing MySQL DNS hostname or IPv4 address reachable from Connect workers; required when create_mysql_connector is true."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.mysql_hostname == null ? true : length(var.mysql_hostname) <= 253 && !startswith(var.mysql_hostname, "REPLACE_") && can(regex("^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$", var.mysql_hostname))
+    error_message = "mysql_hostname must be an actual hostname or IPv4 address without a URL scheme, port, or placeholder."
+  }
+}
+
+variable "mysql_port" {
+  description = "MySQL TCP port."
+  type        = number
+  default     = 3306
+  nullable    = false
+
+  validation {
+    condition     = var.mysql_port >= 1 && var.mysql_port <= 65535 && floor(var.mysql_port) == var.mysql_port
+    error_message = "mysql_port must be an integer between 1 and 65535."
+  }
+}
+
+variable "mysql_user" {
+  description = "Existing MySQL user with snapshot and binlog replication privileges; required when create_mysql_connector is true."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.mysql_user == null ? true : trimspace(var.mysql_user) != "" && !startswith(var.mysql_user, "REPLACE_")
+    error_message = "mysql_user must be an actual non-empty MySQL username."
+  }
+}
+
+variable "mysql_password" {
+  description = "MySQL user's password, supplied through TF_VAR_mysql_password or a private local tfvars file when CDC is enabled."
+  type        = string
+  default     = null
+  sensitive   = true
+
+  validation {
+    condition     = var.mysql_password == null ? true : length(var.mysql_password) > 0
+    error_message = "mysql_password must not be empty."
+  }
+}
+
+variable "mysql_database" {
+  description = "Existing MySQL database containing the single table to capture."
+  type        = string
+  default     = "inventory"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_]{1,64}$", var.mysql_database))
+    error_message = "mysql_database must contain 1-64 letters, numbers, or underscores."
+  }
+}
+
+variable "mysql_table" {
+  description = "Existing table in mysql_database to capture."
+  type        = string
+  default     = "customers"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_]{1,64}$", var.mysql_table))
+    error_message = "mysql_table must contain 1-64 letters, numbers, or underscores."
+  }
+}
+
+variable "mysql_server_id" {
+  description = "Replication client ID; choose a value unique among clients and replicas of the source MySQL server."
+  type        = number
+  default     = 184054
+  nullable    = false
+
+  validation {
+    condition     = var.mysql_server_id >= 1 && var.mysql_server_id <= 4294967295 && floor(var.mysql_server_id) == var.mysql_server_id
+    error_message = "mysql_server_id must be an integer between 1 and 4294967295."
+  }
+}
+
+variable "mysql_ssl_mode" {
+  description = "Debezium MySQL TLS mode; required encrypts the connection, while verify modes also need suitable worker trust configuration."
+  type        = string
+  default     = "required"
+  nullable    = false
+
+  validation {
+    condition     = contains(["disabled", "preferred", "required", "verify_ca", "verify_identity"], var.mysql_ssl_mode)
+    error_message = "mysql_ssl_mode must be disabled, preferred, required, verify_ca, or verify_identity."
+  }
+}
+
+variable "topic_prefix" {
+  description = "Unique CDC topic namespace. The data topic is topic_prefix.mysql_database.mysql_table."
+  type        = string
+  default     = "mysql-cdc"
+  nullable    = false
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-][A-Za-z0-9._-]{0,63}$", var.topic_prefix))
+    error_message = "topic_prefix must contain 1-64 Kafka topic characters and begin with a letter, number, underscore, or hyphen."
+  }
+}
