@@ -1,3 +1,7 @@
+---
+last_updated: 2026-11-25
+---
+
 # AutoMQ on Amazon EC2
 
 This Terraform quick-start provisions an AutoMQ BYOC Console and an optional
@@ -80,6 +84,22 @@ The example has two Terraform root modules with independent state files:
 
 `modules/automq-role` is called by `automq-console`; do not deploy it as a
 third Terraform state.
+
+After creating the Kafka Instance, use the optional
+[Connect example](automq-connect/README.md) to create a dedicated namespace,
+ServiceAccount, Worker IAM Role, and Connect Cluster on an existing EKS cluster
+with the `mysql-debezium-cdc` plugin. It also grants the existing Console Role
+EKS access and automatically adds Console-sourced ingress to the private EKS
+API on TCP `443`, worker REST on TCP `8083`, and built-in Prometheus metrics on
+TCP `9090`. The default worker security group is discovered from EKS, so standard
+deployments need no new SG input. A custom worker SG override covers both REST
+and metrics: three rules by default, or `1 + 2N` for `N` worker security groups.
+Set `create_mysql_connector = true` in that same Connect root to
+optionally capture one MySQL table; Terraform creates the Connector and its
+CDC data Topic in the same apply and state. Debezium creates its own schema
+history Topic through Kafka at startup; that Topic is outside Terraform's
+lifecycle. Worker-to-Kafka/MySQL connectivity and other network paths must
+already be prepared. The Connect example reads the two states above.
 
 The Console stage can be deployed by itself. Running `terraform apply` in the
 Cluster root is the step that creates the AutoMQ data-plane nodes.
@@ -469,8 +489,18 @@ Use a separate state for each AutoMQ Environment ID. Replacing `automq_config`
 with metadata from another environment while retaining the Console data volume
 can mix persistent Console metadata with the wrong control-plane identity.
 
-Destroy the Cluster state first so no data-plane nodes depend on IAM, DNS,
-subnets, or buckets owned by the Console state:
+If you deployed the optional [Connect example](automq-connect/README.md),
+destroy that state before the Kafka Instance. It revokes its own Console-to-EKS
+and worker REST/metrics ingress rules while retaining the external EKS cluster
+and security groups. Its dependencies also remove any
+enabled MySQL Connector and its CDC data Topic, including its records. The
+source MySQL database and Debezium-created schema history Topic remain; retire
+history manually only when its recovery state is no longer needed. The order
+is `automq-connect` → `automq-cluster`
+→ `automq-console`, skipping Connect if it was not deployed.
+Destroy the Kafka Instance before the Console so no
+data-plane nodes depend on IAM, DNS, subnets, or buckets owned by the Console
+state:
 
 ```bash
 cd automq-cluster

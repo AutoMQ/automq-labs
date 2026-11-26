@@ -1,0 +1,3 @@
+# Local parameters can contain MySQL credentials.
+*.tfvars
+*.tfvars.json

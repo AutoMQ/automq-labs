@@ -77,7 +77,7 @@ output "data_bucket_name" {
 }
 
 output "ops_bucket_name" {
-  description = "S3 ops bucket decoded from CONFIG and created by this root"
+  description = "S3 ops bucket decoded from CONFIG, either created or referenced by this root"
   value       = local.ops_bucket_name
 }
 

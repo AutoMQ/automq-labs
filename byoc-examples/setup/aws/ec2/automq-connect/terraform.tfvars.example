@@ -1,0 +1,29 @@
+# Existing EKS cluster NAME, not ARN, in the Console's account/Region/VPC.
+# Requires private API access, API/API_AND_CONFIG_MAP auth, IAM OIDC, and your
+# Terraform identity's Kubernetes access. See README.md for preparation.
+kubernetes_cluster_id = "REPLACE_WITH_YOUR_EKS_CLUSTER_NAME"
+
+# Exact ACTIVE version of the existing mysql-debezium-cdc plugin in Console.
+# If using another registered plugin, also override plugin_name.
+plugin_version = "REPLACE_WITH_ACTIVE_PLUGIN_VERSION"
+# plugin_name = "debezium-mysql"
+
+# Defaults read the adjacent Console/Kafka states and derive the Console Region.
+# Normal AWS credentials, including AWS_PROFILE, work for AWS and Kubernetes.
+# aws_profile = "my-aws-profile"
+# aws_region  = "us-east-1" # Optional; must match Console state.
+
+# Optional: capture one existing MySQL table in this same root/state.
+# First prepare binlogging, CDC privileges, TLS, and worker-to-MySQL networking.
+# Changing true to false DELETES the Connector and CDC data Topic/records;
+# Debezium's schema history Topic stays outside Terraform and is retained.
+# create_mysql_connector = true
+# mysql_hostname         = "REPLACE_WITH_MYSQL_HOSTNAME"
+# mysql_user             = "REPLACE_WITH_CDC_MYSQL_USER"
+# mysql_password         = "your-cdc-password"
+# mysql_database         = "inventory"
+# mysql_table            = "customers"
+# mysql_server_id        = 184054 # Must be unique in the replication topology.
+
+# Keep local tfvars, state, and saved plans containing the password out of Git.
+# Advanced worker, IAM, SG, scheduling, state-path, and tunnel inputs: README.md.

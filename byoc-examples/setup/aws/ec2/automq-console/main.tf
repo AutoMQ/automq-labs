@@ -204,6 +204,8 @@ resource "aws_vpc_endpoint" "s3" {
 }
 
 resource "aws_s3_bucket" "ops" {
+  count = var.create_ops_bucket ? 1 : 0
+
   bucket        = local.ops_bucket_name
   force_destroy = var.force_destroy_ops_bucket
 
@@ -212,8 +214,23 @@ resource "aws_s3_bucket" "ops" {
   })
 }
 
+data "aws_s3_bucket" "ops" {
+  count = var.create_ops_bucket ? 0 : 1
+
+  bucket = local.ops_bucket_name
+
+  lifecycle {
+    postcondition {
+      condition     = self.bucket_region == local.region
+      error_message = "The existing ops bucket must be in the AWS Region specified by CONFIG."
+    }
+  }
+}
+
 resource "aws_s3_bucket_public_access_block" "ops" {
-  bucket = aws_s3_bucket.ops.id
+  count = var.create_ops_bucket ? 1 : 0
+
+  bucket = aws_s3_bucket.ops[0].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -222,13 +239,30 @@ resource "aws_s3_bucket_public_access_block" "ops" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "ops" {
-  bucket = aws_s3_bucket.ops.id
+  count = var.create_ops_bucket ? 1 : 0
+
+  bucket = aws_s3_bucket.ops[0].id
 
   rule {
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
     }
   }
+}
+
+moved {
+  from = aws_s3_bucket.ops
+  to   = aws_s3_bucket.ops[0]
+}
+
+moved {
+  from = aws_s3_bucket_public_access_block.ops
+  to   = aws_s3_bucket_public_access_block.ops[0]
+}
+
+moved {
+  from = aws_s3_bucket_server_side_encryption_configuration.ops
+  to   = aws_s3_bucket_server_side_encryption_configuration.ops[0]
 }
 
 resource "aws_s3_bucket" "data" {
@@ -374,6 +408,7 @@ resource "aws_instance" "console" {
     aws_iam_role_policy_attachment.console_ssm,
     aws_nat_gateway.this,
     aws_s3_bucket.ops,
+    data.aws_s3_bucket.ops,
   ]
 }
 

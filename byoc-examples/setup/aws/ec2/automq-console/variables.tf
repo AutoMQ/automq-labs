@@ -119,6 +119,13 @@ variable "force_destroy_data_bucket" {
   nullable    = false
 }
 
+variable "create_ops_bucket" {
+  description = "Create and manage the ops bucket from CONFIG; set false only for an existing bucket that this state does not manage"
+  type        = bool
+  default     = true
+  nullable    = false
+}
+
 variable "force_destroy_ops_bucket" {
   description = "Allow Terraform destroy to delete all objects from the module-created ops bucket"
   type        = bool

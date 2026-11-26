@@ -1,0 +1,13 @@
+# Required: an existing GKE Standard cluster. See README.md to obtain its ID.
+kubernetes_cluster_id = "projects/your-project/locations/us-central1/clusters/your-gke"
+
+# Optional: capture inventory.customers from an existing MySQL source.
+# Prepare TLS, binlogging, CDC privileges, and network access first.
+# create_mysql_connector = true
+# mysql_hostname         = "mysql.internal.example"
+# mysql_user             = "debezium"
+# mysql_password         = "REPLACE_WITH_CDC_PASSWORD"
+
+# Setting create_mysql_connector back to false deletes its Connector/data Topic.
+# Keep actual credentials in this Git-ignored local file. See ADVANCED.md for
+# custom node pools, state paths, database/table names, and other settings.

@@ -19,3 +19,8 @@ automq_config = "REPLACE_WITH_AUTOMQ_CONFIG"
 # data_bucket_name          = ""
 # force_destroy_data_bucket = true
 # force_destroy_ops_bucket  = true
+
+# Reference the ops bucket named in CONFIG when it already exists and is not
+# managed by this Terraform state. This skips bucket creation and configuration.
+# Do not switch an already-managed ops bucket to this mode without a state migration.
+# create_ops_bucket = false
